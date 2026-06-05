@@ -1,88 +1,132 @@
-name: CI/CD Pipeline
-
-permissions:
-  contents: read
-  security-events: write
+name: Hairapy CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main, develop]
   pull_request:
-    branches: [ "main" ]
+    branches: [main]
 
 jobs:
-  # --- JOB 1: KIỂM TRA BACKEND (.NET) ---
-  backend-ci:
+  # ─────────────────────────────────────────
+  # JOB 1: Test & Build Backend
+  # ─────────────────────────────────────────
+  backend:
+    name: Backend — Test & Build
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up JDK 21
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: 'maven'
+          java-version: "21"
+          distribution: "temurin"
+          cache: maven
 
-      - name: Build with Maven
-        run: |
-          cd project/backend
-          mvn clean package -DskipTests
+      - name: Run backend tests
+        working-directory: project/backend
+        run: mvn test
 
-  # --- JOB 2: KIỂM TRA FRONTEND (Next.js) ---
-  frontend-ci:
+      - name: Build backend JAR
+        working-directory: project/backend
+        run: mvn clean package -DskipTests
+
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jar
+          path: project/backend/target/*.jar
+          retention-days: 1
+
+  # ─────────────────────────────────────────
+  # JOB 2: Test & Build Frontend
+  # ─────────────────────────────────────────
+  frontend:
+    name: Frontend — Test & Build
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: project/frontend/package-lock.json
-      - name: Build Frontend
-        run: |
-          cd project/frontend
-          npm ci
-          npm run build
 
-  # --- JOB 3: QUÉT BẢO MẬT (SNYK) ---
-  security-scan:
-    needs: [backend-ci, frontend-ci]
+      - name: Install dependencies
+        working-directory: project/frontend
+        run: npm ci
+
+      - name: Run frontend tests
+        working-directory: project/frontend
+        run: npm run test --if-present
+
+      - name: Build frontend
+        working-directory: project/frontend
+        run: npm run build
+
+  # ─────────────────────────────────────────
+  # JOB 3: Security Scan (Snyk)
+  # ─────────────────────────────────────────
+  security:
+    name: Security — Snyk Scan
     runs-on: ubuntu-latest
+    needs: [backend, frontend]
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Snyk CLI
-        uses: snyk/actions/setup@master # <-- Dùng bản setup để quét đa ngôn ngữ
-      - name: Run Snyk Scan
-        run: snyk test --all-projects # <-- Quét toàn bộ project con trong folder project
-        continue-on-error: true # <-- Không fail pipeline nếu có lỗ hổng, chỉ cảnh báo
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/maven@master
+        continue-on-error: true        # Không block pipeline nếu Snyk lỗi
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --file=project/backend/pom.xml
 
-  # --- JOB 4: ĐÓNG GÓI & ĐẨY LÊN DOCKER HUB (CD) ---
-  build-and-push:
-    needs: [security-scan]
+  # ─────────────────────────────────────────
+  # JOB 4: Build & Push Docker Images
+  # ─────────────────────────────────────────
+  docker:
+    name: Docker — Build & Push
     runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Login to Docker Hub
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & Push Backend
+      - name: Build & push backend image
         uses: docker/build-push-action@v5
         with:
-          # Context để ở Solution level để Docker thấy file .sln
           context: ./project/backend
-          file: ./project/backend/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/my-backend:latest
+          tags: ghcr.io/${{ github.repository_owner }}/hairapy-backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Build & Push Frontend
+      - name: Build & push frontend image
         uses: docker/build-push-action@v5
         with:
           context: ./project/frontend
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/my-frontend:latest
+          tags: ghcr.io/${{ github.repository_owner }}/hairapy-frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -1,20 +1,12 @@
-# --- STAGE 1: Build ---
-FROM node:20-alpine AS builder
+FROM node:20-alpine AS build
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY package*.json ./
 RUN npm ci
 COPY . .
 RUN npm run build
 
-# --- STAGE 2: Production ---
-FROM node:20-alpine AS runner
-WORKDIR /app
-ENV NODE_ENV production
-
-# Copy thư mục standalone và static để chạy ứng dụng
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-
-EXPOSE 3000
-CMD ["node", "server.js"]
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

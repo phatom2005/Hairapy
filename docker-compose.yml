@@ -1,0 +1,58 @@
+services:
+  # ---------------------------------------------
+  # 1. DATABASE (PostgreSQL)
+  # ---------------------------------------------
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${DB_PASSWORD} # Nó sẽ lấy từ file .env
+      POSTGRES_DB: MyProjectDb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U admin -d MyProjectDb" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------
+  # 2. BACKEND (.NET API)
+  # ---------------------------------------------
+  backend:
+    build: ./project/backend
+    ports:
+      - "5000:8080"
+    environment:
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      retries: 5
+  # ---------------------------------------------
+  # 3. FRONTEND (Next.js)
+  # ---------------------------------------------
+  frontend:
+    build:
+      context: ./project/frontend
+      dockerfile: Dockerfile
+    container_name: my_nextjs_frontend
+    restart: always
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "3000:3000"
+    environment:
+      # Báo cho Next.js biết Backend nằm ở đâu (gọi qua local host vì Next.js chạy cả phía client)
+      - NEXT_PUBLIC_API_URL=http://localhost:5000
+
+# Lưu lại dữ liệu Database để không mất khi tắt Docker
+volumes:
+  postgres_data:

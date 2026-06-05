@@ -1,0 +1,60 @@
+# ==========================================
+# 1. FRONTEND (Next.js / Node)
+# ==========================================
+node_modules/
+.next/
+out/
+build/
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ==========================================
+# 2. BACKEND (.NET)
+# ==========================================
+[Bb]in/
+[Oo]bj/
+# Kết quả chạy Test
+TestResults/
+# File cấu hình cá nhân của Visual Studio
+.vs/
+*.user
+*.userosscache
+*.sln.docuser.json
+# Tránh push file appsettings môi trường Dev (chứa connection string)
+backend/**/[Aa]ppsettings.[Dd]evelopment.json
+**/wwwroot/lib/
+
+# ==========================================
+# 3. DOCKER & DATABASE
+# ==========================================
+# Quan trọng: Không push dữ liệu database thật lên Git
+pgdata/
+# Bỏ qua các file log của Docker
+.docker/
+*.log
+
+# ==========================================
+# 4. BẢO MẬT (Secrets)
+# ==========================================
+# Giấu toàn bộ file chứa biến môi trường và key
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.key
+
+# ==========================================
+# 5. HỆ ĐIỀU HÀNH & IDE
+# ==========================================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

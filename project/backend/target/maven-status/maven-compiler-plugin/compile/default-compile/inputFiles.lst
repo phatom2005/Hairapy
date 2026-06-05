@@ -1,0 +1,8 @@
+D:\Template\nextjs-java-monorepo-template\project\backend\src\main\java\com\example\demo\config\CorsConfig.java
+D:\Template\nextjs-java-monorepo-template\project\backend\src\main\java\com\example\demo\controllers\ItemController.java
+D:\Template\nextjs-java-monorepo-template\project\backend\src\main\java\com\example\demo\DemoApplication.java
+D:\Template\nextjs-java-monorepo-template\project\backend\src\main\java\com\example\demo\exceptions\GlobalExceptionHandler.java
+D:\Template\nextjs-java-monorepo-template\project\backend\src\main\java\com\example\demo\exceptions\ResourceNotFoundException.java
+D:\Template\nextjs-java-monorepo-template\project\backend\src\main\java\com\example\demo\models\Item.java
+D:\Template\nextjs-java-monorepo-template\project\backend\src\main\java\com\example\demo\repositories\ItemRepository.java
+D:\Template\nextjs-java-monorepo-template\project\backend\src\main\java\com\example\demo\services\ItemService.java

@@ -1,81 +1,136 @@
-# Full-Stack Monorepo Template
+# Hairapy
 
-[![CI/CD Pipeline](https://github.com/phatom2005/nextjs-java-monorepo-template/actions/workflows/main.yml/badge.svg)](https://github.com/phatom2005/nextjs-java-monorepo-template/actions)
-[![CodeQL](https://github.com/phatom2005/nextjs-java-monorepo-template/actions/workflows/codeql.yml/badge.svg)](https://github.com/phatom2005/nextjs-java-monorepo-template/security/code-scanning)
+[![CI/CD Pipeline](https://github.com/phatom2005/Hairapy/actions/workflows/main.yml/badge.svg)](https://github.com/phatom2005/Hairapy/actions)
+[![CodeQL](https://github.com/phatom2005/Hairapy/actions/workflows/codeql.yml/badge.svg)](https://github.com/phatom2005/Hairapy/security/code-scanning)
 ![Security Status](https://img.shields.io/badge/Security-Snyk_Protected-blueviolet?logo=snyk)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 *Read this in other languages: [Tiếng Việt](README.vi.md)*
 
-> **Lean, Secure, and Scalable.** 
-> A complete project foundation using **React (Next.js)** and **Java (Spring Boot)**.
+> **Scan. Style. Smile.**
+> AI-powered hairstyle analysis and recommendation web app for Gen Z.
 
-This is a powerful project template designed as a monorepo, combining a modern Frontend (React/Next.js) and a high-performance Backend (Java/Spring Boot), pre-configured with a Dockerized environment for both applications along with a PostgreSQL database.
+Hairapy is a web application that uses AI to analyze face shape and suggest suitable hairstyles. Built as a monorepo with a modern React frontend and a high-performance Java Spring Boot backend.
 
 ## Tech Stack
 
-- **Frontend:** React (Next.js 15 App Router), Tailwind CSS
-- **Backend:** Java (Spring Boot) Web API, Hibernate/Spring Data JPA
-- **Database:** PostgreSQL
-- **DevOps:** Docker, Docker Compose, GitHub Actions
-- **Security:** Snyk Security Scanning
+| Layer | Technology |
+|---|---|
+| **Frontend** | React 18 + Vite, TailwindCSS, Zustand, React Query |
+| **Backend** | Java 21, Spring Boot 3, Spring Security + JWT |
+| **Database** | PostgreSQL 16, Flyway migration |
+| **Cache** | Redis 7 |
+| **Storage** | Cloudflare R2 (auto-delete after 24h) |
+| **Payment** | PayOS + VietQR |
+| **DevOps** | Docker, Docker Compose, GitHub Actions |
+| **Security** | Snyk, Bucket4j rate limiting, HTTPS |
 
 ## Project Structure
 
 ```text
 .
 ├── project/
-│   ├── frontend/         # React (Next.js 15) source code
-│   └── backend/          # Java (Spring Boot) source code
-├── docker-compose.yml    # Configuration file to build & run the entire system
-├── .env                  # Environment variables file (Database Password)
+│   ├── frontend/         # React + Vite source code
+│   └── backend/          # Java Spring Boot source code
+├── docker-compose.yml    # Build & run the entire stack
+├── .env.example          # Environment variables template
 └── README.md
 ```
 
 ## Getting Started
 
 ### 1. Prerequisites
-- [Docker & Docker CLI](https://www.docker.com/) (Recommended for a consistent development environment).
-- [Node.js](https://nodejs.org/) (If you want to run the frontend independently).
-- [Java JDK 17+](https://adoptium.net/) (If you want to develop and test the backend locally).
 
-### 2. Run with Docker (Development Environment)
-The easiest way is to launch the Frontend, Backend, and Database simultaneously with a single command:
+- [Docker Desktop](https://www.docker.com/) — required to run the full stack
+- [Node.js 20+](https://nodejs.org/) — optional, for running frontend independently
+- [Java JDK 21+](https://adoptium.net/) — optional, for running backend independently
 
-1. Ensure your `.env` file has the necessary settings (Defaults to `DB_PASSWORD=YourPassword123` to avoid DB container errors).
-2. Open a terminal at the root of this project and run:
-   ```bash
-   docker compose up --build
-   ```
-3. After a successful build, the services will be available at:
-   - **Frontend (Next.js):** [http://localhost:3000](http://localhost:3000)
-   - **Backend API:** [http://localhost:5000](http://localhost:5000)
-   - **Database (PostgreSQL):** Port `5432`
+### 2. Setup environment
 
-> **Note:** The DB Volume is mapped externally, so your database data is preserved even if the container is stopped. Add the `-d` flag (`docker compose up -d`) if you want to run Docker in detached mode (in the background). To stop the services, run `docker compose down`.
+Copy the example env file and fill in your values:
 
-### 3. Run Services Individually (Manual)
+```bash
+cp .env.example .env
+```
 
-#### Run Frontend independently (requires Node.js):
+Minimum required for local dev:
+
+```env
+DB_PASSWORD=YourPassword123
+JWT_SECRET=hairapy_jwt_secret_key_minimum_32_chars
+```
+
+### 3. Run with Docker
+
+Launch the full stack (Frontend + Backend + PostgreSQL + Redis) with one command:
+
+```bash
+docker compose up --build
+```
+
+After a successful build, services are available at:
+
+| Service | URL |
+|---|---|
+| **Frontend** | http://localhost:3000 |
+| **Backend API** | http://localhost:8090 |
+| **Health Check** | http://localhost:8090/actuator/health |
+| **PostgreSQL** | localhost:5433 |
+| **Redis** | localhost:6379 |
+
+> Add `-d` flag to run in background: `docker compose up -d`
+> Stop all services: `docker compose down`
+
+### 4. Run services individually
+
+**Frontend** (requires Node.js):
 ```bash
 cd project/frontend
 npm install
 npm run dev
+# Available at http://localhost:5173
 ```
 
-#### Run Backend independently (requires Java JDK):
+**Backend** (requires Java 21):
 ```bash
 cd project/backend
 ./mvnw spring-boot:run
+# Ensure PostgreSQL is running locally first
 ```
-*(Note: If running manually, ensure PostgreSQL is running locally or modify the database connection string inside `application.yml` or `application.properties` to match your local DB connection).*
 
-## Customizing the Project 
-- **API Project:** When you change the project structure inside the `backend/` directory, remember to open `docker-compose.yml` and update the `dockerfile` path if needed.
-- **Frontend Environment Variables:** The frontend connects to the backend using the `NEXT_PUBLIC_API_URL` environment variable, which is pre-configured via `.env`/`docker-compose.yml`.
+## User Tiers
 
-## Security / DevOps
-The project comes pre-configured with Github Actions for automated checks and integrates **Snyk Security Scanning** to automatically scan for security vulnerabilities.
+| Feature | Guest | Free | Premium |
+|---|---|---|---|
+| Face analysis | ✗ | 1x/day | 5x/day |
+| Hairstyle try-on | ✗ | 5x/day | 20x/day |
+| Hairstyle catalog | ✗ | Limited | Full |
+| Image quality | ✗ | Watermark | HD, clean |
+| Outfit suggestions | ✗ | ✗ | ✓ |
+
+## Environment Variables
+
+See `.env.example` for all required variables. Key ones:
+
+```env
+DB_PASSWORD=          # PostgreSQL password
+JWT_SECRET=           # Min 32 chars
+R2_BUCKET=            # Cloudflare R2 bucket name
+R2_ACCESS_KEY=        # Cloudflare R2 access key
+R2_SECRET_KEY=        # Cloudflare R2 secret key
+PAYOS_API_KEY=        # PayOS API key
+SENTRY_DSN=           # Sentry error tracking DSN
+```
+
+## Security & DevOps
+
+- **GitHub Actions** — CI/CD pipeline: test → build → deploy on push to `main`
+- **Snyk** — automatic vulnerability scanning on every build
+- **CodeQL** — static code analysis
+- **JWT + Spring Security** — stateless auth with 3-tier access control
+- **Bucket4j** — rate limiting per user tier
+- **HTTPS** — Let's Encrypt via Cloudflare
 
 ---
-**Happy Coding!**
+
+**Hairapy** — FPT University HCM · EXE101 · 2025

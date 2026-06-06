@@ -106,7 +106,7 @@ jobs:
         if: env.SNYK_TOKEN != ''
         working-directory: project/backend
         continue-on-error: true
-        run: snyk test --severity-threshold=high --file=pom.xml -d 2>&1
+        run: snyk test --severity-threshold=high --file=pom.xml
 
       - name: Skip Snyk (SNYK_TOKEN not configured)
         if: env.SNYK_TOKEN == ''

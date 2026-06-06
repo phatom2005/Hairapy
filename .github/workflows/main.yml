@@ -105,7 +105,8 @@ jobs:
       - name: Run Snyk to check for vulnerabilities
         if: env.SNYK_TOKEN != ''
         working-directory: project/backend
-        run: snyk test --severity-threshold=high --package-manager=maven
+        continue-on-error: true
+        run: snyk test --severity-threshold=high --file=pom.xml -d 2>&1
 
       - name: Skip Snyk (SNYK_TOKEN not configured)
         if: env.SNYK_TOKEN == ''

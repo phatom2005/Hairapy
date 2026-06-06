@@ -12,7 +12,10 @@ import org.springframework.test.context.TestPropertySource;
     "spring.datasource.password=",
     "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
     "spring.jpa.hibernate.ddl-auto=create-drop",
-    "app.cors.allowed-origins=http://localhost:5173"
+    "spring.flyway.enabled=false",
+    "app.jwt.secret=dGVzdC1zZWNyZXQta2V5LWZvci1oYWlyYXB5LXRlc3RpbmctdXNlLW9ubHk=",
+    "app.cors.allowed-origins=http://localhost:5173",
+    "sentry.dsn="
 })
 class HairapyApplicationTests {
 

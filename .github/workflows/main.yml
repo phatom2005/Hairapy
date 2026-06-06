@@ -95,9 +95,11 @@ jobs:
           distribution: "temurin"
           cache: maven
 
-      - name: Pre-resolve Maven dependencies
+      - name: Pre-warm Maven wrapper and resolve dependencies
         working-directory: project/backend
-        run: mvn dependency:resolve -q
+        run: |
+          chmod +x mvnw
+          ./mvnw dependency:resolve -q
 
       - name: Install Snyk CLI
         run: npm install -g snyk

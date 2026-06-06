@@ -133,4 +133,4 @@ SENTRY_DSN=           # DSN Sentry error tracking
 
 ---
 
-**Hairapy** — FPT University HCM · EXE101 · 2025
+**Hairapy** — FPT University HCM · EXE101 · 2026

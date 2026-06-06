@@ -88,17 +88,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: maven
+
+      - name: Install Snyk CLI
+        run: npm install -g snyk
+
       - name: Run Snyk to check for vulnerabilities
         if: env.SNYK_TOKEN != ''
-        uses: snyk/actions/maven@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: --severity-threshold=high --file=project/backend/pom.xml
+        working-directory: project/backend
+        run: snyk test --severity-threshold=high
 
       - name: Skip Snyk (SNYK_TOKEN not configured)
         if: env.SNYK_TOKEN == ''
-        run: echo "⚠️ SNYK_TOKEN secret is not set — skipping security scan. Add it in repo Settings → Secrets."
+        run: echo "SNYK_TOKEN secret is not set — skipping security scan."
 
   # ─────────────────────────────────────────
   # JOB 4: Build & Push Docker Images

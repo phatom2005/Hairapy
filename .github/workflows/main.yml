@@ -95,13 +95,17 @@ jobs:
           distribution: "temurin"
           cache: maven
 
+      - name: Pre-resolve Maven dependencies
+        working-directory: project/backend
+        run: mvn dependency:resolve -q
+
       - name: Install Snyk CLI
         run: npm install -g snyk
 
       - name: Run Snyk to check for vulnerabilities
         if: env.SNYK_TOKEN != ''
         working-directory: project/backend
-        run: snyk test --severity-threshold=high
+        run: snyk test --severity-threshold=high --package-manager=maven
 
       - name: Skip Snyk (SNYK_TOKEN not configured)
         if: env.SNYK_TOKEN == ''

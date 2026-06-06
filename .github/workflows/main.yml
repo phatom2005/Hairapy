@@ -41,10 +41,10 @@ jobs:
           retention-days: 1
 
   # ─────────────────────────────────────────
-  # JOB 2: Test & Build Frontend
+  # JOB 2: Lint, Test & Build Frontend
   # ─────────────────────────────────────────
   frontend:
-    name: Frontend — Test & Build
+    name: Frontend — Lint, Test & Build
     runs-on: ubuntu-latest
 
     steps:
@@ -61,6 +61,10 @@ jobs:
       - name: Install dependencies
         working-directory: project/frontend
         run: npm ci
+
+      - name: Lint
+        working-directory: project/frontend
+        run: npm run lint
 
       - name: Run frontend tests
         working-directory: project/frontend
@@ -84,7 +88,6 @@ jobs:
 
       - name: Run Snyk to check for vulnerabilities
         uses: snyk/actions/maven@master
-        continue-on-error: true        # Không block pipeline nếu Snyk lỗi
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:

@@ -14,20 +14,13 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # ==========================================
-# 2. BACKEND (.NET)
+# 2. BACKEND (Java / Maven)
 # ==========================================
-[Bb]in/
-[Oo]bj/
-# Kết quả chạy Test
-TestResults/
-# File cấu hình cá nhân của Visual Studio
-.vs/
-*.user
-*.userosscache
-*.sln.docuser.json
-# Tránh push file appsettings môi trường Dev (chứa connection string)
-backend/**/[Aa]ppsettings.[Dd]evelopment.json
-**/wwwroot/lib/
+target/
+*.class
+*.jar
+*.war
+hs_err_pid*
 
 # ==========================================
 # 3. DOCKER & DATABASE

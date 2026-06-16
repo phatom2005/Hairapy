@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 720" preserveAspectRatio="xMidYMid slice" font-family="'Be Vietnam Pro',system-ui,sans-serif">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2a4ae8"/><stop offset="1" stop-color="#8093ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="720" fill="url(#g)"/>
+  <g opacity="0.12" fill="#fff">
+    <circle cx="108" cy="158" r="120"/>
+    <circle cx="510" cy="576" r="96"/>
+  </g>
+  <g transform="translate(300.0,288.0)" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="0.92">
+    <circle cx="-70.0" cy="63.0" r="30.8"/><circle cx="70.0" cy="63.0" r="30.8"/><path d="M -44.800000000000004 42.0 L 84.0 -84.0"/><path d="M 44.800000000000004 42.0 L -84.0 -84.0"/>
+  </g>
+  <text x="300.0" y="532.8" fill="#fff" font-size="54" font-weight="800" text-anchor="middle">Modern Fade</text>
+  <text x="300.0" y="590.4" fill="#fff" font-size="28" opacity="0.85" text-anchor="middle">Hairstyle</text>
+</svg>

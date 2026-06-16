@@ -1,0 +1,36 @@
+/* ===== Glare Hover styles ===== */
+
+.glare-hover {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.glare-hover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.25) 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+  transition: transform var(--glare-duration, 700ms) ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.glare-hover:hover::after {
+  transform: translateX(100%);
+}
+
+.glare-hover > * {
+  position: relative;
+  z-index: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glare-hover::after { transition: none; display: none; }
+}

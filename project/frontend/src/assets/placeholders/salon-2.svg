@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 440" preserveAspectRatio="xMidYMid slice" font-family="'Be Vietnam Pro',system-ui,sans-serif">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d0ee88"/><stop offset="1" stop-color="#2a4ae8"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="440" fill="url(#g)"/>
+  <g opacity="0.12" fill="#fff">
+    <circle cx="108" cy="96" r="120"/>
+    <circle cx="510" cy="352" r="96"/>
+  </g>
+  <g transform="translate(300.0,176.0)" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="0.92">
+    <rect x="-72.0" y="-60.0" width="144.0" height="132.0" rx="12.0"/><line x1="-36.0" y1="-24.0" x2="-36.0" y2="-24.0"/><circle cx="-30.0" cy="-18.0" r="8.4" fill="#fff" stroke="none"/><circle cx="30.0" cy="-18.0" r="8.4" fill="#fff" stroke="none"/><rect x="-21.599999999999998" y="18.0" width="43.199999999999996" height="54.0"/>
+  </g>
+  <text x="300.0" y="325.6" fill="#fff" font-size="33" font-weight="800" text-anchor="middle">The Studio</text>
+  <text x="300.0" y="360.79999999999995" fill="#fff" font-size="17" opacity="0.85" text-anchor="middle">Hair Salon</text>
+</svg>

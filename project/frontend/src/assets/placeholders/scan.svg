@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" preserveAspectRatio="xMidYMid slice" font-family="'Be Vietnam Pro',system-ui,sans-serif">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2a4ae8"/><stop offset="1" stop-color="#8093ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="800" fill="url(#g)"/>
+  <g opacity="0.12" fill="#fff">
+    <circle cx="108" cy="176" r="120"/>
+    <circle cx="510" cy="640" r="96"/>
+  </g>
+  <g transform="translate(300.0,320.0)" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="0.92">
+    <circle cx="0" cy="0" r="150"/><circle cx="-52.5" cy="-15.0" r="12.0" fill="#fff" stroke="none"/><circle cx="52.5" cy="-15.0" r="12.0" fill="#fff" stroke="none"/><path d="M -45.0 60.0 Q 0 90.0 45.0 60.0"/>
+  </g>
+  <text x="300.0" y="592.0" fill="#fff" font-size="60" font-weight="800" text-anchor="middle">AI Scanning</text>
+  <text x="300.0" y="656.0" fill="#fff" font-size="32" opacity="0.85" text-anchor="middle">150+ facial markers</text>
+</svg>

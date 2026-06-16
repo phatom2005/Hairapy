@@ -1,0 +1,29 @@
+/* ===== Spotlight Card styles ===== */
+
+.spotlight-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate; /* z-index không leak ra ngoài */
+}
+
+.spotlight-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    var(--spotlight-size, 500px) circle at var(--spotlight-x, 50%) var(--spotlight-y, 50%),
+    var(--spotlight-color, rgba(255, 87, 207, 0.18)),
+    transparent 40%
+  );
+  opacity: var(--spotlight-opacity, 0);
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Đảm bảo content nằm trên spotlight */
+.spotlight-card > * {
+  position: relative;
+  z-index: 1;
+}

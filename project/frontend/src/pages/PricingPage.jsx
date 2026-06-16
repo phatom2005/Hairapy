@@ -56,10 +56,16 @@ export default function PricingPage() {
           {PLANS.map((p, i) => (
             <AnimatedContent key={p.name} delay={i * 0.15}>
               {p.highlight ? (
-                /* Premium card: GlareHover sweep + BorderGlow CTA */
-                <GlareHover className="rounded-3xl">
-                  <PlanCard plan={p} premium />
-                </GlareHover>
+                /* Premium card: halo phát sáng phía sau + viền glow xoay quanh card +
+                   nhô cao hơn Free trên desktop để nổi bật hẳn */
+                <div className="relative h-full md:-translate-y-3">
+                  <div className="pointer-events-none absolute inset-[-8%] -z-10 rounded-[40px] bg-pink/25 blur-[50px]" />
+                  <BorderGlow rounded="rounded-3xl" thickness={2} className="block h-full w-full">
+                    <GlareHover className="h-full rounded-3xl">
+                      <PlanCard plan={p} premium />
+                    </GlareHover>
+                  </BorderGlow>
+                </div>
               ) : (
                 <PlanCard plan={p} />
               )}
@@ -98,9 +104,9 @@ export default function PricingPage() {
 /* Tách card ra để re-use trong cả GlareHover wrapper và standalone */
 function PlanCard({ plan: p, premium = false }) {
   return (
-    <Card className={`relative flex h-full flex-col gap-6 ${p.highlight ? "ring-2 ring-pink" : ""}`}>
+    <Card className="relative flex h-full flex-col gap-6">
       {p.highlight && (
-        <Badge variant="hot" className="absolute -top-3 right-6">Bán chạy nhất</Badge>
+        <Badge variant="hot" className="absolute top-4 right-4 shadow">Bán chạy nhất</Badge>
       )}
 
       <div>
@@ -110,7 +116,7 @@ function PlanCard({ plan: p, premium = false }) {
 
       <div>
         <div className="flex items-end gap-1">
-          <span className="text-4xl font-extrabold text-ink">{p.price}</span>
+          <span className={`text-4xl font-extrabold ${premium ? "text-magenta" : "text-ink"}`}>{p.price}</span>
           <span className="pb-1 text-sm text-muted">{p.period}</span>
         </div>
         {p.note && <p className="mt-1 text-xs font-semibold text-magenta">{p.note}</p>}

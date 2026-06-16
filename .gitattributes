@@ -1,2 +1,10 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Force LF for files that must not have CRLF (Docker, shell, env)
+.env            text eol=lf
+.env.*          text eol=lf
+docker-compose* text eol=lf
+Dockerfile*     text eol=lf
+*.sh            text eol=lf
+mvnw            text eol=lf

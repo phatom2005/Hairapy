@@ -32,11 +32,3 @@ CREATE TABLE IF NOT EXISTS usage_history (
 
 CREATE INDEX IF NOT EXISTS idx_usage_history_user_id ON usage_history(user_id);
 CREATE INDEX IF NOT EXISTS idx_usage_history_used_at  ON usage_history(used_at);
-
-CREATE TABLE IF NOT EXISTS items (
-    id          BIGSERIAL    PRIMARY KEY,
-    name        VARCHAR(100) NOT NULL,
-    description VARCHAR(500),
-    created_at  TIMESTAMP,
-    updated_at  TIMESTAMP
-);

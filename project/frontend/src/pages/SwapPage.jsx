@@ -94,14 +94,14 @@ export default function SwapPage() {
     <div className="min-h-screen">
       <Navbar />
 
-      <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-8 px-6 py-12 sm:px-16 lg:grid-cols-[340px_1fr]">
+      <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-8 px-6 py-12 sm:px-16 lg:grid-cols-[380px_1fr]">
         
         {/* ASIDE: bộ chọn */}
         <Card className="flex flex-col gap-6">
           {/* Chọn kiểu tóc */}
           <div>
             <h2 className="mb-3 text-lg font-bold text-ink">Chọn kiểu tóc</h2>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               {STYLES.map((s, i) => (
                 <button key={s.name} onClick={() => setStyleIdx(i)}
                   className={`relative overflow-hidden rounded-xl border-2 transition ${
@@ -219,7 +219,7 @@ export default function SwapPage() {
                   <img 
                     src={s.img} 
                     alt={s.name}
-                    className={`size-16 rounded-xl object-cover transition duration-200 ${
+                    className={`size-20 rounded-xl object-cover transition duration-200 ${
                       styleIdx === i ? "opacity-100 ring-2 ring-primary" : "opacity-60 hover:opacity-100"
                     }`} 
                   />

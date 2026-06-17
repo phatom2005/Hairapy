@@ -53,6 +53,9 @@ export default function ProfilePage() {
           <div className="flex flex-col gap-3">
             <Button to="/scan">Quét AI mới</Button>
             <Button to="/settings" variant="outline">Sửa hồ sơ</Button>
+            {user?.role === "ADMIN" && (
+              <Button to="/admin" variant="pink">Dashboard quản trị</Button>
+            )}
           </div>
         </div>
       </section>

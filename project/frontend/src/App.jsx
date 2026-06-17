@@ -15,6 +15,13 @@ import PricingPage from "./pages/PricingPage";
 import SettingsPage from "./pages/SettingsPage";
 import ProfilePage from "./pages/ProfilePage";
 import SalonsPage from "./pages/SalonsPage";
+import AdminRoute from "./components/auth/AdminRoute";
+import AdminLayout from "./components/admin/AdminLayout";
+import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
+import AdminUsersPage from "./pages/admin/AdminUsersPage";
+import AdminCatalogPage from "./pages/admin/AdminCatalogPage";
+import AdminSubscriptionsPage from "./pages/admin/AdminSubscriptionsPage";
+import AdminUsagePage from "./pages/admin/AdminUsagePage";
 
 // Luồng chính: / -> /scan -> /results -> /swap
 export default function App() {
@@ -49,13 +56,23 @@ export default function App() {
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/salons" element={<SalonsPage />} />
 
-        {/* Protected Routes (yêu cầu đăng nhập) */}
         <Route element={<ProtectedRoute />}>
           <Route path="/scan" element={<ScanPage />} />
           <Route path="/results" element={<ResultsPage />} />
           <Route path="/swap" element={<SwapPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+        </Route>
+
+        {/* Admin Routes (yêu cầu đăng nhập + role ADMIN) */}
+        <Route element={<AdminRoute />}>
+          <Route element={<AdminLayout />}>
+            <Route path="/admin" element={<AdminDashboardPage />} />
+            <Route path="/admin/users" element={<AdminUsersPage />} />
+            <Route path="/admin/catalog" element={<AdminCatalogPage />} />
+            <Route path="/admin/subscriptions" element={<AdminSubscriptionsPage />} />
+            <Route path="/admin/usage" element={<AdminUsagePage />} />
+          </Route>
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

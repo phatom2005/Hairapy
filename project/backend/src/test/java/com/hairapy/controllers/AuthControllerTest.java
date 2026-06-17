@@ -49,7 +49,7 @@ class AuthControllerTest {
 
     @Test
     void registerUser_Success() throws Exception {
-        RegisterRequest request = new RegisterRequest("test@example.com", "password123", "password123");
+        RegisterRequest request = new RegisterRequest("Nguyễn Anh", "test@example.com", "password123", "password123");
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -57,12 +57,13 @@ class AuthControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.token").isNotEmpty())
                 .andExpect(jsonPath("$.email").value("test@example.com"))
-                .andExpect(jsonPath("$.role").value("USER"));
+                .andExpect(jsonPath("$.role").value("USER"))
+                .andExpect(jsonPath("$.fullName").value("Nguyễn Anh"));
     }
 
     @Test
     void registerUser_PasswordMismatch() throws Exception {
-        RegisterRequest request = new RegisterRequest("test@example.com", "password123", "different");
+        RegisterRequest request = new RegisterRequest("Nguyễn Anh", "test@example.com", "password123", "different");
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -78,10 +79,11 @@ class AuthControllerTest {
                 .email("test@example.com")
                 .passwordHash(passwordEncoder.encode("password123"))
                 .role(Role.USER)
+                .fullName("Nguyễn Anh")
                 .build();
         userRepository.save(existingUser);
 
-        RegisterRequest request = new RegisterRequest("test@example.com", "password123", "password123");
+        RegisterRequest request = new RegisterRequest("Nguyễn Anh", "test@example.com", "password123", "password123");
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -97,6 +99,7 @@ class AuthControllerTest {
                 .email("test@example.com")
                 .passwordHash(passwordEncoder.encode("password123"))
                 .role(Role.USER)
+                .fullName("Nguyễn Anh")
                 .build();
         userRepository.save(user);
 
@@ -108,7 +111,8 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").isNotEmpty())
                 .andExpect(jsonPath("$.email").value("test@example.com"))
-                .andExpect(jsonPath("$.role").value("USER"));
+                .andExpect(jsonPath("$.role").value("USER"))
+                .andExpect(jsonPath("$.fullName").value("Nguyễn Anh"));
     }
 
     @Test
@@ -118,6 +122,7 @@ class AuthControllerTest {
                 .email("test@example.com")
                 .passwordHash(passwordEncoder.encode("password123"))
                 .role(Role.USER)
+                .fullName("Nguyễn Anh")
                 .build();
         userRepository.save(user);
 
@@ -134,7 +139,7 @@ class AuthControllerTest {
     @Test
     void getCurrentUser_Success() throws Exception {
         // Đăng ký trước để lấy JWT token hợp lệ
-        RegisterRequest registerRequest = new RegisterRequest("test@example.com", "password123", "password123");
+        RegisterRequest registerRequest = new RegisterRequest("Nguyễn Anh", "test@example.com", "password123", "password123");
 
         String responseJson = mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -149,7 +154,8 @@ class AuthControllerTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("test@example.com"))
-                .andExpect(jsonPath("$.role").value("USER"));
+                .andExpect(jsonPath("$.role").value("USER"))
+                .andExpect(jsonPath("$.fullName").value("Nguyễn Anh"));
     }
 
     @Test

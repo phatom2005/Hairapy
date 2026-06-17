@@ -8,6 +8,10 @@ import jakarta.validation.constraints.Size;
  * DTO yêu cầu đăng ký tài khoản mới.
  */
 public record RegisterRequest(
+    @NotBlank(message = "Họ và tên không được để trống")
+    @Size(max = 100, message = "Họ và tên không được vượt quá 100 ký tự")
+    String fullName,
+
     @NotBlank(message = "Email không được để trống")
     @Email(message = "Email không đúng định dạng")
     String email,

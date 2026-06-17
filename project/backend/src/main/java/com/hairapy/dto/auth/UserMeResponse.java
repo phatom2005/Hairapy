@@ -5,5 +5,6 @@ package com.hairapy.dto.auth;
  */
 public record UserMeResponse(
     String email,
-    String role
+    String role,
+    String fullName
 ) {}

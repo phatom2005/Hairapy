@@ -3,10 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { AuthShell, AuthHeading, OrDivider, SocialButtons } from "../components/auth/AuthShell";
 import { Button, Input } from "../components/ui";
 import { AnimatedContent, BorderGlow } from "../components/animated";
-import { MailIcon, LockIcon, ShieldIcon, ArrowRight, ChevronLeft } from "../components/icons";
+import { MailIcon, LockIcon, UserIcon, ShieldIcon, ArrowRight, ChevronLeft } from "../components/icons";
 import useAuthStore from "../store/useAuthStore";
 
 export default function RegisterPage() {
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -24,7 +25,7 @@ export default function RegisterPage() {
     e.preventDefault();
     setLocalError("");
 
-    if (!email || !password || !confirm) {
+    if (!fullName || !email || !password || !confirm) {
       setLocalError("Vui lòng điền đầy đủ các thông tin bắt buộc");
       return;
     }
@@ -35,7 +36,7 @@ export default function RegisterPage() {
     }
 
     try {
-      const success = await register(email, password, confirm);
+      const success = await register(email, password, confirm, fullName);
       if (success) {
         navigate("/profile");
       }
@@ -59,6 +60,15 @@ export default function RegisterPage() {
           )}
 
           <div className="flex flex-col gap-5">
+            <Input
+              label="Họ và tên"
+              name="fullName"
+              placeholder="Nguyễn Văn A"
+              icon={<UserIcon />}
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+            />
             <Input
               label="Email"
               type="email"

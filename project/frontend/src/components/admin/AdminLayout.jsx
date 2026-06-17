@@ -8,6 +8,7 @@ import {
   ActivityIcon,
   HomeIcon
 } from "../icons";
+import logoStack from "../../assets/logo/logo-stack.png";
 
 export default function AdminLayout() {
   const logout = useAuthStore((state) => state.logout);
@@ -31,11 +32,9 @@ export default function AdminLayout() {
       {/* Sidebar cố định bên trái */}
       <aside className="sticky top-0 flex h-screen w-64 flex-col border-r border-line bg-white p-6 shadow-sm">
         {/* Logo & Subtitle */}
-        <div className="mb-8 px-2">
-          <h1 className="font-display text-2xl font-extrabold tracking-tight text-ink">
-            Hairapy<span className="text-pink">.</span>
-          </h1>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted mt-1">
+        <div className="mb-8 px-2 flex flex-col items-center">
+          <img src={logoStack} alt="Hairapy Logo" className="h-16 w-auto object-contain" />
+          <p className="text-[9px] font-bold uppercase tracking-widest text-muted mt-3 text-center">
             Admin Management
           </p>
         </div>

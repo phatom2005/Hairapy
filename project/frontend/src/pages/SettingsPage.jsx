@@ -5,12 +5,14 @@ import { Button, Card, Input } from "../components/ui";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import { UserIcon, CameraIcon } from "../components/icons";
+import useAuthStore from "../store/useAuthStore";
 
 const NAV = ["Thông tin cá nhân", "Thông báo", "Bảo mật", "Gói dịch vụ"];
 
 export default function SettingsPage() {
   const [active, setActive] = useState(NAV[0]);
   const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
 
   return (
     <div className="min-h-screen">
@@ -29,7 +31,10 @@ export default function SettingsPage() {
               </button>
             ))}
             <div className="my-2 h-px bg-divider/30" />
-            <button onClick={() => navigate("/login")}
+            <button onClick={() => {
+              logout();
+              navigate("/login");
+            }}
               className="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-base text-[#ba1a1a] hover:bg-[#ba1a1a]/5">
               Đăng xuất
             </button>
@@ -57,8 +62,8 @@ export default function SettingsPage() {
           {/* Form */}
           <form className="flex flex-col gap-8" onSubmit={(e) => e.preventDefault()}>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <Input label="Họ và tên" defaultValue="Nguyễn Hoàng Nam" />
-              <Input label="Email" type="email" defaultValue="hoangnam.dev@gmail.com" />
+              <Input label="Họ và tên" defaultValue={user?.email ? user.email.split("@")[0] : "Nguyễn Hoàng Nam"} />
+              <Input label="Email" type="email" defaultValue={user?.email || ""} readOnly />
               <Input label="Số điện thoại" defaultValue="+84 987 654 321" />
               <Input label="Ngày sinh" type="date" defaultValue="1998-05-15" />
             </div>

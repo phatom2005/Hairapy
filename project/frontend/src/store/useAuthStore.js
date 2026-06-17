@@ -1,0 +1,85 @@
+import { create } from "zustand";
+import api from "../lib/api";
+
+/**
+ * Zustand Store quản lý trạng thái xác thực người dùng.
+ * Làm nguồn chân lý duy nhất (Single Source of Truth) cho frontend.
+ */
+const useAuthStore = create((set, get) => ({
+  token: localStorage.getItem("token") || null,
+  user: null,
+  loading: false,
+  error: null,
+  hydrated: false,
+
+  /**
+   * Đăng nhập người dùng bằng email và mật khẩu.
+   */
+  login: async (email, password) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await api.post("/auth/login", { email, password });
+      const { token, email: userEmail, role } = res.data;
+      localStorage.setItem("token", token);
+      set({ token, user: { email: userEmail, role }, loading: false });
+      return true;
+    } catch (err) {
+      const errMsg = err.response?.data?.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại.";
+      set({ error: errMsg, loading: false });
+      throw new Error(errMsg);
+    }
+  },
+
+  /**
+   * Đăng ký tài khoản người dùng mới.
+   */
+  register: async (email, password, confirmPassword) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await api.post("/auth/register", { email, password, confirmPassword });
+      const { token, email: userEmail, role } = res.data;
+      localStorage.setItem("token", token);
+      set({ token, user: { email: userEmail, role }, loading: false });
+      return true;
+    } catch (err) {
+      const errMsg = err.response?.data?.message || "Đăng ký thất bại. Vui lòng thử lại.";
+      set({ error: errMsg, loading: false });
+      throw new Error(errMsg);
+    }
+  },
+
+  /**
+   * Đăng xuất, xóa toàn bộ thông tin xác thực khỏi store và localStorage.
+   */
+  logout: () => {
+    localStorage.removeItem("token");
+    set({ token: null, user: null, error: null });
+  },
+
+  /**
+   * Đồng bộ lại trạng thái xác thực khi tải/làm mới trang.
+   * Nếu có token, sẽ gọi API /auth/me để lấy thông tin người dùng mới nhất.
+   */
+  hydrate: async () => {
+    const { token } = get();
+    if (!token) {
+      set({ hydrated: true });
+      return;
+    }
+    try {
+      const res = await api.get("/auth/me");
+      set({ user: res.data, hydrated: true });
+    } catch (err) {
+      // Nếu token hết hạn hoặc không hợp lệ, đăng xuất người dùng
+      localStorage.removeItem("token");
+      set({ token: null, user: null, hydrated: true });
+    }
+  },
+
+  /**
+   * Xóa thông báo lỗi hiện tại.
+   */
+  clearError: () => set({ error: null }),
+}));
+
+export default useAuthStore;

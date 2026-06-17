@@ -4,6 +4,7 @@ import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import { ArrowRight } from "../components/icons";
 import { AnimatedContent, SpotlightCard } from "../components/animated";
+import useAuthStore from "../store/useAuthStore";
 
 const METRICS = [
   { label: "Dáng mặt", value: "Oval" },
@@ -21,6 +22,10 @@ const SAVED = [
 ];
 
 export default function ProfilePage() {
+  const { user } = useAuthStore();
+  const userName = user?.email ? user.email.split("@")[0] : "Người dùng";
+  const userRole = user?.role === "ADMIN" ? "Admin" : (user?.role === "PREMIUM" ? "Premium" : "Thành viên");
+
   return (
     <div className="min-h-screen">
       <Navbar />
@@ -28,14 +33,14 @@ export default function ProfilePage() {
       {/* Header hồ sơ */}
       <section className="bg-transparent px-6 py-12 sm:px-16">
         <div className="mx-auto flex max-w-[1100px] flex-col items-center gap-6 sm:flex-row sm:items-center">
-          <img src={PROFILE_IMG} alt="Nguyễn Anh"
+          <img src={PROFILE_IMG} alt={userName}
             className="size-28 rounded-full border-4 border-white object-cover shadow-lg" />
           <div className="flex-1 text-center sm:text-left">
             <div className="flex flex-col items-center gap-2 sm:flex-row">
-              <h1 className="font-display text-3xl font-bold text-ink">Nguyễn Anh</h1>
-              <Badge variant="premium">Thành viên Premium</Badge>
+              <h1 className="font-display text-3xl font-bold text-ink">{userName}</h1>
+              <Badge variant={user?.role === "ADMIN" ? "new" : "premium"}>{userRole}</Badge>
             </div>
-            <p className="mt-1 text-sm text-mauve">Gói đăng ký có hiệu lực đến 12/2026</p>
+            <p className="mt-1 text-sm text-mauve">{user?.email}</p>
             <div className="mt-4 flex justify-center gap-8 sm:justify-start">
               {METRICS.map((m) => (
                 <div key={m.label}>

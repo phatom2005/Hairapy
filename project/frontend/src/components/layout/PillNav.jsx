@@ -11,6 +11,7 @@ import Logo from "./Logo";
 import Button from "../ui/Button";
 import StaggeredMenu from "./StaggeredMenu";
 import { PROFILE_IMG } from "../../lib/figmaAssets";
+import useAuthStore from "../../store/useAuthStore";
 
 const DEFAULT_ITEMS = [
   { label: "Tính năng", to: "/#features" },
@@ -21,6 +22,7 @@ const DEFAULT_ITEMS = [
 export default function PillNav({ items = DEFAULT_ITEMS }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const { token, logout } = useAuthStore();
 
   // Resolve active item theo URL (so sánh path bỏ hash)
   const activeLabel = items.find((it) => {
@@ -68,17 +70,30 @@ export default function PillNav({ items = DEFAULT_ITEMS }) {
 
           {/* Right side: login + CTA + profile (desktop) | hamburger (mobile) */}
           <div className="hidden items-center gap-4 md:flex">
-            <Link to="/login" className="text-sm font-semibold text-mauve hover:text-ink">
-              Đăng nhập
-            </Link>
-            <Button to="/register" size="sm">Bắt đầu ngay</Button>
-            <Link to="/profile" aria-label="Tài khoản">
-              <img
-                src={PROFILE_IMG}
-                alt=""
-                className="size-9 rounded-full border-2 border-white object-cover shadow"
-              />
-            </Link>
+            {!token ? (
+              <>
+                <Link to="/login" className="text-sm font-semibold text-mauve hover:text-ink">
+                  Đăng nhập
+                </Link>
+                <Button to="/register" size="sm">Bắt đầu ngay</Button>
+              </>
+            ) : (
+              <>
+                <Link to="/profile" aria-label="Tài khoản" className="flex items-center gap-2">
+                  <img
+                    src={PROFILE_IMG}
+                    alt=""
+                    className="size-9 rounded-full border-2 border-white object-cover shadow"
+                  />
+                </Link>
+                <button
+                  onClick={logout}
+                  className="text-sm font-semibold text-[#ba1a1a] hover:text-[#ba1a1a]/80"
+                >
+                  Đăng xuất
+                </button>
+              </>
+            )}
           </div>
 
           {/* Mobile hamburger */}

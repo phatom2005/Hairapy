@@ -31,7 +31,15 @@ export default function AdminSubscriptionsPage() {
   }, [statusFilter, page]);
 
   useEffect(() => {
-    fetchSubscriptions();
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) {
+        fetchSubscriptions();
+      }
+    });
+    return () => {
+      active = false;
+    };
   }, [fetchSubscriptions]);
 
   // Hủy gói subscription

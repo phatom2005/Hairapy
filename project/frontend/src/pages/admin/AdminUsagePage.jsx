@@ -24,7 +24,15 @@ export default function AdminUsagePage() {
   }, [page]);
 
   useEffect(() => {
-    fetchUsageHistory();
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) {
+        fetchUsageHistory();
+      }
+    });
+    return () => {
+      active = false;
+    };
   }, [fetchUsageHistory]);
 
   const formatDate = (dateStr) => {

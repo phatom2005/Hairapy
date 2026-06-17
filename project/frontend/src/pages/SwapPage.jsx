@@ -83,8 +83,10 @@ export default function SwapPage() {
       }
     } catch (err) {
       console.error("Lỗi khi gọi Hair Swap API:", err);
-      const errMsg = err.response?.data?.error || "AI xử lý quá lâu hoặc gặp sự cố, vui lòng thử lại.";
-      setError(errMsg);
+      const errorData = err.response?.data;
+      const errMsg = errorData?.error || "AI xử lý quá lâu hoặc gặp sự cố, vui lòng thử lại.";
+      const errDetails = errorData?.details ? ` (Chi tiết: ${errorData.details})` : "";
+      setError(`${errMsg}${errDetails}`);
     } finally {
       setLoading(false);
     }

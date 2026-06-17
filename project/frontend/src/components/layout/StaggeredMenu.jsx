@@ -6,6 +6,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "motion/react";
 import Button from "../ui/Button";
+import useAuthStore from "../../store/useAuthStore";
 
 const containerVariants = {
   hidden: {},
@@ -20,6 +21,7 @@ const itemVariants = {
 };
 
 export default function StaggeredMenu({ items, onClose }) {
+  const { token, logout } = useAuthStore();
   return (
     <motion.div
       initial="hidden"
@@ -61,12 +63,31 @@ export default function StaggeredMenu({ items, onClose }) {
 
         {/* CTA group */}
         <motion.li variants={itemVariants} className="mt-8 flex flex-col items-center gap-4">
-          <Link to="/login" onClick={onClose} className="text-base font-semibold text-mauve">
-            Login
-          </Link>
-          <Button to="/register" size="lg" onClick={onClose}>
-            Bắt đầu ngay
-          </Button>
+          {!token ? (
+            <>
+              <Link to="/login" onClick={onClose} className="text-base font-semibold text-mauve">
+                Đăng nhập
+              </Link>
+              <Button to="/register" size="lg" onClick={onClose}>
+                Bắt đầu ngay
+              </Button>
+            </>
+          ) : (
+            <>
+              <Link to="/profile" onClick={onClose} className="text-base font-semibold text-mauve">
+                Hồ sơ cá nhân
+              </Link>
+              <button
+                onClick={() => {
+                  logout();
+                  onClose();
+                }}
+                className="text-base font-semibold text-[#ba1a1a]"
+              >
+                Đăng xuất
+              </button>
+            </>
+          )}
         </motion.li>
       </motion.ul>
     </motion.div>

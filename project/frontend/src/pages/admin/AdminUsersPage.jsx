@@ -43,7 +43,15 @@ export default function AdminUsersPage() {
   }, [debouncedSearch, page]);
 
   useEffect(() => {
-    fetchUsers();
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) {
+        fetchUsers();
+      }
+    });
+    return () => {
+      active = false;
+    };
   }, [fetchUsers]);
 
   // Toggle role người dùng

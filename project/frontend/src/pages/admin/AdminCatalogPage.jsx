@@ -40,7 +40,15 @@ export default function AdminCatalogPage() {
   }, [page]);
 
   useEffect(() => {
-    fetchCatalog();
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) {
+        fetchCatalog();
+      }
+    });
+    return () => {
+      active = false;
+    };
   }, [fetchCatalog]);
 
   // Mở modal thêm mới

@@ -32,7 +32,8 @@ export async function initFaceAnalyzer() {
       );
 
       // Khởi tạo FaceLandmarker từ model task CDN của Google
-      faceLandmarkerInstance = await FaceLandmarker.createFromOptions(filesetResolver, {
+      // Ưu tiên GPU, fallback CPU nếu thiết bị không hỗ trợ WebGPU
+      const modelOptions = {
         baseOptions: {
           modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
           delegate: "GPU"
@@ -41,7 +42,16 @@ export async function initFaceAnalyzer() {
         numFaces: 1,
         outputFaceBlendshapes: false,
         outputFacialTransformationMatrixes: false
-      });
+      };
+
+      try {
+        faceLandmarkerInstance = await FaceLandmarker.createFromOptions(filesetResolver, modelOptions);
+      } catch {
+        // Fallback sang CPU nếu GPU không khả dụng
+        console.warn("GPU delegate không khả dụng, chuyển sang CPU.");
+        modelOptions.baseOptions.delegate = "CPU";
+        faceLandmarkerInstance = await FaceLandmarker.createFromOptions(filesetResolver, modelOptions);
+      }
 
       return faceLandmarkerInstance;
     } catch (error) {

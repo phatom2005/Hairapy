@@ -121,6 +121,9 @@ public class HairSwapService {
             }
 
             return resultImage;
+        } catch (RuntimeException e) {
+            // Ném lại RuntimeException đã throw ở trên mà không wrap thêm lần nữa
+            throw e;
         } catch (Exception e) {
             log.error("Lỗi khi thực hiện Hair Swap:", e);
             throw new RuntimeException("Xử lý AI thất bại: " + e.getMessage());

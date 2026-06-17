@@ -14,8 +14,10 @@ public class CorsConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(@NonNull CorsRegistry registry) {
+        // Split comma-separated origins — env var dạng "http://localhost:5173,https://hairapy-opal.vercel.app"
+        String[] origins = allowedOrigins.split(",");
         registry.addMapping("/api/**")
-                .allowedOriginPatterns(allowedOrigins)
+                .allowedOriginPatterns(origins)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("Authorization", "Content-Type", "Accept")
                 .allowCredentials(true);

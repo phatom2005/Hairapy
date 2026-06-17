@@ -1,24 +1,128 @@
+import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { SCAN_PORTRAIT } from "../lib/figmaAssets";
-import { Button, Badge } from "../components/ui";
+import { Button, Badge, DisclosureModal } from "../components/ui";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import { CameraIcon, UploadIcon } from "../components/icons";
 import { AnimatedContent, BorderGlow } from "../components/animated";
+import { useScanStore } from "../store/useScanStore";
+import { analyzeFace, initFaceAnalyzer } from "../lib/faceAnalysis";
 
 const STATS = [
-  { value: "150+", label: "Điểm khuôn mặt" },
+  { value: "478 điểm", label: "Điểm khuôn mặt" },
   { value: "0.2s", label: "Thời gian xử lý" },
   { value: "Toàn cầu", label: "Kho xu hướng" },
 ];
 
 export default function ScanPage() {
   const navigate = useNavigate();
-  const goResults = () => navigate("/results");
+  const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+
+  // Lấy dữ liệu và actions từ Zustand store
+  const { 
+    previewUrl, 
+    setImage, 
+    setResult, 
+    analyzing, 
+    setAnalyzing, 
+    error, 
+    setError, 
+    reset 
+  } = useScanStore();
+
+  const [showDisclosure, setShowDisclosure] = useState(false);
+  const [pendingFile, setPendingFile] = useState(null);
+
+  // Preload model MediaPipe khi vào trang lần đầu tiên
+  useEffect(() => {
+    initFaceAnalyzer().catch(err => {
+      console.error("Lỗi preload model:", err);
+    });
+  }, []);
+
+  // Xử lý sự kiện khi người dùng chọn/chụp ảnh
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Kiểm tra kích thước file (tối đa 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Kích thước tệp tin vượt quá 5MB. Vui lòng chọn ảnh nhỏ hơn.");
+      return;
+    }
+
+    const accepted = localStorage.getItem("hairapy_disclosure_accepted") === "true";
+    if (accepted) {
+      startAnalysis(file);
+    } else {
+      setPendingFile(file);
+      setShowDisclosure(true);
+    }
+  };
+
+  // Kích hoạt phân tích ảnh
+  const startAnalysis = async (file) => {
+    setAnalyzing(true);
+    setError(null);
+    setImage(file); // Lưu ảnh và tạo previewUrl
+
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.src = objectUrl;
+
+    img.onload = async () => {
+      try {
+        // Chạy thuật toán phân tích khuôn mặt MediaPipe trên Client
+        const result = await analyzeFace(img);
+        setResult(result);
+        setAnalyzing(false);
+        URL.revokeObjectURL(objectUrl);
+        // Điều hướng sang trang hiển thị kết quả
+        navigate("/results");
+      } catch (err) {
+        console.error("Lỗi phân tích khuôn mặt:", err);
+        setError(err.message || "Không thể phân tích khuôn mặt. Hãy chắc chắn ảnh rõ mặt.");
+        setAnalyzing(false);
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+
+    img.onerror = () => {
+      setError("Không thể tải hình ảnh để tiến hành phân tích.");
+      setAnalyzing(false);
+      URL.revokeObjectURL(objectUrl);
+    };
+  };
+
+  // Đồng ý điều khoản bảo mật
+  const handleAcceptDisclosure = () => {
+    setShowDisclosure(false);
+    if (pendingFile) {
+      startAnalysis(pendingFile);
+      setPendingFile(null);
+    }
+  };
+
+  // Từ chối điều khoản bảo mật
+  const handleCloseDisclosure = () => {
+    setShowDisclosure(false);
+    setPendingFile(null);
+    reset();
+  };
 
   return (
     <div className="min-h-screen">
       <Navbar />
+
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes laserScan {
+          0% { top: 0%; }
+          50% { top: 100%; }
+          100% { top: 0%; }
+        }
+      `}} />
 
       <section className="mx-auto grid max-w-[1100px] grid-cols-1 items-center gap-12 px-6 py-16 sm:px-10 lg:grid-cols-2">
         {/* Trái: nội dung */}
@@ -31,21 +135,61 @@ export default function ScanPage() {
               </h1>
               <p className="max-w-lg text-lg leading-7 text-mauve">
                 Trải nghiệm tương lai của tạo kiểu với mạng nơ-ron tiên tiến. AI của chúng tôi phân tích
-                hơn 150+ điểm trên khuôn mặt để gợi ý kiểu cắt, màu và phong cách phù hợp nhất
+                hơn 470+ điểm trên khuôn mặt để gợi ý kiểu cắt, màu và phong cách phù hợp nhất
                 với cấu trúc xương riêng của bạn.
               </p>
             </div>
           </AnimatedContent>
 
           <AnimatedContent delay={0.2}>
-            <div className="flex flex-wrap gap-4">
-              {/* CTA chính: viền glow xoay */}
-              <BorderGlow rounded="rounded-full" thickness={2}>
-                <Button onClick={goResults} icon={<CameraIcon size={20} />}>Chụp ảnh</Button>
-              </BorderGlow>
-              <Button onClick={goResults} variant="outline" icon={<UploadIcon size={20} />}>Tải ảnh lên</Button>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-wrap gap-4">
+                {/* Nút chụp ảnh (dành cho Mobile camera) */}
+                <BorderGlow rounded="rounded-full" thickness={2}>
+                  <Button 
+                    onClick={() => cameraInputRef.current?.click()} 
+                    icon={<CameraIcon size={20} />}
+                    disabled={analyzing}
+                  >
+                    Chụp ảnh
+                  </Button>
+                </BorderGlow>
+                {/* Nút tải ảnh lên */}
+                <Button 
+                  onClick={() => fileInputRef.current?.click()} 
+                  variant="outline" 
+                  icon={<UploadIcon size={20} />}
+                  disabled={analyzing}
+                >
+                  Tải ảnh lên
+                </Button>
+              </div>
+
+              {/* Hiển thị lỗi nếu quá trình phân tích hoặc tải ảnh thất bại */}
+              {error && (
+                <div className="max-w-lg rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-sm font-medium text-red-500">
+                  ⚠️ {error}
+                </div>
+              )}
             </div>
           </AnimatedContent>
+
+          {/* Các input ẩn xử lý chọn ảnh */}
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileChange} 
+            accept="image/*" 
+            className="hidden" 
+          />
+          <input 
+            type="file" 
+            ref={cameraInputRef} 
+            onChange={handleFileChange} 
+            accept="image/*" 
+            capture="user" 
+            className="hidden" 
+          />
 
           <AnimatedContent delay={0.4}>
             <div className="flex gap-8 pt-4">
@@ -66,7 +210,31 @@ export default function ScanPage() {
             <div className="pointer-events-none absolute -bottom-20 -left-20 size-80 rounded-full bg-primary/5 blur-[32px]" />
 
             <div className="relative overflow-hidden rounded-[32px] border-4 border-white bg-line shadow-2xl">
-              <img src={SCAN_PORTRAIT} alt="Đang quét AI" className="aspect-[3/4] w-full object-cover" />
+              <img 
+                src={previewUrl || SCAN_PORTRAIT} 
+                alt="Đang quét AI" 
+                className="aspect-[3/4] w-full object-cover transition-all duration-300" 
+              />
+
+              {/* Hiệu ứng quét laser chuyển động đẹp mắt khi đang chạy MediaPipe */}
+              {analyzing && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink/60 backdrop-blur-sm transition-opacity duration-300">
+                  <div className="relative z-10 flex flex-col items-center gap-4 text-center px-6">
+                    <span className="size-16 animate-spin rounded-full border-4 border-pink border-t-transparent shadow-lg" />
+                    <p className="font-display font-semibold text-white animate-pulse tracking-wide text-lg">
+                      Đang phân tích khuôn mặt...
+                    </p>
+                    <p className="text-xs text-white/70">
+                      Tính toán 478 điểm mốc bằng WebAssembly
+                    </p>
+                  </div>
+                  {/* Đường laser quét */}
+                  <div 
+                    className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-pink to-transparent shadow-[0_0_15px_#ff57cf]" 
+                    style={{ animation: "laserScan 2.5s ease-in-out infinite" }}
+                  />
+                </div>
+              )}
 
               {/* 4 góc khung digital */}
               {[
@@ -90,18 +258,25 @@ export default function ScanPage() {
                   <span className="size-10 rounded-full border-2 border-pink" />
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">Nhận diện khuôn mặt</p>
-                    <p className="text-sm font-semibold text-white">DÁNG OVAL</p>
+                    <p className="text-sm font-semibold text-white">CHẠY CLIENT-SIDE</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">Độ tin cậy</p>
-                  <p className="text-2xl font-bold text-pink">94%</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">Độ bảo mật</p>
+                  <p className="text-2xl font-bold text-pink">100%</p>
                 </div>
               </div>
             </div>
           </div>
         </AnimatedContent>
       </section>
+
+      {/* Modal chính sách quyền riêng tư */}
+      <DisclosureModal 
+        isOpen={showDisclosure} 
+        onClose={handleCloseDisclosure} 
+        onAccept={handleAcceptDisclosure} 
+      />
 
       <Footer />
     </div>

@@ -25,7 +25,7 @@ export default function LoginPage() {
       if (success) {
         navigate("/profile");
       }
-    } catch (err) {
+    } catch {
       // Lỗi đã được lưu trữ trong store và hiển thị trên giao diện
     }
   }

@@ -174,7 +174,7 @@ export default function SwapPage() {
             <img 
               src={resultImage || previewUrl} 
               alt="Preview chân dung" 
-              className="aspect-[4/3] w-full object-cover transition-all duration-300" 
+              className="aspect-[3/4] w-full object-cover transition-all duration-300" 
             />
             
             {/* Lớp phủ màu mô phỏng */}

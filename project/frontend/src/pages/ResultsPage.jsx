@@ -189,7 +189,7 @@ export default function ResultsPage() {
           <div className="flex flex-col gap-6">
             <SectionHeading 
               center={false}
-              title={`Kiểu tóc dành cho gương mặt ${FACE_SHAPE_TRANSLATION[faceShape].split(" ")[0]}`}
+              title={`Kiểu tóc dành cho gương mặt ${FACE_SHAPE_TRANSLATION[faceShape].split(" (")[0]}`}
               subtitle="4 đề xuất hàng đầu phù hợp nhất với cấu trúc xương của bạn."
               action={<a href="#" className="flex shrink-0 items-center gap-2 font-bold text-primary">Xem tất cả <ArrowRight /></a>} 
             />

@@ -18,7 +18,6 @@ export default function RegisterPage() {
   // Xóa các lỗi cũ khi mở trang đăng ký
   useEffect(() => {
     clearError();
-    setLocalError("");
   }, [clearError]);
 
   async function handleSubmit(e) {
@@ -40,7 +39,7 @@ export default function RegisterPage() {
       if (success) {
         navigate("/profile");
       }
-    } catch (err) {
+    } catch {
       // Lỗi từ server đã được lưu trữ trong store và hiển thị trên giao diện
     }
   }

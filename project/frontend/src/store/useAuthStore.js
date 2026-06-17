@@ -26,7 +26,7 @@ const useAuthStore = create((set, get) => ({
     } catch (err) {
       const errMsg = err.response?.data?.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại.";
       set({ error: errMsg, loading: false });
-      throw new Error(errMsg);
+      throw new Error(errMsg, { cause: err });
     }
   },
 
@@ -44,7 +44,7 @@ const useAuthStore = create((set, get) => ({
     } catch (err) {
       const errMsg = err.response?.data?.message || "Đăng ký thất bại. Vui lòng thử lại.";
       set({ error: errMsg, loading: false });
-      throw new Error(errMsg);
+      throw new Error(errMsg, { cause: err });
     }
   },
 
@@ -69,7 +69,7 @@ const useAuthStore = create((set, get) => ({
     try {
       const res = await api.get("/auth/me");
       set({ user: res.data, hydrated: true });
-    } catch (err) {
+    } catch {
       // Nếu token hết hạn hoặc không hợp lệ, đăng xuất người dùng
       localStorage.removeItem("token");
       set({ token: null, user: null, hydrated: true });

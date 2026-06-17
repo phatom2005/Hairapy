@@ -52,3 +52,4 @@ pgdata/
 Thumbs.db
 desktop.ini
 .claude/
+gemini-prompt-auth.md

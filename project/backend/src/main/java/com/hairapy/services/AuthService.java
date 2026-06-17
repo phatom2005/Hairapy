@@ -47,6 +47,7 @@ public class AuthService {
                 .email(request.email())
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .role(Role.USER)
+                .fullName(request.fullName())
                 .build();
 
         // Lưu thông tin người dùng vào cơ sở dữ liệu
@@ -56,7 +57,7 @@ public class AuthService {
         String token = jwtService.generateToken(user);
 
         // Trả về kết quả đăng ký thành công
-        return new AuthResponse(token, user.getEmail(), user.getRole().name());
+        return new AuthResponse(token, user.getEmail(), user.getRole().name(), user.getFullName());
     }
 
     /**
@@ -80,6 +81,6 @@ public class AuthService {
         String token = jwtService.generateToken(user);
 
         // Trả về kết quả đăng nhập thành công
-        return new AuthResponse(token, user.getEmail(), user.getRole().name());
+        return new AuthResponse(token, user.getEmail(), user.getRole().name(), user.getFullName());
     }
 }

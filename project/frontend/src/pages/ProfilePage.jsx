@@ -23,7 +23,7 @@ const SAVED = [
 
 export default function ProfilePage() {
   const { user } = useAuthStore();
-  const userName = user?.email ? user.email.split("@")[0] : "Người dùng";
+  const userName = user?.fullName || (user?.email ? user.email.split("@")[0] : "Người dùng");
   const userRole = user?.role === "ADMIN" ? "Admin" : (user?.role === "PREMIUM" ? "Premium" : "Thành viên");
 
   return (

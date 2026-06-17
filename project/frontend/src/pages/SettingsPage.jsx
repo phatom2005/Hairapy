@@ -62,7 +62,7 @@ export default function SettingsPage() {
           {/* Form */}
           <form className="flex flex-col gap-8" onSubmit={(e) => e.preventDefault()}>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <Input label="Họ và tên" defaultValue={user?.email ? user.email.split("@")[0] : "Nguyễn Hoàng Nam"} />
+              <Input label="Họ và tên" defaultValue={user?.fullName || (user?.email ? user.email.split("@")[0] : "Nguyễn Hoàng Nam")} />
               <Input label="Email" type="email" defaultValue={user?.email || ""} readOnly />
               <Input label="Số điện thoại" defaultValue="+84 987 654 321" />
               <Input label="Ngày sinh" type="date" defaultValue="1998-05-15" />

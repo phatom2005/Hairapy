@@ -19,9 +19,9 @@ const useAuthStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const res = await api.post("/auth/login", { email, password });
-      const { token, email: userEmail, role } = res.data;
+      const { token, email: userEmail, role, fullName } = res.data;
       localStorage.setItem("token", token);
-      set({ token, user: { email: userEmail, role }, loading: false });
+      set({ token, user: { email: userEmail, role, fullName }, loading: false });
       return true;
     } catch (err) {
       let errMsg = "Đăng nhập thất bại. Vui lòng kiểm tra lại.";
@@ -40,13 +40,13 @@ const useAuthStore = create((set, get) => ({
   /**
    * Đăng ký tài khoản người dùng mới.
    */
-  register: async (email, password, confirmPassword) => {
+  register: async (email, password, confirmPassword, fullName) => {
     set({ loading: true, error: null });
     try {
-      const res = await api.post("/auth/register", { email, password, confirmPassword });
-      const { token, email: userEmail, role } = res.data;
+      const res = await api.post("/auth/register", { email, password, confirmPassword, fullName });
+      const { token, email: userEmail, role, fullName: userFullName } = res.data;
       localStorage.setItem("token", token);
-      set({ token, user: { email: userEmail, role }, loading: false });
+      set({ token, user: { email: userEmail, role, fullName: userFullName }, loading: false });
       return true;
     } catch (err) {
       let errMsg = "Đăng ký thất bại. Vui lòng thử lại.";

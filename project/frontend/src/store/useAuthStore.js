@@ -24,7 +24,14 @@ const useAuthStore = create((set, get) => ({
       set({ token, user: { email: userEmail, role }, loading: false });
       return true;
     } catch (err) {
-      const errMsg = err.response?.data?.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại.";
+      let errMsg = "Đăng nhập thất bại. Vui lòng kiểm tra lại.";
+      if (err.response?.data) {
+        if (err.response.data.message) {
+          errMsg = err.response.data.message;
+        } else if (err.response.data.errors) {
+          errMsg = Object.values(err.response.data.errors).join(", ");
+        }
+      }
       set({ error: errMsg, loading: false });
       throw new Error(errMsg, { cause: err });
     }
@@ -42,7 +49,14 @@ const useAuthStore = create((set, get) => ({
       set({ token, user: { email: userEmail, role }, loading: false });
       return true;
     } catch (err) {
-      const errMsg = err.response?.data?.message || "Đăng ký thất bại. Vui lòng thử lại.";
+      let errMsg = "Đăng ký thất bại. Vui lòng thử lại.";
+      if (err.response?.data) {
+        if (err.response.data.message) {
+          errMsg = err.response.data.message;
+        } else if (err.response.data.errors) {
+          errMsg = Object.values(err.response.data.errors).join(", ");
+        }
+      }
       set({ error: errMsg, loading: false });
       throw new Error(errMsg, { cause: err });
     }

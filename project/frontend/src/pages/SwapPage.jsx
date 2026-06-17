@@ -86,7 +86,16 @@ export default function SwapPage() {
       const errorData = err.response?.data;
       const errMsg = errorData?.error || "AI xử lý quá lâu hoặc gặp sự cố, vui lòng thử lại.";
       const errDetails = errorData?.details ? ` (Chi tiết: ${errorData.details})` : "";
-      setError(`${errMsg}${errDetails}`);
+      
+      const isCreditError = errDetails.toLowerCase().includes("credits") || errDetails.toLowerCase().includes("credit");
+      const isKeyError = errDetails.toLowerCase().includes("key") || errDetails.toLowerCase().includes("key");
+
+      if (isCreditError || isKeyError) {
+        setError("Tài khoản AILabTools đã hết điểm (Credits) hoặc chưa cấu hình API Key chính xác. Vui lòng đăng ký/nạp thêm tại ailabtools.com và cấu hình biến AILAB_API_KEY trên Railway. (Hệ thống đã tự động chuyển sang Chế độ Mô phỏng để không gián đoạn demo).");
+        setResultImage(previewUrl);
+      } else {
+        setError(`${errMsg}${errDetails}`);
+      }
     } finally {
       setLoading(false);
     }

@@ -1,19 +1,11 @@
 import { useState } from "react";
-import { TRENDS } from "../lib/figmaAssets";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import { Button, Card, Badge, Input } from "../components/ui";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import { AnimatedContent, SpotlightCard } from "../components/animated";
-
-// Dữ liệu mock catalog (sau nối API GET /api/hairstyles)
-const ITEMS = [
-  { name: "Wolf Cut Pastel", tag: "Thịnh hành", face: "Trái xoan", length: "Vừa", desc: "Sự kết hợp hoàn hảo giữa nét phá cách và dịu dàng.", img: TRENDS[0].img },
-  { name: "Modern Fade", tag: "Kinh điển", face: "Vuông", length: "Ngắn", desc: "Gọn gàng, nam tính và vô cùng lịch lãm.", img: TRENDS[1].img },
-  { name: "Sunset Curls", tag: "Bán chạy", face: "Tròn", length: "Dài", desc: "Quyến rũ với những lọn tóc xoăn bồng bềnh.", img: TRENDS[2].img },
-  { name: "French Chic Bob", tag: "Mới", face: "Dài", length: "Ngắn", desc: "Vẻ đẹp tối giản, thanh lịch vượt thời gian.", img: TRENDS[3].img },
-  { name: "Surf Shag", tag: "Viral", face: "Tròn", length: "Vừa", desc: "Phong cách tự do, phóng khoáng như nắng hè.", img: TRENDS[4].img },
-  { name: "Sleek Quiff", tag: "Thanh lịch", face: "Trái xoan", length: "Ngắn", desc: "Sự lựa chọn hàng đầu cho quý ông công sở.", img: TRENDS[5].img },
-];
 
 const FILTERS = {
   "Khuôn mặt": ["Tròn", "Vuông", "Trái xoan", "Dài"],
@@ -21,15 +13,44 @@ const FILTERS = {
   "Độ dài": ["Ngắn", "Vừa", "Dài"],
 };
 
+const BASE = import.meta.env.VITE_API_URL || "/api";
+
+// Lấy danh sách kiểu tóc — không cần đăng nhập, nhưng gửi token nếu có để lọc premium
+function useHairstyles({ faceShape, search }) {
+  return useQuery({
+    queryKey: ["hairstyles", faceShape, search],
+    queryFn: async () => {
+      const params = {};
+      if (faceShape) params.faceShape = faceShape;
+      if (search) params.search = search;
+      const token = localStorage.getItem("token");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const { data } = await axios.get(`${BASE}/hairstyles`, { params, headers });
+      return data;
+    },
+  });
+}
+
 export default function CatalogPage() {
-  const [face, setFace] = useState(null);   // lọc theo khuôn mặt (demo)
+  const navigate = useNavigate();
+  const [face, setFace] = useState(null);
   const [q, setQ] = useState("");
 
-  const items = ITEMS.filter(
-    (i) =>
-      (!face || i.face === face) &&
-      (!q || i.name.toLowerCase().includes(q.toLowerCase()))
-  );
+  // Kiểm tra đăng nhập khi bấm Chi tiết
+  const handleDetail = (hairstyleId) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      // Chưa đăng nhập → chuyển sang trang login, sau khi login sẽ quay lại catalog
+      navigate("/login", { state: { from: `/catalog` } });
+      return;
+    }
+    navigate(`/results?hairstyleId=${hairstyleId}`);
+  };
+
+  const { data: items = [], isLoading, isError } = useHairstyles({
+    faceShape: face,
+    search: q,
+  });
 
   return (
     <div className="min-h-screen">
@@ -83,54 +104,88 @@ export default function CatalogPage() {
         <div>
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-2xl font-bold text-ink">Tất cả kiểu tóc</h2>
-            <label className="flex items-center gap-2 text-sm text-mauve">
-              Sắp xếp:
-              <select className="rounded-full border border-line bg-white px-3 py-1.5 font-semibold text-ink outline-none">
-                <option>Phổ biến nhất</option>
-                <option>Mới nhất</option>
-                <option>A → Z</option>
-              </select>
-            </label>
+            <span className="text-sm text-mauve">{isLoading ? "Đang tải..." : `${items.length} kiểu tóc`}</span>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
-            {items.map((i, idx) => (
-              <AnimatedContent key={i.name} delay={idx * 0.05}>
-                <SpotlightCard className="rounded-2xl">
-                  <Card padded={false} className="overflow-hidden">
-                <div className="relative">
-                  <img src={i.img} alt={i.name} className="h-60 w-full object-cover" />
-                  <Badge variant={["Mới","Bán chạy"].includes(i.tag) ? "new" : "hot"} className="absolute left-3 top-3 shadow">{i.tag}</Badge>
-                  <span className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-mauve">{i.face}</span>
-                </div>
-                <div className="p-4">
-                  <h4 className="text-lg font-bold text-ink">{i.name}</h4>
-                  <p className="mt-1 text-sm text-mauve">{i.desc}</p>
-                  <div className="mt-3 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-muted">Độ dài: {i.length}</span>
-                    <Button to="/results" size="sm" variant="outline" className="px-4 py-2 text-xs">Chi tiết</Button>
+          {/* Loading state */}
+          {isLoading && (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Card key={i} padded={false} className="animate-pulse overflow-hidden">
+                  <div className="h-60 w-full bg-line" />
+                  <div className="space-y-2 p-4">
+                    <div className="h-5 w-3/4 rounded bg-line" />
+                    <div className="h-4 w-full rounded bg-line" />
                   </div>
-                </div>
-                  </Card>
-                </SpotlightCard>
-              </AnimatedContent>
-            ))}
-          </div>
-
-          {items.length === 0 && (
-            <p className="py-16 text-center text-mauve">Không tìm thấy kiểu tóc phù hợp.</p>
+                </Card>
+              ))}
+            </div>
           )}
 
-          {/* Pagination */}
-          <div className="mt-10 flex items-center justify-center gap-2">
-            {["1", "2", "3", "...", "12"].map((p, idx) => (
-              <button key={idx}
-                className={`flex size-10 items-center justify-center rounded-full text-sm font-semibold transition ${
-                  p === "1" ? "bg-primary text-white" : "text-mauve hover:bg-white"}`}>
-                {p}
-              </button>
-            ))}
-          </div>
+          {/* Error state */}
+          {isError && (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <p className="text-lg font-semibold text-ink">Không thể tải danh sách kiểu tóc.</p>
+              <p className="mt-1 text-sm text-mauve">Vui lòng kiểm tra kết nối hoặc thử lại sau.</p>
+              <Button to="/login" size="sm" className="mt-4">Đăng nhập lại</Button>
+            </div>
+          )}
+
+          {/* Results */}
+          {!isLoading && !isError && (
+            <>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                {items.map((i, idx) => (
+                  <AnimatedContent key={i.id} delay={idx * 0.05}>
+                    <SpotlightCard className="rounded-2xl">
+                      <Card padded={false} className="overflow-hidden">
+                        <div className="relative">
+                          <img
+                            src={i.imageUrl}
+                            alt={i.name}
+                            className="h-60 w-full object-cover"
+                            onError={(e) => { e.target.src = `https://placehold.co/600x400?text=${encodeURIComponent(i.name)}`; }}
+                          />
+                          {i.tag && (
+                            <Badge variant={["Mới", "Bán chạy"].includes(i.tag) ? "new" : "hot"} className="absolute left-3 top-3 shadow">
+                              {i.tag}
+                            </Badge>
+                          )}
+                          {i.premiumOnly && (
+                            <Badge variant="premium" className="absolute right-3 top-3 shadow">PREMIUM</Badge>
+                          )}
+                          {i.faceShape && (
+                            <span className="absolute right-3 bottom-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-mauve">
+                              {i.faceShape}
+                            </span>
+                          )}
+                        </div>
+                        <div className="p-4">
+                          <h4 className="text-lg font-bold text-ink">{i.name}</h4>
+                          <p className="mt-1 text-sm text-mauve">{i.description}</p>
+                          <div className="mt-3 flex items-center justify-between">
+                            <span className="text-xs font-semibold text-muted">Độ dài: {i.hairLength}</span>
+                            <Button
+                              onClick={() => handleDetail(i.id)}
+                              size="sm"
+                              variant="outline"
+                              className="px-4 py-2 text-xs"
+                            >
+                              Chi tiết
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    </SpotlightCard>
+                  </AnimatedContent>
+                ))}
+              </div>
+
+              {items.length === 0 && (
+                <p className="py-16 text-center text-mauve">Không tìm thấy kiểu tóc phù hợp.</p>
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -138,3 +193,4 @@ export default function CatalogPage() {
     </div>
   );
 }
+

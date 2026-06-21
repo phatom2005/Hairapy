@@ -24,6 +24,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final SubscriptionService subscriptionService;
 
     /**
      * Đăng ký tài khoản người dùng mới.
@@ -56,7 +57,7 @@ public class AuthService {
         // Tạo JWT token từ thông tin người dùng
         String token = jwtService.generateToken(user);
 
-        // Trả về kết quả đăng ký thành công
+        // Trả về kết quả đăng ký thành công (user mới luôn là FREE vì chưa có subscription)
         return new AuthResponse(token, user.getEmail(), user.getRole().name(), user.getFullName());
     }
 
@@ -80,7 +81,26 @@ public class AuthService {
         // Tạo JWT token từ thông tin người dùng
         String token = jwtService.generateToken(user);
 
+        // Xác định role hiển thị: ADMIN giữ nguyên, USER thường kiểm tra thêm subscription
+        String effectiveRole = resolveEffectiveRole(user);
+
         // Trả về kết quả đăng nhập thành công
-        return new AuthResponse(token, user.getEmail(), user.getRole().name(), user.getFullName());
+        return new AuthResponse(token, user.getEmail(), effectiveRole, user.getFullName());
+    }
+
+    /**
+     * Xác định role hiển thị cho Frontend:
+     * - ADMIN → "ADMIN"
+     * - USER với subscription trả phí đang ACTIVE → "PREMIUM"
+     * - USER thường → "USER"
+     */
+    public String resolveEffectiveRole(User user) {
+        if (user.getRole() == Role.ADMIN) {
+            return "ADMIN";
+        }
+        if (subscriptionService.isPaidUser(user.getId())) {
+            return "PREMIUM";
+        }
+        return "USER";
     }
 }

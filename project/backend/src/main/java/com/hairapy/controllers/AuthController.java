@@ -65,7 +65,8 @@ public class AuthController {
         User user = userRepository.findByEmail(userDetails.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin người dùng"));
 
-        // Trả về thông tin email, phân quyền và họ tên của người dùng hiện tại
-        return ResponseEntity.ok(new UserMeResponse(user.getEmail(), user.getRole().name(), user.getFullName()));
+        // Trả về role hiệu lực (bạo gồm cả PREMIUM nếu có subscription đang hoạt động)
+        String effectiveRole = authService.resolveEffectiveRole(user);
+        return ResponseEntity.ok(new UserMeResponse(user.getEmail(), effectiveRole, user.getFullName()));
     }
 }

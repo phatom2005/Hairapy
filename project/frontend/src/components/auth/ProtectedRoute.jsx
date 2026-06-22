@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import useAuthStore from "../../store/useAuthStore";
 
 /**
@@ -8,6 +8,7 @@ import useAuthStore from "../../store/useAuthStore";
  */
 export default function ProtectedRoute() {
   const { token, hydrated } = useAuthStore();
+  const location = useLocation();
 
   // Đang đồng bộ hóa trạng thái xác thực từ local storage / API
   if (!hydrated) {
@@ -20,7 +21,16 @@ export default function ProtectedRoute() {
 
   // Chưa đăng nhập -> Chuyển hướng về trang Login
   if (!token) {
-    return <Navigate to="/login" replace />;
+    return (
+      <Navigate
+        to="/login"
+        state={{
+          from: location.pathname,
+          message: location.pathname === "/swap" ? "Vui lòng đăng nhập để thử kiểu tóc AI" : undefined,
+        }}
+        replace
+      />
+    );
   }
 
   // Đã đăng nhập -> Cho phép truy cập vào các route con

@@ -15,11 +15,15 @@ public class AiLabConfig {
     @Value("${app.ailab.api-key}")
     private String apiKey;
 
-    @Value("${app.ailab.timeout-ms:15000}")
+    @Value("${app.ailab.timeout-ms:10000}")
     private int timeoutMs;
 
     public String getApiKey() {
         return apiKey;
+    }
+
+    public int getTimeoutMs() {
+        return timeoutMs;
     }
 
     /**

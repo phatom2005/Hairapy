@@ -79,7 +79,13 @@ public class HairSwapService {
                 : "Rỗng/Ngắn";
             log.info("Sử dụng API Key AILabTools: {}", maskedKey);
 
-            ResponseEntity<Map> response = aiRestTemplate.postForEntity(AILAB_URL, requestEntity, Map.class);
+            ResponseEntity<Map> response;
+            try {
+                response = aiRestTemplate.postForEntity(AILAB_URL, requestEntity, Map.class);
+            } catch (org.springframework.web.client.ResourceAccessException e) {
+                log.warn("AILab API timeout sau {}ms", aiLabConfig.getTimeoutMs());
+                throw new com.hairapy.exceptions.AiTimeoutException("AI xử lý quá lâu, lượt của bạn đã được hoàn lại.");
+            }
             
             if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
                 log.error("AILab Tools API trả về status code hoặc body không hợp lệ: {}", response.getStatusCode());
@@ -87,7 +93,7 @@ public class HairSwapService {
             }
 
             Map<String, Object> responseBody = response.getBody();
-            log.info("Nhận phản hồi thành công từ AILab API: {}", responseBody);
+            log.info("Nhận phản hồi thành công từ AILab API. error_code={}", responseBody != null ? responseBody.get("error_code") : "null");
 
             // Kiểm tra lỗi từ phía AILabTools
             Object errorCodeObj = responseBody.get("error_code");

@@ -24,6 +24,10 @@ public interface UsageHistoryRepository extends JpaRepository<UsageHistory, Long
     @Query("SELECT COUNT(u) FROM UsageHistory u WHERE u.feature = :feature AND u.usedAt >= :since")
     long countByFeatureSince(@Param("feature") String feature, @Param("since") LocalDateTime since);
 
+    // Đếm lượt dùng của một user cụ thể từ thời điểm cụ thể (hôm nay)
+    @Query("SELECT COUNT(u) FROM UsageHistory u WHERE u.user.id = :userId AND u.feature = :feature AND u.usedAt >= :since")
+    long countTodayUsage(@Param("userId") Long userId, @Param("feature") String feature, @Param("since") LocalDateTime since);
+
     // Thống kê theo ngày trong 30 ngày gần nhất (cho chart)
     @Query("SELECT CAST(u.usedAt AS date) as day, COUNT(u) as count FROM UsageHistory u WHERE u.usedAt >= :since GROUP BY CAST(u.usedAt AS date) ORDER BY day")
     List<Object[]> countDailyUsageSince(@Param("since") LocalDateTime since);

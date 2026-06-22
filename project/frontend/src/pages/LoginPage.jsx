@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { AuthShell, AuthHeading, OrDivider, SocialButtons } from "../components/auth/AuthShell";
 import { Button, Input } from "../components/ui";
 import { AnimatedContent, BorderGlow } from "../components/animated";
@@ -10,7 +10,11 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, loading, error, clearError } = useAuthStore();
+
+  const from = location.state?.from || "/profile";
+  const message = location.state?.message;
 
   // Xóa các lỗi cũ khi mở trang đăng nhập
   useEffect(() => {
@@ -23,7 +27,7 @@ export default function LoginPage() {
     try {
       const success = await login(email, password);
       if (success) {
-        navigate("/profile");
+        navigate(from);
       }
     } catch {
       // Lỗi đã được lưu trữ trong store và hiển thị trên giao diện
@@ -39,6 +43,12 @@ export default function LoginPage() {
           {error && (
             <div className="rounded-2xl border border-[#ba1a1a]/20 bg-[#ba1a1a]/5 p-4 text-center text-sm font-semibold text-[#ba1a1a]">
               {error}
+            </div>
+          )}
+
+          {message && !error && (
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-center text-sm font-semibold text-primary">
+              ℹ️ {message}
             </div>
           )}
 

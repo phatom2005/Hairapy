@@ -25,9 +25,10 @@ public class SecurityConfig {
     private final JwtFilter jwtFilter;
 
     @Bean
+    @SuppressWarnings("lgtm[java/spring-disabled-csrf-protection]") // Intentional: REST API stateless (JWT), không dùng session/cookie → CSRF không áp dụng
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
-                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(AbstractHttpConfigurer::disable) // lgtm[java/spring-disabled-csrf-protection]
                 .cors(withDefaults())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth

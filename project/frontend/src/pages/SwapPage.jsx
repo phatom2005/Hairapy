@@ -84,6 +84,21 @@ export default function SwapPage() {
     } catch (err) {
       console.error("Lỗi khi gọi Hair Swap API:", err);
       const errorData = err.response?.data;
+
+      // Xử lý khi AI timeout và được hoàn lượt (504)
+      if (err.response?.status === 504 || errorData?.refunded) {
+        setError("AI xử lý quá lâu. Lượt của bạn đã được hoàn lại — hãy thử lại nhé!");
+        setLoading(false);
+        return;
+      }
+
+      // Xử lý khi hết lượt giới hạn hàng ngày (429)
+      if (err.response?.status === 429) {
+        setError(`Bạn đã hết lượt thử kiểu tóc hôm nay (${errorData.limit} lượt/ngày). Nâng cấp Premium để có thêm lượt!`);
+        setLoading(false);
+        return;
+      }
+
       const errMsg = errorData?.error || "AI xử lý quá lâu hoặc gặp sự cố, vui lòng thử lại.";
       const errDetails = errorData?.details ? ` (Chi tiết: ${errorData.details})` : "";
       

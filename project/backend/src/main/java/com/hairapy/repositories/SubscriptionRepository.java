@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,4 +31,7 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
 
     // Đếm subscription theo trạng thái
     long countByStatus(SubscriptionStatus status);
+
+    // Tìm các subscription active có ngày hết hạn trước mốc thời gian truyền vào
+    List<Subscription> findByStatusAndEndDateBefore(SubscriptionStatus status, LocalDateTime dateTime);
 }

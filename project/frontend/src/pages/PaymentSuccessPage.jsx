@@ -5,7 +5,7 @@ import useAuthStore from "../store/useAuthStore";
 import { Button, Card, Badge } from "../components/ui";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
-import { CheckIcon, CrownIcon, ShieldIcon } from "../components/icons";
+import { CheckIcon, ShieldIcon } from "../components/icons";
 import { AnimatedContent, BorderGlow } from "../components/animated";
 
 export default function PaymentSuccessPage() {
@@ -15,16 +15,12 @@ export default function PaymentSuccessPage() {
   
   const orderCode = searchParams.get("orderCode");
   
-  const [status, setStatus] = useState("checking"); // checking, paid, pending_webhook, error
-  const [errorMessage, setErrorMessage] = useState("");
+  const [status, setStatus] = useState(() => orderCode ? "checking" : "error"); // checking, paid, pending_webhook, error
+  const [errorMessage, setErrorMessage] = useState(() => orderCode ? "" : "Không tìm thấy mã hóa đơn (orderCode) trong yêu cầu.");
   const pollCount = useRef(0);
 
   useEffect(() => {
-    if (!orderCode) {
-      setStatus("error");
-      setErrorMessage("Không tìm thấy mã hóa đơn (orderCode) trong yêu cầu.");
-      return;
-    }
+    if (!orderCode) return;
 
     const checkStatus = async () => {
       try {

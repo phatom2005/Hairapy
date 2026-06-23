@@ -10,21 +10,31 @@ const PLANS = [
     price: "0đ", period: "/ vĩnh viễn", highlight: false,
     cta: "Dùng bản miễn phí", to: "/register", variant: "outline",
     features: [
-      { text: "3 lần quét mỗi tháng", on: true },
-      { text: "Gợi ý kiểu tóc cơ bản", on: true },
+      { text: "1 lần quét AI mỗi ngày", on: true },
+      { text: "5 lần thử kiểu tóc mỗi ngày", on: true },
       { text: "Phân tích chuyên sâu", on: false },
       { text: "Ưu đãi Salon", on: false },
     ],
   },
   {
+    name: "Tuần", tagline: "Trải nghiệm nhanh",
+    price: "59.000đ", period: "/ tuần", highlight: false,
+    cta: "Mua gói Tuần", to: "/checkout?plan=PRO", variant: "outline",
+    features: [
+      { text: "5 lần quét AI mỗi ngày", on: true },
+      { text: "20 lần thử kiểu tóc mỗi ngày", on: true },
+      { text: "Ảnh HD không watermark", on: true },
+      { text: "Tư vấn 1:1 cùng Stylist", on: false },
+    ],
+  },
+  {
     name: "Premium", tagline: "Trải nghiệm không giới hạn",
     price: "199.000đ", period: "/ tháng", highlight: true,
-    note: "Hoặc 1.490.000đ / năm (Tiết kiệm 37%)",
-    cta: "Nâng cấp ngay", to: "/register", variant: "pink",
+    cta: "Nâng cấp ngay", to: "/checkout?plan=PREMIUM", variant: "pink",
     features: [
-      { text: "Quét AI không giới hạn", on: true },
-      { text: "Phân tích hình dáng & màu sắc", on: true },
-      { text: "Đặc quyền giảm giá 30% tại Salon", on: true },
+      { text: "5 lần quét AI mỗi ngày", on: true },
+      { text: "20 lần thử kiểu tóc mỗi ngày", on: true },
+      { text: "Ảnh HD không watermark", on: true },
       { text: "Tư vấn 1:1 cùng Stylist", on: true },
     ],
   },
@@ -52,7 +62,7 @@ export default function PricingPage() {
 
       {/* Pricing cards */}
       <section className="px-6 py-16 sm:px-16">
-        <div className="mx-auto grid max-w-4xl grid-cols-1 gap-8 md:grid-cols-2">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 md:grid-cols-3">
           {PLANS.map((p, i) => (
             <AnimatedContent key={p.name} delay={i * 0.15}>
               {p.highlight ? (

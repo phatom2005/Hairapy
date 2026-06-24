@@ -50,6 +50,9 @@ public class HairstyleCatalog {
     @Builder.Default
     private boolean premiumOnly = false;
 
+    @Column(name = "ailab_hair_type")
+    private Integer ailabHairType;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

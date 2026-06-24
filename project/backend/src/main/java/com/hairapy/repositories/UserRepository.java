@@ -9,6 +9,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -22,4 +24,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     // Đếm theo role (cho dashboard)
     long countByRole(Role role);
+
+    // Thống kê user đăng ký theo ngày
+    @Query("SELECT CAST(u.createdAt AS date) as day, COUNT(u) as count FROM User u WHERE u.createdAt >= :since GROUP BY CAST(u.createdAt AS date) ORDER BY day")
+    List<Object[]> countDailyRegistrationsSince(@Param("since") LocalDateTime since);
+
+    // Thống kê user đăng ký theo tháng
+    @Query("SELECT FUNCTION('to_char', u.createdAt, 'YYYY-MM') as month, COUNT(u) as count FROM User u WHERE u.createdAt >= :since GROUP BY FUNCTION('to_char', u.createdAt, 'YYYY-MM') ORDER BY month")
+    List<Object[]> countMonthlyRegistrationsSince(@Param("since") LocalDateTime since);
 }

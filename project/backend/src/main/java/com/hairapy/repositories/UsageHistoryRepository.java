@@ -31,4 +31,8 @@ public interface UsageHistoryRepository extends JpaRepository<UsageHistory, Long
     // Thống kê theo ngày trong 30 ngày gần nhất (cho chart)
     @Query("SELECT CAST(u.usedAt AS date) as day, COUNT(u) as count FROM UsageHistory u WHERE u.usedAt >= :since GROUP BY CAST(u.usedAt AS date) ORDER BY day")
     List<Object[]> countDailyUsageSince(@Param("since") LocalDateTime since);
+
+    // Thống kê theo tháng (dùng khi range > 90 ngày)
+    @Query("SELECT FUNCTION('to_char', u.usedAt, 'YYYY-MM') as month, COUNT(u) as count FROM UsageHistory u WHERE u.usedAt >= :since GROUP BY FUNCTION('to_char', u.usedAt, 'YYYY-MM') ORDER BY month")
+    List<Object[]> countMonthlyUsageSince(@Param("since") LocalDateTime since);
 }

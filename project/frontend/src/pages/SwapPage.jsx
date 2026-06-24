@@ -19,7 +19,7 @@ export default function SwapPage() {
   // Lấy ảnh gốc và kiểu tóc đã chọn (nếu có) từ useScanStore
   const { imageFile, previewUrl, selectedHairstyle } = useScanStore();
 
-  const [activeStyle, setActiveStyle] = useState(null);
+  const [selectedStyle, setSelectedStyle] = useState(selectedHairstyle);
   const [tab, setTab] = useState("Tự nhiên");
   const [color, setColor] = useState(PALETTES["Tự nhiên"][2]);
   const [shade, setShade] = useState(50);
@@ -45,21 +45,13 @@ export default function SwapPage() {
     }
   }, [previewUrl, navigate]);
 
-  // Thiết lập kiểu tóc được chọn khi vào trang (ưu tiên từ ResultsPage)
-  useEffect(() => {
-    if (selectedHairstyle) {
-      setActiveStyle(selectedHairstyle);
-    } else if (styles.length > 0 && !activeStyle) {
-      // Fallback: chọn kiểu tóc đầu tiên nếu truy cập trực tiếp
-      const first = styles[0];
-      setActiveStyle({
-        id: first.id,
-        name: first.name,
-        imageUrl: first.imageUrl,
-        ailabHairType: first.ailabHairType,
-      });
-    }
-  }, [selectedHairstyle, styles]);
+  // Thiết lập kiểu tóc đang hiển thị hoạt động (ưu tiên từ state selectedStyle, fallback về styles[0])
+  const activeStyle = selectedStyle || (styles.length > 0 ? {
+    id: styles[0].id,
+    name: styles[0].name,
+    imageUrl: styles[0].imageUrl,
+    ailabHairType: styles[0].ailabHairType,
+  } : null);
 
   if (!previewUrl) {
     return null;
@@ -151,7 +143,7 @@ export default function SwapPage() {
                   return (
                     <button 
                       key={s.id} 
-                      onClick={() => setActiveStyle({
+                      onClick={() => setSelectedStyle({
                         id: s.id,
                         name: s.name,
                         imageUrl: s.imageUrl,
@@ -298,7 +290,7 @@ export default function SwapPage() {
                 return (
                   <button 
                     key={s.id} 
-                    onClick={() => setActiveStyle({
+                    onClick={() => setSelectedStyle({
                       id: s.id,
                       name: s.name,
                       imageUrl: s.imageUrl,

@@ -1,28 +1,22 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import api from "../../lib/api";
 import { Card, Badge } from "../../components/ui";
 import { CameraIcon, ScanIcon, UserIcon, CrownIcon } from "../../components/icons";
 
 export default function AdminDashboardPage() {
-  const [stats, setStats] = useState(null);
   const [period, setPeriod] = useState("30d");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    setLoading(true);
-    api
-      .get(`/admin/dashboard/stats?period=${period}`)
-      .then((res) => {
-        setStats(res.data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setError("Không thể tải thông tin thống kê.");
-        setLoading(false);
-      });
-  }, [period]);
+  // Fetch dữ liệu thống kê từ API sử dụng useQuery để tự động quản lý loading state
+  const { data: stats, isLoading: loading, error: queryError } = useQuery({
+    queryKey: ["admin-stats", period],
+    queryFn: async () => {
+      const { data } = await api.get(`/admin/dashboard/stats`, { params: { period } });
+      return data;
+    },
+  });
+
+  const error = queryError ? "Không thể tải thông tin thống kê." : null;
 
   if (loading) {
     return (

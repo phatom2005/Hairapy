@@ -10,5 +10,7 @@ public record DashboardStatsResponse(
     long totalSwaps,             // feature = "HAIR_SWAP"
     long scansToday,
     long swapsToday,
-    List<DailyUsageStat> dailyUsage  // 30 ngày gần nhất
+    List<DailyUsageStat> dailyUsage,
+    List<DailyUsageStat> registrationTrend,
+    String granularity
 ) {}

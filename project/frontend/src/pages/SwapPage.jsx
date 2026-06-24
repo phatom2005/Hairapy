@@ -1,24 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { TRENDS } from "../lib/figmaAssets";
 import { Button, Card } from "../components/ui";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import { CheckIcon } from "../components/icons";
 import { useScanStore } from "../store/useScanStore";
+import { useQuery } from "@tanstack/react-query";
 import api from "../lib/api";
-
-const STYLES = TRENDS.slice(0, 6); // Tái sử dụng danh sách kiểu tóc xu hướng làm mẫu thử
-
-// Bản đồ mã hóa tên kiểu tóc sang mã hair_type tương thích với AILabTools
-const HAIR_TYPES = [
-  0,   // Layered Bob -> Bangs (Mái bằng)
-  1,   // Shaggy Cut -> Long hair (Tóc dài)
-  2,   // Soft Wave -> Bangs & Long (Mái + Dài)
-  3,   // Pixie -> Increase hair volume (Tóc phồng)
-  901, // Curtain Bangs -> Straight hair (Tóc thẳng)
-  603  // Wolf Cut -> Short hair (Tóc ngắn)
-];
 
 const PALETTES = {
   "Tự nhiên": ["#1a1a1a", "#3a2a1a", "#6b4423", "#a0703c", "#c89b6a", "#e0c097"],
@@ -28,10 +16,10 @@ const PALETTES = {
 export default function SwapPage() {
   const navigate = useNavigate();
   
-  // Lấy ảnh gốc từ useScanStore
-  const { imageFile, previewUrl } = useScanStore();
+  // Lấy ảnh gốc và kiểu tóc đã chọn (nếu có) từ useScanStore
+  const { imageFile, previewUrl, selectedHairstyle } = useScanStore();
 
-  const [styleIdx, setStyleIdx] = useState(0);
+  const [selectedStyle, setSelectedStyle] = useState(selectedHairstyle);
   const [tab, setTab] = useState("Tự nhiên");
   const [color, setColor] = useState(PALETTES["Tự nhiên"][2]);
   const [shade, setShade] = useState(50);
@@ -41,6 +29,15 @@ export default function SwapPage() {
   const [resultImage, setResultImage] = useState(null);
   const [error, setError] = useState(null);
 
+  // Fetch danh sách kiểu tóc từ API để làm mẫu thử
+  const { data: styles = [] } = useQuery({
+    queryKey: ["hairstyles-swap"],
+    queryFn: async () => {
+      const { data } = await api.get("/hairstyles");
+      return data;
+    },
+  });
+
   // Bảo vệ route: Nếu không có ảnh preview thì chuyển hướng về /scan
   useEffect(() => {
     if (!previewUrl) {
@@ -48,20 +45,28 @@ export default function SwapPage() {
     }
   }, [previewUrl, navigate]);
 
+  // Thiết lập kiểu tóc đang hiển thị hoạt động (ưu tiên từ state selectedStyle, fallback về styles[0])
+  const activeStyle = selectedStyle || (styles.length > 0 ? {
+    id: styles[0].id,
+    name: styles[0].name,
+    imageUrl: styles[0].imageUrl,
+    ailabHairType: styles[0].ailabHairType,
+  } : null);
+
   if (!previewUrl) {
     return null;
   }
 
   // Gửi request đổi kiểu tóc đến backend proxy
   const handleApply = async () => {
-    if (!imageFile) return;
+    if (!imageFile || !activeStyle?.ailabHairType) return;
 
     setLoading(true);
     setError(null);
 
     const formData = new FormData();
     formData.append("image", imageFile);
-    formData.append("hairType", HAIR_TYPES[styleIdx]);
+    formData.append("hairType", activeStyle.ailabHairType);
 
     try {
       // Gọi API POST /api/swap/try
@@ -127,20 +132,49 @@ export default function SwapPage() {
           {/* Chọn kiểu tóc */}
           <div>
             <h2 className="mb-3 text-lg font-bold text-ink">Chọn kiểu tóc</h2>
-            <div className="grid grid-cols-2 gap-4">
-              {STYLES.map((s, i) => (
-                <button key={s.name} onClick={() => setStyleIdx(i)}
-                  className={`relative overflow-hidden rounded-xl border-2 transition ${
-                    styleIdx === i ? "border-primary font-bold" : "border-transparent"}`}>
-                  <img src={s.img} alt={s.name} className="aspect-square w-full object-cover" />
-                  {styleIdx === i && (
-                    <span className="absolute right-1 top-1 flex size-5 items-center justify-center rounded-full bg-primary text-white">
-                      <CheckIcon size={12} />
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
+            {styles.length === 0 ? (
+              <div className="text-center py-6 text-xs text-muted">
+                Đang tải danh sách kiểu tóc...
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4 max-h-[300px] overflow-y-auto pr-1">
+                {styles.map((s) => {
+                  const isActive = activeStyle?.id === s.id;
+                  return (
+                    <button 
+                      key={s.id} 
+                      onClick={() => setSelectedStyle({
+                        id: s.id,
+                        name: s.name,
+                        imageUrl: s.imageUrl,
+                        ailabHairType: s.ailabHairType
+                      })}
+                      className={`relative aspect-square overflow-hidden rounded-xl border-2 transition ${
+                        isActive ? "border-primary font-bold" : "border-transparent"
+                      }`}
+                    >
+                      <img 
+                        src={s.imageUrl} 
+                        alt={s.name} 
+                        className="aspect-square w-full object-cover" 
+                        onError={(e) => { e.target.src = `https://placehold.co/300x300?text=${encodeURIComponent(s.name)}`; }}
+                      />
+                      {isActive && (
+                        <span className="absolute right-1 top-1 flex size-5 items-center justify-center rounded-full bg-primary text-white z-10">
+                          <CheckIcon size={12} />
+                        </span>
+                      )}
+                      {s.premiumOnly && (
+                        <span className="absolute left-1 top-1 rounded bg-magenta/90 px-1.5 py-0.5 text-[9px] font-bold text-white z-10">PRO</span>
+                      )}
+                      <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[10px] px-1.5 py-0.5 truncate text-center">
+                        {s.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Màu sắc (Mô phỏng lớp phủ màu) */}
@@ -181,9 +215,20 @@ export default function SwapPage() {
           )}
 
           {/* Nút bấm trigger Hair Swap */}
-          <Button onClick={handleApply} disabled={loading} className="w-full">
-            {loading ? "Đang xử lý..." : "Áp dụng kiểu tóc AI"}
-          </Button>
+          <div className="relative group w-full">
+            <Button 
+              onClick={handleApply} 
+              disabled={loading || !activeStyle?.ailabHairType} 
+              className="w-full"
+            >
+              {loading ? "Đang xử lý..." : "Áp dụng kiểu tóc AI"}
+            </Button>
+            {activeStyle && !activeStyle.ailabHairType && (
+              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs bg-ink text-white text-[11px] py-1.5 px-3 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-line z-50">
+                Kiểu tóc này chưa hỗ trợ thử nghiệm AI
+              </span>
+            )}
+          </div>
 
           {/* Nút khôi phục ảnh gốc */}
           {resultImage && (
@@ -228,29 +273,45 @@ export default function SwapPage() {
 
             {/* Thanh hành động nổi bên dưới ảnh */}
             <div className="absolute inset-x-6 bottom-6 flex items-center justify-between rounded-2xl bg-white/95 px-5 py-3 shadow-lg backdrop-blur-md">
-              <div>
-                <p className="text-sm font-bold text-ink">{STYLES[styleIdx].name}</p>
-                <p className="text-xs text-muted">Mã kiểu tóc: AI #{HAIR_TYPES[styleIdx]}</p>
+              <div className="max-w-[70%]">
+                <p className="text-sm font-bold text-ink truncate" title={activeStyle?.name}>{activeStyle?.name || "Đang tải..."}</p>
+                <p className="text-xs text-muted">Mã kiểu tóc: AI #{activeStyle?.ailabHairType !== undefined && activeStyle?.ailabHairType !== null ? activeStyle.ailabHairType : "N/A"}</p>
               </div>
-              <span className="size-8 rounded-full border border-line" style={{ backgroundColor: color }} />
+              <span className="size-8 rounded-full border border-line shrink-0" style={{ backgroundColor: color }} />
             </div>
           </div>
 
           {/* Lịch sử mẫu thử */}
           <div>
-            <p className="mb-3 text-sm font-bold text-mauve">Các kiểu tóc đã chọn:</p>
-            <div className="flex gap-3 overflow-x-auto pb-2">
-              {STYLES.map((s, i) => (
-                <button key={s.name} onClick={() => setStyleIdx(i)} className="shrink-0 relative">
-                  <img 
-                    src={s.img} 
-                    alt={s.name}
-                    className={`size-20 rounded-xl object-cover transition duration-200 ${
-                      styleIdx === i ? "opacity-100 ring-2 ring-primary" : "opacity-60 hover:opacity-100"
-                    }`} 
-                  />
-                </button>
-              ))}
+            <p className="mb-3 text-sm font-bold text-mauve">Tất cả kiểu tóc có sẵn:</p>
+            <div className="flex gap-3 overflow-x-auto pb-2 pr-1">
+              {styles.map((s) => {
+                const isActive = activeStyle?.id === s.id;
+                return (
+                  <button 
+                    key={s.id} 
+                    onClick={() => setSelectedStyle({
+                      id: s.id,
+                      name: s.name,
+                      imageUrl: s.imageUrl,
+                      ailabHairType: s.ailabHairType
+                    })} 
+                    className="shrink-0 relative"
+                  >
+                    <img 
+                      src={s.imageUrl} 
+                      alt={s.name}
+                      className={`size-20 rounded-xl object-cover transition duration-200 ${
+                        isActive ? "opacity-100 ring-2 ring-primary" : "opacity-60 hover:opacity-100"
+                      }`} 
+                      onError={(e) => { e.target.src = `https://placehold.co/300x300?text=${encodeURIComponent(s.name)}`; }}
+                    />
+                    {s.premiumOnly && (
+                      <span className="absolute left-1 top-1 rounded bg-magenta/90 px-1 py-0.5 text-[8px] font-bold text-white z-10">PRO</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

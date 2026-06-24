@@ -6,6 +6,7 @@ export const useScanStore = create((set, get) => ({
   analysisResult: null,
   analyzing: false,
   error: null,
+  selectedHairstyle: null, // Kiểu tóc được chọn từ trang kết quả phân tích
 
   // Thiết lập ảnh gốc và tạo URL xem trước tạm thời (Blob URL)
   setImage: (file) => {
@@ -47,6 +48,11 @@ export const useScanStore = create((set, get) => ({
     set({ error });
   },
 
+  // Thiết lập kiểu tóc được chọn
+  setSelectedHairstyle: (hairstyle) => {
+    set({ selectedHairstyle: hairstyle });
+  },
+
   // Reset toàn bộ state về mặc định (ví dụ khi người dùng muốn quét lại)
   reset: () => {
     const currentPreviewUrl = get().previewUrl;
@@ -59,6 +65,7 @@ export const useScanStore = create((set, get) => ({
       analysisResult: null,
       analyzing: false,
       error: null,
+      selectedHairstyle: null,
     });
   },
 }));

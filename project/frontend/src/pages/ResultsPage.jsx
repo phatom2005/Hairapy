@@ -1,12 +1,13 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { TRENDS } from "../lib/figmaAssets";
 import { Button, Card, Badge, Section, SectionHeading } from "../components/ui";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import { ArrowRight, CheckIcon, StarIcon } from "../components/icons";
 import { AnimatedContent, SpotlightCard, GlareHover, BorderGlow } from "../components/animated";
 import { useScanStore } from "../store/useScanStore";
+import { useQuery } from "@tanstack/react-query";
+import api from "../lib/api";
 
 // Bản đồ dịch dáng mặt sang tiếng Việt
 const FACE_SHAPE_TRANSLATION = {
@@ -18,44 +19,13 @@ const FACE_SHAPE_TRANSLATION = {
   Diamond: "Kim cương (Diamond)",
 };
 
-// Đề xuất kiểu tóc dựa theo hình dáng khuôn mặt
-const HAIRSTYLE_RECS = {
-  Oval: [
-    { name: "Layered Bob", match: 98, img: TRENDS[3].img },
-    { name: "Textured Pixie", match: 95, img: TRENDS[5].img },
-    { name: "Soft Beach Waves", match: 92, img: TRENDS[2].img },
-    { name: "Modern Wolf Cut", match: 89, img: TRENDS[0].img }
-  ],
-  Round: [
-    { name: "Long Layers", match: 97, img: TRENDS[1].img },
-    { name: "Textured Pixie", match: 93, img: TRENDS[5].img },
-    { name: "Layered Bob", match: 90, img: TRENDS[3].img },
-    { name: "Curtain Bangs with Waves", match: 88, img: TRENDS[2].img }
-  ],
-  Square: [
-    { name: "Soft Beach Waves", match: 96, img: TRENDS[2].img },
-    { name: "Modern Wolf Cut", match: 94, img: TRENDS[0].img },
-    { name: "Long Layers", match: 91, img: TRENDS[1].img },
-    { name: "Layered Bob", match: 87, img: TRENDS[3].img }
-  ],
-  Heart: [
-    { name: "Layered Bob", match: 98, img: TRENDS[3].img },
-    { name: "Soft Beach Waves", match: 95, img: TRENDS[2].img },
-    { name: "Modern Wolf Cut", match: 91, img: TRENDS[0].img },
-    { name: "Long Layers", match: 88, img: TRENDS[1].img }
-  ],
-  Oblong: [
-    { name: "Soft Beach Waves", match: 97, img: TRENDS[2].img },
-    { name: "Layered Bob", match: 94, img: TRENDS[3].img },
-    { name: "Curtain Bangs with Waves", match: 92, img: TRENDS[4].img },
-    { name: "Modern Wolf Cut", match: 89, img: TRENDS[0].img }
-  ],
-  Diamond: [
-    { name: "Textured Pixie", match: 96, img: TRENDS[5].img },
-    { name: "Soft Beach Waves", match: 94, img: TRENDS[2].img },
-    { name: "Layered Bob", match: 91, img: TRENDS[3].img },
-    { name: "Modern Wolf Cut", match: 88, img: TRENDS[0].img }
-  ]
+const FACE_SHAPE_MAP = {
+  Oval: "Trái xoan",
+  Round: "Tròn",
+  Square: "Vuông",
+  Heart: "Trái tim",
+  Oblong: "Dài",
+  Diamond: "Kim cương",
 };
 
 // Lý do lựa chọn kiểu tóc dựa theo dáng mặt
@@ -89,8 +59,8 @@ const REASONS_MAP = {
 export default function ResultsPage() {
   const navigate = useNavigate();
   
-  // Lấy kết quả phân tích và ảnh preview từ Zustand store
-  const { analysisResult, previewUrl } = useScanStore();
+  // Lấy kết quả phân tích, ảnh preview và hàm set kiểu tóc từ Zustand store
+  const { analysisResult, previewUrl, setSelectedHairstyle } = useScanStore();
 
   // Kiểm tra nếu chưa có kết quả scan thì chuyển hướng về /scan
   useEffect(() => {
@@ -99,35 +69,55 @@ export default function ResultsPage() {
     }
   }, [analysisResult, navigate]);
 
+  const faceShape = analysisResult?.faceShape;
+  const metrics = analysisResult?.metrics;
+
+  const faceShapeVi = FACE_SHAPE_MAP[faceShape] || "Trái xoan";
+
+  // Fetch kiểu tóc gợi ý từ API dựa theo hình dáng khuôn mặt tiếng Việt
+  const { data: recommendations = [], isLoading: recsLoading } = useQuery({
+    queryKey: ["hairstyles", faceShapeVi],
+    queryFn: async () => {
+      const { data } = await api.get("/hairstyles", { params: { faceShape: faceShapeVi } });
+      return data;
+    },
+    enabled: !!faceShape,
+  });
+
   if (!analysisResult) {
     return null;
   }
 
-  const { faceShape, metrics } = analysisResult;
-
-  // Cấu hình các chỉ số sinh trắc học dựa trên dáng khuôn mặt nhận diện được
+  // Cấu hình các chỉ số sinh trắc học dựa trên dáng khuôn mặt nhận diện được từ MediaPipe
   const faceShapeText = FACE_SHAPE_TRANSLATION[faceShape] || faceShape;
   const BIOMETRICS = [
     { label: "Hình dáng khuôn mặt", value: faceShapeText },
-    { label: "Chất tóc", value: "Wavy (Sóng nhẹ)" },
-    { label: "Tông da", value: "Warm (Ấm)" },
-    { label: "Mật độ tóc", value: "Medium (Trung bình)" },
+    { label: "Tỷ lệ rộng/dài", value: metrics?.widthToLength ? `${(metrics.widthToLength * 100).toFixed(0)}%` : "N/A" },
+    { label: "Tỷ lệ trán/hàm", value: metrics?.foreheadToJaw ? metrics.foreheadToJaw.toFixed(2) : "N/A" },
+    { label: "Tỷ lệ hàm/gò má", value: metrics?.jawToCheek ? metrics.jawToCheek.toFixed(2) : "N/A" },
   ];
 
   // Tính toán điểm số trực quan dựa trên tỷ lệ khuôn mặt thực tế
-  const symmetryScore = Math.min(99, Math.round(90 + (metrics.widthToLength ? (1 - Math.abs(0.75 - metrics.widthToLength)) * 10 : 5)));
-  const styleScore = Math.round(85 + (metrics.foreheadToJaw ? Math.min(14, metrics.foreheadToJaw * 10) : 10));
+  const symmetryScore = Math.min(99, Math.round(90 + (metrics?.widthToLength ? (1 - Math.abs(0.75 - metrics.widthToLength)) * 10 : 5)));
+  const styleScore = Math.round(85 + (metrics?.foreheadToJaw ? Math.min(14, metrics.foreheadToJaw * 10) : 10));
 
   const SCORES = [
     { label: "Điểm cân đối", value: symmetryScore },
     { label: "Độ hợp phong cách", value: styleScore },
   ];
 
-  // Lấy các khuyến nghị kiểu tóc và lý do tương ứng với dáng khuôn mặt
-  const recs = HAIRSTYLE_RECS[faceShape] || HAIRSTYLE_RECS.Oval;
+  // Lấy các khuyến nghị lý do tương ứng với dáng khuôn mặt
   const reasons = REASONS_MAP[faceShape] || REASONS_MAP.Oval;
 
-  const tryStyle = () => navigate("/swap");
+  const handleTryStyle = (hairstyle) => {
+    setSelectedHairstyle({
+      id: hairstyle.id,
+      name: hairstyle.name,
+      imageUrl: hairstyle.imageUrl,
+      ailabHairType: hairstyle.ailabHairType,
+    });
+    navigate("/swap");
+  };
 
   return (
     <div className="min-h-screen">
@@ -189,29 +179,60 @@ export default function ResultsPage() {
           <div className="flex flex-col gap-6">
             <SectionHeading 
               center={false}
-              title={`Kiểu tóc dành cho gương mặt ${FACE_SHAPE_TRANSLATION[faceShape].split(" (")[0]}`}
-              subtitle="4 đề xuất hàng đầu phù hợp nhất với cấu trúc xương của bạn."
-              action={<a href="#" className="flex shrink-0 items-center gap-2 font-bold text-primary">Xem tất cả <ArrowRight /></a>} 
+              title={`Kiểu tóc dành cho gương mặt ${(FACE_SHAPE_TRANSLATION[faceShape] || "").split(" (")[0]}`}
+              subtitle="Đề xuất hàng đầu phù hợp nhất với cấu trúc xương của bạn."
+              action={<a href="/catalog" className="flex shrink-0 items-center gap-2 font-bold text-primary">Xem tất cả <ArrowRight /></a>} 
             />
 
-            <div className="grid grid-cols-2 gap-6">
-              {recs.map((r, idx) => (
-                <AnimatedContent key={r.name} delay={idx * 0.1}>
-                  <SpotlightCard className="rounded-2xl">
-                    <Card padded={false} className="overflow-hidden">
-                      <div className="relative">
-                        <img src={r.img} alt={r.name} className="h-56 w-full object-cover" />
-                        <Badge variant="new" className="absolute left-3 top-3 shadow">{r.match}% phù hợp</Badge>
-                      </div>
-                      <div className="flex items-center justify-between p-4">
-                        <h4 className="font-bold text-ink">{r.name}</h4>
-                        <Button onClick={tryStyle} size="sm" className="px-4 py-2 text-xs">Thử ngay</Button>
-                      </div>
-                    </Card>
-                  </SpotlightCard>
-                </AnimatedContent>
-              ))}
-            </div>
+            {recsLoading ? (
+              <div className="grid grid-cols-2 gap-6">
+                {Array.from({ length: 4 }).map((_, idx) => (
+                  <Card key={idx} padded={false} className="animate-pulse overflow-hidden">
+                    <div className="h-56 w-full bg-line" />
+                    <div className="flex items-center justify-between p-4">
+                      <div className="h-4 w-1/2 rounded bg-line" />
+                      <div className="h-8 w-20 rounded bg-line animate-pulse" />
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : recommendations.length === 0 ? (
+              <Card className="flex flex-col items-center justify-center py-16 text-center">
+                <p className="text-lg font-semibold text-ink">Không tìm thấy kiểu tóc phù hợp trong danh mục.</p>
+                <p className="mt-1 text-sm text-mauve">Vui lòng quay lại hoặc khám phá tất cả kiểu tóc.</p>
+                <Button to="/catalog" className="mt-4">Khám phá Catalog</Button>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-2 gap-6">
+                {recommendations.map((r, idx) => {
+                  const match = Math.max(80, 98 - idx * 3);
+                  return (
+                    <AnimatedContent key={r.id || r.name} delay={idx * 0.1}>
+                      <SpotlightCard className="rounded-2xl">
+                        <Card padded={false} className="overflow-hidden">
+                          <div className="relative">
+                            <img 
+                              src={r.imageUrl} 
+                              alt={r.name} 
+                              className="h-56 w-full object-cover" 
+                              onError={(e) => { e.target.src = `https://placehold.co/600x400?text=${encodeURIComponent(r.name)}`; }}
+                            />
+                            <Badge variant="new" className="absolute left-3 top-3 shadow">{match}% phù hợp</Badge>
+                            {r.premiumOnly && (
+                              <Badge variant="premium" className="absolute right-3 top-3 shadow">PRO</Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between p-4">
+                            <h4 className="font-bold text-ink truncate mr-2" title={r.name}>{r.name}</h4>
+                            <Button onClick={() => handleTryStyle(r)} size="sm" className="px-4 py-2 text-xs shrink-0">Thử ngay</Button>
+                          </div>
+                        </Card>
+                      </SpotlightCard>
+                    </AnimatedContent>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </Section>

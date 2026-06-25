@@ -62,7 +62,7 @@ public class HairSwapService {
 
         // === BƯỚC 3: Upload ảnh kết quả lên Cloudinary để lưu trữ lâu dài ===
         try {
-            return cloudinaryService.uploadFromUrl(tempUrl);
+            return cloudinaryService.uploadFromUrl(tempUrl, "ai-results");
         } catch (Exception e) {
             log.error("Không thể upload ảnh kết quả lên Cloudinary, sử dụng URL tạm thời của AILab: {}", tempUrl, e);
             return tempUrl;

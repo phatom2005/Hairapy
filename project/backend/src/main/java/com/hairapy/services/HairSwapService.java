@@ -26,6 +26,7 @@ public class HairSwapService {
 
     private final AiLabConfig aiLabConfig;
     private final RestTemplate aiRestTemplate;
+    private final CloudinaryService cloudinaryService;
 
     // Pro API endpoint — async, chỉ thay tóc (không thay mặt)
     private static final String AILAB_PRO_URL = "https://www.ailabapi.com/api/portrait/effects/hairstyle-editor-pro";
@@ -57,7 +58,15 @@ public class HairSwapService {
         String taskId = submitProTask(image, hairStyle);
 
         // === BƯỚC 2: Poll kết quả cho đến khi hoàn thành hoặc timeout ===
-        return pollForResult(taskId);
+        String tempUrl = pollForResult(taskId);
+
+        // === BƯỚC 3: Upload ảnh kết quả lên Cloudinary để lưu trữ lâu dài ===
+        try {
+            return cloudinaryService.uploadFromUrl(tempUrl);
+        } catch (Exception e) {
+            log.error("Không thể upload ảnh kết quả lên Cloudinary, sử dụng URL tạm thời của AILab: {}", tempUrl, e);
+            return tempUrl;
+        }
     }
 
     /**

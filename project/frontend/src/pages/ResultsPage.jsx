@@ -1,13 +1,15 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Card, Badge, Section, SectionHeading } from "../components/ui";
-import Navbar from "../components/layout/Navbar";
-import Footer from "../components/layout/Footer";
+import { AnimatedContent, BorderGlow, GlareHover, SpotlightCard } from "../components/animated";
 import { ArrowRight, CheckIcon, StarIcon } from "../components/icons";
-import { AnimatedContent, SpotlightCard, GlareHover, BorderGlow } from "../components/animated";
-import { useScanStore } from "../store/useScanStore";
-import { useQuery } from "@tanstack/react-query";
+import Footer from "../components/layout/Footer";
+import Navbar from "../components/layout/Navbar";
+import { Badge, Button, Card, Section, SectionHeading } from "../components/ui";
 import api from "../lib/api";
+import { useScanStore } from "../store/useScanStore";
+import useAuthStore from "../store/useAuthStore";
 
 // Bản đồ dịch dáng mặt sang tiếng Việt
 const FACE_SHAPE_TRANSLATION = {
@@ -27,6 +29,8 @@ const FACE_SHAPE_MAP = {
   Oblong: "Dài",
   Diamond: "Kim cương",
 };
+
+const BASE = import.meta.env.VITE_API_URL || "/api";
 
 // Lý do lựa chọn kiểu tóc dựa theo dáng mặt
 const REASONS_MAP = {
@@ -58,9 +62,11 @@ const REASONS_MAP = {
 
 export default function ResultsPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Lấy kết quả phân tích, ảnh preview, giới tính và hàm set kiểu tóc từ Zustand store
   const { analysisResult, previewUrl, setSelectedHairstyle, gender } = useScanStore();
+  const { user } = useAuthStore();
 
   useEffect(() => {
     if (!analysisResult) {
@@ -85,6 +91,49 @@ export default function ResultsPage() {
     enabled: !!faceShape,
   });
 
+  // Query lấy kiểu tóc đã lưu (đồng bộ key chung)
+  const { data: savedStyles = [] } = useQuery({
+    queryKey: ["profile-saved-styles"],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return [];
+      const { data } = await axios.get(`${BASE}/profile/saved-styles`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return data;
+    }
+  });
+
+  const savedIds = new Set(savedStyles.map(s => s.id));
+
+  const handleToggleSave = async (e, hairstyleId) => {
+    e.stopPropagation();
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/login", { state: { from: `/results` } });
+      return;
+    }
+
+    try {
+      const isSaved = savedIds.has(hairstyleId);
+      const headers = { Authorization: `Bearer ${token}` };
+      if (isSaved) {
+        await axios.delete(`${BASE}/profile/saved-styles`, {
+          params: { hairstyleId },
+          headers
+        });
+      } else {
+        await axios.post(`${BASE}/profile/saved-styles`, null, {
+          params: { hairstyleId },
+          headers
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["profile-saved-styles"] });
+    } catch (err) {
+      console.error("Lỗi khi thay đổi trạng thái yêu thích:", err);
+    }
+  };
+
   if (!analysisResult) {
     return null;
   }
@@ -108,10 +157,15 @@ export default function ResultsPage() {
   const reasons = REASONS_MAP[faceShape] || REASONS_MAP.Oval;
 
   const handleTryStyle = (hairstyle) => {
+    if (hairstyle.premiumOnly && (!user || (user.role !== "PREMIUM" && user.role !== "ADMIN" && user.role !== "TESTER"))) {
+      navigate("/pricing");
+      return;
+    }
     setSelectedHairstyle({
       id: hairstyle.id,
       name: hairstyle.name,
       imageUrl: hairstyle.imageUrl,
+      ailabHairType: hairstyle.ailabHairType,
       ailabProStyle: hairstyle.ailabProStyle,
     });
     navigate("/swap");
@@ -216,10 +270,31 @@ export default function ResultsPage() {
                             {r.premiumOnly && (
                               <Badge variant="premium" className="absolute right-3 top-3 shadow">PRO</Badge>
                             )}
+
+                            {/* Nút lưu yêu thích */}
+                            <button
+                              onClick={(e) => handleToggleSave(e, r.id)}
+                              className="absolute left-3 bottom-3 flex size-8 items-center justify-center rounded-full bg-white/90 text-ink shadow-md hover:bg-white hover:text-primary transition"
+                              title={savedIds.has(r.id) ? "Bỏ lưu" : "Lưu kiểu tóc"}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill={savedIds.has(r.id) ? "#FF57CF" : "none"}
+                                viewBox="0 0 24 24"
+                                strokeWidth={2}
+                                stroke="#FF57CF"
+                                className="size-4"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+                              </svg>
+                            </button>
                           </div>
-                          <div className="flex items-center justify-between p-4">
-                            <h4 className="font-bold text-ink truncate mr-2" title={r.name}>{r.name}</h4>
-                            <Button onClick={() => handleTryStyle(r)} size="sm" className="px-4 py-2 text-xs shrink-0">Thử ngay</Button>
+                          <div className="p-4 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-bold text-ink truncate mr-2" title={r.name}>{r.name}</h4>
+                              <Button onClick={() => handleTryStyle(r)} size="sm" className="px-4 py-2 text-xs shrink-0">Thử ngay</Button>
+                            </div>
+                            <p className="text-xs font-semibold text-muted">Phù hợp: {r.gender || "Unisex"}</p>
                           </div>
                         </Card>
                       </SpotlightCard>

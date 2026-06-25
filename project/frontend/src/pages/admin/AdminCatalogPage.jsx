@@ -4,6 +4,7 @@ import { Card, Badge, Button, Input } from "../../components/ui";
 
 const FACE_SHAPES = ["Oval", "Round", "Square", "Heart", "Oblong", "Diamond"];
 const HAIR_LENGTHS = ["Ngắn", "Vừa", "Dài"];
+const GENDERS = ["Nam", "Nữ", "Unisex"];
 
 export default function AdminCatalogPage() {
   const [catalog, setCatalog] = useState([]);
@@ -19,6 +20,7 @@ export default function AdminCatalogPage() {
     tag: "",
     faceShape: "Oval",
     hairLength: "Vừa",
+    gender: "Unisex",
     description: "",
     imageUrl: "",
     premiumOnly: false,
@@ -59,6 +61,7 @@ export default function AdminCatalogPage() {
       tag: "",
       faceShape: "Oval",
       hairLength: "Vừa",
+      gender: "Unisex",
       description: "",
       imageUrl: "",
       premiumOnly: false,
@@ -74,6 +77,7 @@ export default function AdminCatalogPage() {
       tag: item.tag || "",
       faceShape: item.faceShape || "Oval",
       hairLength: item.hairLength || "Vừa",
+      gender: item.gender || "Unisex",
       description: item.description || "",
       imageUrl: item.imageUrl,
       premiumOnly: item.premiumOnly,
@@ -152,6 +156,7 @@ export default function AdminCatalogPage() {
                   <th className="px-6 py-4">Nhãn tag</th>
                   <th className="px-6 py-4">Dáng mặt</th>
                   <th className="px-6 py-4">Độ dài</th>
+                  <th className="px-6 py-4">Giới tính</th>
                   <th className="px-6 py-4">Giới hạn</th>
                   <th className="px-6 py-4 text-center">Hành động</th>
                 </tr>
@@ -161,7 +166,7 @@ export default function AdminCatalogPage() {
                   <tr key={item.id} className="hover:bg-canvas/50 transition-colors">
                     <td className="px-6 py-3">
                       <img
-                        src={item.imageUrl}
+                         src={item.imageUrl}
                         alt={item.name}
                         className="size-12 rounded-xl object-cover border border-line"
                       />
@@ -172,6 +177,11 @@ export default function AdminCatalogPage() {
                     </td>
                     <td className="px-6 py-3 text-mauve font-medium">{item.faceShape || "-"}</td>
                     <td className="px-6 py-3 text-mauve font-medium">{item.hairLength || "-"}</td>
+                    <td className="px-6 py-3">
+                      <Badge variant={item.gender === "Nam" ? "new" : (item.gender === "Nữ" ? "premium" : "neutral")}>
+                        {item.gender || "Unisex"}
+                      </Badge>
+                    </td>
                     <td className="px-6 py-3">
                       {item.premiumOnly ? (
                         <Badge variant="premium">PREMIUM</Badge>
@@ -268,12 +278,12 @@ export default function AdminCatalogPage() {
                 onChange={(e) => setFormData({ ...formData, tag: e.target.value })}
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-3">
                 {/* Dáng khuôn mặt */}
                 <label className="flex flex-col gap-2">
-                  <span className="text-sm font-semibold text-mauve">Dáng mặt hợp</span>
+                  <span className="text-sm font-semibold text-mauve">Dáng mặt</span>
                   <select
-                    className="w-full rounded-3xl border-2 border-line bg-white py-3.5 px-5 text-base text-ink outline-none transition focus:border-brand"
+                    className="w-full rounded-3xl border-2 border-line bg-white py-3.5 px-4 text-sm text-ink outline-none transition focus:border-brand"
                     value={formData.faceShape}
                     onChange={(e) => setFormData({ ...formData, faceShape: e.target.value })}
                   >
@@ -287,15 +297,31 @@ export default function AdminCatalogPage() {
 
                 {/* Độ dài tóc */}
                 <label className="flex flex-col gap-2">
-                  <span className="text-sm font-semibold text-mauve">Độ dài tóc</span>
+                  <span className="text-sm font-semibold text-mauve">Độ dài</span>
                   <select
-                    className="w-full rounded-3xl border-2 border-line bg-white py-3.5 px-5 text-base text-ink outline-none transition focus:border-brand"
+                    className="w-full rounded-3xl border-2 border-line bg-white py-3.5 px-4 text-sm text-ink outline-none transition focus:border-brand"
                     value={formData.hairLength}
                     onChange={(e) => setFormData({ ...formData, hairLength: e.target.value })}
                   >
                     {HAIR_LENGTHS.map((len) => (
                       <option key={len} value={len}>
                         {len}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                {/* Giới tính phù hợp */}
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-mauve">Giới tính</span>
+                  <select
+                    className="w-full rounded-3xl border-2 border-line bg-white py-3.5 px-4 text-sm text-ink outline-none transition focus:border-brand"
+                    value={formData.gender}
+                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                  >
+                    {GENDERS.map((genderOpt) => (
+                      <option key={genderOpt} value={genderOpt}>
+                        {genderOpt}
                       </option>
                     ))}
                   </select>

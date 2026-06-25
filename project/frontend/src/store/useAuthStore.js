@@ -68,6 +68,8 @@ const useAuthStore = create((set, get) => ({
   logout: () => {
     localStorage.removeItem("token");
     set({ token: null, user: null, error: null });
+    // Chuyển hướng về trang chủ và tải lại trang để xóa sạch cache/state cũ
+    window.location.href = "/";
   },
 
   /**

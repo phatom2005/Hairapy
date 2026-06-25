@@ -36,6 +36,7 @@ public class HairstyleCatalogController {
      * @param hairLength lọc theo độ dài tóc (tùy chọn).
      * @param tag        lọc theo tag (tùy chọn).
      * @param search     tìm kiếm theo tên (tùy chọn).
+     * @param gender     lọc theo giới tính: "Nam", "Nữ" (tùy chọn, bao gồm cả Unisex).
      * @param userDetails thông tin người dùng đang đăng nhập từ JWT.
      * @return danh sách kiểu tóc phù hợp.
      */
@@ -45,6 +46,7 @@ public class HairstyleCatalogController {
             @RequestParam(required = false) String hairLength,
             @RequestParam(required = false) String tag,
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String gender,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         // Kiểm tra người dùng có gói Premium đang hoạt động không
@@ -66,6 +68,10 @@ public class HairstyleCatalogController {
                 .filter(h -> tag == null || tag.isBlank() || tag.equalsIgnoreCase(h.getTag()))
                 .filter(h -> search == null || search.isBlank()
                         || h.getName().toLowerCase().contains(search.toLowerCase()))
+                // Lọc theo giới tính: hiển thị kiểu tóc đúng giới tính + Unisex
+                .filter(h -> gender == null || gender.isBlank()
+                        || "Unisex".equalsIgnoreCase(h.getGender())
+                        || gender.equalsIgnoreCase(h.getGender()))
                 .toList();
 
         return ResponseEntity.ok(result);

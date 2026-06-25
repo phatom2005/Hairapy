@@ -63,7 +63,7 @@ public class ScanHistoryController {
             log.info("Lưu lịch sử quét khuôn mặt cho user: {}, faceShape: {}", currentUser.getEmail(), faceShape);
             
             // Upload ảnh lên Cloudinary
-            String cloudinaryUrl = cloudinaryService.upload(image);
+            String cloudinaryUrl = cloudinaryService.uploadFile(image, "scans");
 
             ScanHistory history = ScanHistory.builder()
                     .user(currentUser)

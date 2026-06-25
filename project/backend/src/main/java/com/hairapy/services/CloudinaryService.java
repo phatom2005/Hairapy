@@ -8,10 +8,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
 import java.util.Map;
 
 /**
- * Service xử lý tải ảnh lên Cloudinary.
+ * Service upload/xóa ảnh trên Cloudinary.
+ * Dùng cho: ảnh user upload (selfie), kết quả AI swap, ảnh catalog kiểu tóc.
  */
 @Slf4j
 @Service
@@ -21,40 +24,60 @@ public class CloudinaryService {
     private final Cloudinary cloudinary;
 
     /**
-     * Upload file ảnh từ MultipartFile lên Cloudinary.
-     * Trả về URL bảo mật.
+     * Upload file ảnh (MultipartFile) lên Cloudinary.
+     *
+     * @param file   file ảnh từ request.
+     * @param folder thư mục trên Cloudinary (ví dụ: "user-uploads", "ai-results", "catalog").
+     * @return URL ảnh đã upload (HTTPS).
      */
-    public String upload(MultipartFile file) {
+    public String uploadFile(MultipartFile file, String folder) {
         try {
-            if (file.isEmpty()) {
-                throw new IllegalArgumentException("File ảnh không được để trống.");
-            }
-            Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
-                    "folder", "hairapy/scans"
+            Map result = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
+                    "folder", "hairapy/" + folder,
+                    "resource_type", "image"
             ));
-            return (String) uploadResult.get("secure_url");
+            String url = (String) result.get("secure_url");
+            log.info("Upload ảnh thành công lên Cloudinary: folder={}, url={}...", folder, url.substring(0, Math.min(60, url.length())));
+            return url;
         } catch (IOException e) {
-            log.error("Lỗi khi upload ảnh lên Cloudinary", e);
-            throw new RuntimeException("Không thể lưu trữ hình ảnh.");
+            log.error("Lỗi upload ảnh lên Cloudinary: {}", e.getMessage());
+            throw new RuntimeException("Không thể upload ảnh lên cloud storage.");
         }
     }
 
     /**
-     * Tải ảnh từ URL bên ngoài (như AILab CDN) và upload lên Cloudinary.
-     * Trả về URL bảo mật.
+     * Upload ảnh từ URL (ví dụ: URL kết quả từ AI Pro API) lên Cloudinary.
+     *
+     * @param imageUrl URL ảnh nguồn (temporary URL từ AILab).
+     * @param folder   thư mục trên Cloudinary.
+     * @return URL ảnh permanent trên Cloudinary.
      */
-    public String uploadFromUrl(String imageUrl) {
+    public String uploadFromUrl(String imageUrl, String folder) {
         try {
-            if (imageUrl == null || imageUrl.isBlank()) {
-                throw new IllegalArgumentException("URL ảnh không được để trống.");
-            }
-            Map uploadResult = cloudinary.uploader().upload(imageUrl, ObjectUtils.asMap(
-                    "folder", "hairapy/results"
+            Map result = cloudinary.uploader().upload(imageUrl, ObjectUtils.asMap(
+                    "folder", "hairapy/" + folder,
+                    "resource_type", "image"
             ));
-            return (String) uploadResult.get("secure_url");
+            String url = (String) result.get("secure_url");
+            log.info("Upload ảnh từ URL lên Cloudinary thành công: folder={}", folder);
+            return url;
         } catch (IOException e) {
-            log.error("Lỗi khi upload ảnh từ URL lên Cloudinary: {}", imageUrl, e);
-            throw new RuntimeException("Không thể lưu trữ hình ảnh kết quả.");
+            log.error("Lỗi upload ảnh từ URL lên Cloudinary: {}", e.getMessage());
+            throw new RuntimeException("Không thể lưu ảnh kết quả AI lên cloud storage.");
+        }
+    }
+
+    /**
+     * Xóa ảnh trên Cloudinary theo public_id.
+     *
+     * @param publicId public_id của ảnh (ví dụ: "hairapy/user-uploads/abc123").
+     */
+    public void delete(String publicId) {
+        try {
+            cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+            log.info("Đã xóa ảnh trên Cloudinary: {}", publicId);
+        } catch (IOException e) {
+            log.warn("Không thể xóa ảnh trên Cloudinary: {} — {}", publicId, e.getMessage());
         }
     }
 }

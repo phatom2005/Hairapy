@@ -7,10 +7,10 @@ export const useScanStore = create((set, get) => ({
   analyzing: false,
   error: null,
   selectedHairstyle: null, // Kiểu tóc được chọn từ trang kết quả phân tích
+  gender: null, // Giới tính người dùng chọn: "Nam" hoặc "Nữ"
 
   // Thiết lập ảnh gốc và tạo URL xem trước tạm thời (Blob URL)
   setImage: (file) => {
-    // Thu hồi URL xem trước cũ nếu có để tránh rò rỉ bộ nhớ (memory leak)
     const currentPreviewUrl = get().previewUrl;
     if (currentPreviewUrl) {
       URL.revokeObjectURL(currentPreviewUrl);
@@ -53,6 +53,11 @@ export const useScanStore = create((set, get) => ({
     set({ selectedHairstyle: hairstyle });
   },
 
+  // Thiết lập giới tính người dùng
+  setGender: (gender) => {
+    set({ gender });
+  },
+
   // Reset toàn bộ state về mặc định (ví dụ khi người dùng muốn quét lại)
   reset: () => {
     const currentPreviewUrl = get().previewUrl;
@@ -66,6 +71,7 @@ export const useScanStore = create((set, get) => ({
       analyzing: false,
       error: null,
       selectedHairstyle: null,
+      // Không reset gender khi quét lại — giới tính không thay đổi giữa các lần scan
     });
   },
 }));

@@ -58,11 +58,10 @@ const REASONS_MAP = {
 
 export default function ResultsPage() {
   const navigate = useNavigate();
-  
-  // Lấy kết quả phân tích, ảnh preview và hàm set kiểu tóc từ Zustand store
-  const { analysisResult, previewUrl, setSelectedHairstyle } = useScanStore();
 
-  // Kiểm tra nếu chưa có kết quả scan thì chuyển hướng về /scan
+  // Lấy kết quả phân tích, ảnh preview, giới tính và hàm set kiểu tóc từ Zustand store
+  const { analysisResult, previewUrl, setSelectedHairstyle, gender } = useScanStore();
+
   useEffect(() => {
     if (!analysisResult) {
       navigate("/scan");
@@ -74,11 +73,13 @@ export default function ResultsPage() {
 
   const faceShapeVi = FACE_SHAPE_MAP[faceShape] || "Trái xoan";
 
-  // Fetch kiểu tóc gợi ý từ API dựa theo hình dáng khuôn mặt tiếng Việt
+  // Fetch kiểu tóc gợi ý từ API dựa theo hình dáng khuôn mặt + giới tính
   const { data: recommendations = [], isLoading: recsLoading } = useQuery({
-    queryKey: ["hairstyles", faceShapeVi],
+    queryKey: ["hairstyles", faceShapeVi, gender],
     queryFn: async () => {
-      const { data } = await api.get("/hairstyles", { params: { faceShape: faceShapeVi } });
+      const params = { faceShape: faceShapeVi };
+      if (gender) params.gender = gender;
+      const { data } = await api.get("/hairstyles", { params });
       return data;
     },
     enabled: !!faceShape,
@@ -88,7 +89,6 @@ export default function ResultsPage() {
     return null;
   }
 
-  // Cấu hình các chỉ số sinh trắc học dựa trên dáng khuôn mặt nhận diện được từ MediaPipe
   const faceShapeText = FACE_SHAPE_TRANSLATION[faceShape] || faceShape;
   const BIOMETRICS = [
     { label: "Hình dáng khuôn mặt", value: faceShapeText },
@@ -97,7 +97,6 @@ export default function ResultsPage() {
     { label: "Tỷ lệ hàm/gò má", value: metrics?.jawToCheek ? metrics.jawToCheek.toFixed(2) : "N/A" },
   ];
 
-  // Tính toán điểm số trực quan dựa trên tỷ lệ khuôn mặt thực tế
   const symmetryScore = Math.min(99, Math.round(90 + (metrics?.widthToLength ? (1 - Math.abs(0.75 - metrics.widthToLength)) * 10 : 5)));
   const styleScore = Math.round(85 + (metrics?.foreheadToJaw ? Math.min(14, metrics.foreheadToJaw * 10) : 10));
 
@@ -106,7 +105,6 @@ export default function ResultsPage() {
     { label: "Độ hợp phong cách", value: styleScore },
   ];
 
-  // Lấy các khuyến nghị lý do tương ứng với dáng khuôn mặt
   const reasons = REASONS_MAP[faceShape] || REASONS_MAP.Oval;
 
   const handleTryStyle = (hairstyle) => {
@@ -124,7 +122,6 @@ export default function ResultsPage() {
       <Navbar />
 
       <Section className="bg-transparent">
-        {/* Header */}
         <div className="mb-12 flex flex-col items-center gap-3 text-center">
           <Badge variant="new" className="uppercase tracking-wider text-[#3a4d00]">AI phân tích trực tiếp</Badge>
           <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink sm:text-5xl">Phân tích kết quả của bạn</h1>
@@ -132,13 +129,12 @@ export default function ResultsPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_1.4fr]">
-          {/* Hồ sơ khuôn mặt */}
           <Card className="flex flex-col gap-6">
             <h3 className="text-xl font-bold text-ink">Hồ sơ khuôn mặt</h3>
-            <img 
-              src={previewUrl} 
-              alt="Khuôn mặt người dùng" 
-              className="aspect-square w-full rounded-2xl object-cover border border-line" 
+            <img
+              src={previewUrl}
+              alt="Khuôn mặt người dùng"
+              className="aspect-square w-full rounded-2xl object-cover border border-line"
             />
 
             <div>
@@ -175,13 +171,12 @@ export default function ResultsPage() {
             </p>
           </Card>
 
-          {/* Đề xuất */}
           <div className="flex flex-col gap-6">
-            <SectionHeading 
+            <SectionHeading
               center={false}
               title={`Kiểu tóc dành cho gương mặt ${(FACE_SHAPE_TRANSLATION[faceShape] || "").split(" (")[0]}`}
               subtitle="Đề xuất hàng đầu phù hợp nhất với cấu trúc xương của bạn."
-              action={<a href="/catalog" className="flex shrink-0 items-center gap-2 font-bold text-primary">Xem tất cả <ArrowRight /></a>} 
+              action={<a href="/catalog" className="flex shrink-0 items-center gap-2 font-bold text-primary">Xem tất cả <ArrowRight /></a>}
             />
 
             {recsLoading ? (
@@ -211,10 +206,10 @@ export default function ResultsPage() {
                       <SpotlightCard className="rounded-2xl">
                         <Card padded={false} className="overflow-hidden">
                           <div className="relative">
-                            <img 
-                              src={r.imageUrl} 
-                              alt={r.name} 
-                              className="h-56 w-full object-cover" 
+                            <img
+                              src={r.imageUrl}
+                              alt={r.name}
+                              className="h-56 w-full object-cover"
                               onError={(e) => { e.target.src = `https://placehold.co/600x400?text=${encodeURIComponent(r.name)}`; }}
                             />
                             <Badge variant="new" className="absolute left-3 top-3 shadow">{match}% phù hợp</Badge>
@@ -237,7 +232,6 @@ export default function ResultsPage() {
         </div>
       </Section>
 
-      {/* Tại sao phù hợp */}
       <Section className="bg-transparent">
         <SectionHeading title="Tại sao các kiểu tóc này lại phù hợp?" />
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
@@ -257,7 +251,6 @@ export default function ResultsPage() {
         </div>
       </Section>
 
-      {/* CTA AR */}
       <section className="bg-transparent px-4 py-16 sm:px-16">
         <AnimatedContent y={60}>
           <GlareHover className="mx-auto max-w-[1200px] rounded-[40px]">

@@ -25,16 +25,15 @@ const PALETTES = {
 
 export default function SwapPage() {
   const navigate = useNavigate();
-  
-  // Lấy ảnh gốc, kết quả phân tích và kiểu tóc đã chọn (nếu có) từ useScanStore
-  const { imageFile, previewUrl, selectedHairstyle, analysisResult } = useScanStore();
+
+  // Lấy ảnh gốc, kết quả phân tích, giới tính và kiểu tóc đã chọn (nếu có) từ useScanStore
+  const { imageFile, previewUrl, selectedHairstyle, analysisResult, gender } = useScanStore();
 
   const [selectedStyle, setSelectedStyle] = useState(selectedHairstyle);
   const [tab, setTab] = useState("Tự nhiên");
   const [color, setColor] = useState(PALETTES["Tự nhiên"][2]);
   const [shade, setShade] = useState(50);
 
-  // Các state xử lý tích hợp API thật
   const [loading, setLoading] = useState(false);
   const [resultImage, setResultImage] = useState(null);
   const [error, setError] = useState(null);
@@ -44,11 +43,13 @@ export default function SwapPage() {
     ? FACE_SHAPE_MAP[analysisResult.faceShape] || null
     : null;
 
-  // Fetch kiểu tóc phù hợp dáng mặt (khớp với ResultsPage), fallback toàn bộ nếu không có faceShape
+  // Fetch kiểu tóc phù hợp dáng mặt + giới tính, fallback toàn bộ nếu không có faceShape
   const { data: styles = [] } = useQuery({
-    queryKey: ["hairstyles-swap", faceShapeVi],
+    queryKey: ["hairstyles-swap", faceShapeVi, gender],
     queryFn: async () => {
-      const params = faceShapeVi ? { faceShape: faceShapeVi } : {};
+      const params = {};
+      if (faceShapeVi) params.faceShape = faceShapeVi;
+      if (gender) params.gender = gender;
       const { data } = await api.get("/hairstyles", { params });
       return data;
     },
@@ -61,7 +62,7 @@ export default function SwapPage() {
     }
   }, [previewUrl, navigate]);
 
-  // Thiết lập kiểu tóc đang hiển thị hoạt động (ưu tiên từ state selectedStyle, fallback về styles[0])
+  // Thiết lập kiểu tóc đang hiển thị hoạt động
   const activeStyle = selectedStyle || (styles.length > 0 ? {
     id: styles[0].id,
     name: styles[0].name,
@@ -85,16 +86,12 @@ export default function SwapPage() {
     formData.append("hairType", activeStyle.ailabHairType);
 
     try {
-      // Gọi API POST /api/swap/try
       const response = await api.post("/swap/try", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       let imgData = response.data.image;
       if (imgData) {
-        // Nếu API trả về chuỗi Base64 chưa có tiền tố thì bổ sung để hiển thị
         if (!imgData.startsWith("http") && !imgData.startsWith("data:image")) {
           imgData = `data:image/png;base64,${imgData}`;
         }
@@ -106,14 +103,12 @@ export default function SwapPage() {
       console.error("Lỗi khi gọi Hair Swap API:", err);
       const errorData = err.response?.data;
 
-      // Xử lý khi AI timeout và được hoàn lượt (504)
       if (err.response?.status === 504 || errorData?.refunded) {
         setError("AI xử lý quá lâu. Lượt của bạn đã được hoàn lại — hãy thử lại nhé!");
         setLoading(false);
         return;
       }
 
-      // Xử lý khi hết lượt giới hạn hàng ngày (429)
       if (err.response?.status === 429) {
         setError(`Bạn đã hết lượt thử kiểu tóc hôm nay (${errorData.limit} lượt/ngày). Nâng cấp Premium để có thêm lượt!`);
         setLoading(false);
@@ -122,9 +117,9 @@ export default function SwapPage() {
 
       const errMsg = errorData?.error || "AI xử lý quá lâu hoặc gặp sự cố, vui lòng thử lại.";
       const errDetails = errorData?.details ? ` (Chi tiết: ${errorData.details})` : "";
-      
+
       const isCreditError = errDetails.toLowerCase().includes("credits") || errDetails.toLowerCase().includes("credit");
-      const isKeyError = errDetails.toLowerCase().includes("key") || errDetails.toLowerCase().includes("key");
+      const isKeyError = errDetails.toLowerCase().includes("key");
 
       if (isCreditError || isKeyError) {
         setError("Tài khoản AILabTools đã hết điểm (Credits) hoặc chưa cấu hình API Key chính xác. Vui lòng đăng ký/nạp thêm tại ailabtools.com và cấu hình biến AILAB_API_KEY trên Railway. (Hệ thống đã tự động chuyển sang Chế độ Mô phỏng để không gián đoạn demo).");
@@ -142,10 +137,9 @@ export default function SwapPage() {
       <Navbar />
 
       <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-8 px-6 py-12 sm:px-16 lg:grid-cols-[380px_1fr]">
-        
+
         {/* ASIDE: bộ chọn */}
         <Card className="flex flex-col gap-6">
-          {/* Chọn kiểu tóc */}
           <div>
             <h2 className="mb-3 text-lg font-bold text-ink">Chọn kiểu tóc</h2>
             {styles.length === 0 ? (
@@ -157,8 +151,8 @@ export default function SwapPage() {
                 {styles.map((s) => {
                   const isActive = activeStyle?.id === s.id;
                   return (
-                    <button 
-                      key={s.id} 
+                    <button
+                      key={s.id}
                       onClick={() => {
                         setSelectedStyle({
                           id: s.id,
@@ -166,7 +160,6 @@ export default function SwapPage() {
                           imageUrl: s.imageUrl,
                           ailabHairType: s.ailabHairType,
                         });
-                        // Reset ảnh kết quả AI cũ khi đổi kiểu tóc để tránh mismatch
                         setResultImage(null);
                         setError(null);
                       }}
@@ -174,10 +167,10 @@ export default function SwapPage() {
                         isActive ? "border-primary font-bold" : "border-transparent"
                       }`}
                     >
-                      <img 
-                        src={s.imageUrl} 
-                        alt={s.name} 
-                        className="aspect-square w-full object-cover" 
+                      <img
+                        src={s.imageUrl}
+                        alt={s.name}
+                        className="aspect-square w-full object-cover"
                         onError={(e) => { e.target.src = `https://placehold.co/300x300?text=${encodeURIComponent(s.name)}`; }}
                       />
                       {isActive && (
@@ -198,7 +191,6 @@ export default function SwapPage() {
             )}
           </div>
 
-          {/* Màu sắc (Mô phỏng lớp phủ màu) */}
           <div>
             <h2 className="mb-3 text-lg font-bold text-ink">Màu sắc mô phỏng</h2>
             <div className="mb-3 flex gap-2 rounded-full bg-canvas p-1">
@@ -220,7 +212,6 @@ export default function SwapPage() {
             </div>
           </div>
 
-          {/* Tùy chỉnh sắc độ */}
           <div>
             <label className="mb-2 block text-sm font-semibold text-mauve">Sắc độ phủ màu</label>
             <input type="range" min="0" max="100" value={shade}
@@ -228,17 +219,15 @@ export default function SwapPage() {
               className="w-full accent-primary" />
           </div>
 
-          {/* Hiển thị thông báo lỗi nếu ghép ảnh thất bại */}
           {error && (
             <div className="text-xs font-semibold text-red-500 bg-red-500/10 p-3 rounded-xl border border-red-500/20">
               ⚠️ {error}
             </div>
           )}
 
-          {/* Nút bấm trigger Hair Swap */}
           <div className="relative group w-full">
-            <Button 
-              onClick={handleApply} 
+            <Button
+              onClick={handleApply}
               disabled={loading || activeStyle?.ailabHairType == null}
               className="w-full"
             >
@@ -251,7 +240,6 @@ export default function SwapPage() {
             )}
           </div>
 
-          {/* Nút khôi phục ảnh gốc */}
           {resultImage && (
             <Button variant="outline" onClick={() => setResultImage(null)} className="w-full">
               Khôi phục ảnh gốc
@@ -262,20 +250,17 @@ export default function SwapPage() {
         {/* PREVIEW */}
         <div className="flex flex-col gap-6">
           <div className="relative overflow-hidden rounded-[32px] shadow-2xl ring-4 ring-pink/40 bg-ink">
-            {/* Ảnh hiển thị: Ưu tiên ảnh đã ghép của AI, nếu chưa có hiển thị ảnh xem trước gốc */}
-            <img 
-              src={resultImage || previewUrl} 
-              alt="Preview chân dung" 
-              className="aspect-[3/4] w-full object-cover transition-all duration-300" 
+            <img
+              src={resultImage || previewUrl}
+              alt="Preview chân dung"
+              className="aspect-[3/4] w-full object-cover transition-all duration-300"
             />
-            
-            {/* Lớp phủ màu mô phỏng — chỉ hiện khi chưa có kết quả AI để tránh làm sai màu ảnh ghép */}
+
             {!resultImage && (
               <div className="pointer-events-none absolute inset-0 mix-blend-soft-light"
                 style={{ backgroundColor: color, opacity: shade / 150 }} />
             )}
 
-            {/* Trạng thái AI loading overlay */}
             {loading && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink/75 backdrop-blur-sm transition-opacity duration-300">
                 <span className="size-14 animate-spin rounded-full border-4 border-pink border-t-transparent shadow-lg" />
@@ -288,13 +273,11 @@ export default function SwapPage() {
               </div>
             )}
 
-            {/* Trạng thái hiển thị góc trên */}
             <div className="absolute left-6 top-6 flex items-center gap-2 rounded-full bg-ink/75 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md">
               <span className={`size-2 rounded-full ${loading ? "bg-amber-400 animate-pulse" : resultImage ? "bg-lime" : "bg-pink"}`} />
               {loading ? "AI đang ghép..." : resultImage ? "Hoàn tất ghép tóc AI" : "Ảnh gốc - Sẵn sàng ghép"}
             </div>
 
-            {/* Thanh hành động nổi bên dưới ảnh */}
             <div className="absolute inset-x-6 bottom-6 flex items-center justify-between rounded-2xl bg-white/95 px-5 py-3 shadow-lg backdrop-blur-md">
               <div className="max-w-[70%]">
                 <p className="text-sm font-bold text-ink truncate" title={activeStyle?.name}>{activeStyle?.name || "Đang tải..."}</p>
@@ -304,15 +287,14 @@ export default function SwapPage() {
             </div>
           </div>
 
-          {/* Lịch sử mẫu thử */}
           <div>
             <p className="mb-3 text-sm font-bold text-mauve">Tất cả kiểu tóc có sẵn:</p>
             <div className="flex gap-3 overflow-x-auto pb-2 pr-1">
               {styles.map((s) => {
                 const isActive = activeStyle?.id === s.id;
                 return (
-                  <button 
-                    key={s.id} 
+                  <button
+                    key={s.id}
                     onClick={() => {
                       setSelectedStyle({
                         id: s.id,
@@ -325,12 +307,12 @@ export default function SwapPage() {
                     }}
                     className="shrink-0 relative"
                   >
-                    <img 
-                      src={s.imageUrl} 
+                    <img
+                      src={s.imageUrl}
                       alt={s.name}
                       className={`size-20 rounded-xl object-cover transition duration-200 ${
                         isActive ? "opacity-100 ring-2 ring-primary" : "opacity-60 hover:opacity-100"
-                      }`} 
+                      }`}
                       onError={(e) => { e.target.src = `https://placehold.co/300x300?text=${encodeURIComponent(s.name)}`; }}
                     />
                     {s.premiumOnly && (

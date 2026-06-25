@@ -21,15 +21,17 @@ export default function ScanPage() {
   const cameraInputRef = useRef(null);
 
   // Lấy dữ liệu và actions từ Zustand store
-  const { 
-    previewUrl, 
-    setImage, 
-    setResult, 
-    analyzing, 
-    setAnalyzing, 
-    error, 
-    setError, 
-    reset 
+  const {
+    previewUrl,
+    setImage,
+    setResult,
+    analyzing,
+    setAnalyzing,
+    error,
+    setError,
+    reset,
+    gender,
+    setGender,
   } = useScanStore();
 
   const [showDisclosure, setShowDisclosure] = useState(false);
@@ -66,7 +68,7 @@ export default function ScanPage() {
   const startAnalysis = async (file) => {
     setAnalyzing(true);
     setError(null);
-    setImage(file); // Lưu ảnh và tạo previewUrl
+    setImage(file);
 
     const objectUrl = URL.createObjectURL(file);
     const img = new Image();
@@ -74,12 +76,10 @@ export default function ScanPage() {
 
     img.onload = async () => {
       try {
-        // Chạy thuật toán phân tích khuôn mặt MediaPipe trên Client
         const result = await analyzeFace(img);
         setResult(result);
         setAnalyzing(false);
         URL.revokeObjectURL(objectUrl);
-        // Điều hướng sang trang hiển thị kết quả
         navigate("/results");
       } catch (err) {
         console.error("Lỗi phân tích khuôn mặt:", err);
@@ -96,7 +96,6 @@ export default function ScanPage() {
     };
   };
 
-  // Đồng ý điều khoản bảo mật
   const handleAcceptDisclosure = () => {
     setShowDisclosure(false);
     if (pendingFile) {
@@ -105,7 +104,6 @@ export default function ScanPage() {
     }
   };
 
-  // Từ chối điều khoản bảo mật
   const handleCloseDisclosure = () => {
     setShowDisclosure(false);
     setPendingFile(null);
@@ -141,23 +139,49 @@ export default function ScanPage() {
             </div>
           </AnimatedContent>
 
+          <AnimatedContent delay={0.15}>
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-semibold text-mauve">Giới tính của bạn</p>
+              <div className="flex gap-3">
+                {[
+                  { value: "Nam", icon: "👨" },
+                  { value: "Nữ", icon: "👩" },
+                ].map((g) => (
+                  <button
+                    key={g.value}
+                    onClick={() => setGender(g.value)}
+                    className={`flex items-center gap-2 rounded-full border-2 px-5 py-2.5 text-sm font-semibold transition-all ${
+                      gender === g.value
+                        ? "border-primary bg-primary/10 text-primary shadow-sm"
+                        : "border-line text-mauve hover:border-primary/50"
+                    }`}
+                  >
+                    <span>{g.icon}</span>
+                    {g.value}
+                  </button>
+                ))}
+              </div>
+              {!gender && (
+                <p className="text-xs text-muted">Vui lòng chọn để AI gợi ý kiểu tóc phù hợp hơn</p>
+              )}
+            </div>
+          </AnimatedContent>
+
           <AnimatedContent delay={0.2}>
             <div className="flex flex-col gap-4">
               <div className="flex flex-wrap gap-4">
-                {/* Nút chụp ảnh (dành cho Mobile camera) */}
                 <BorderGlow rounded="rounded-full" thickness={2}>
-                  <Button 
-                    onClick={() => cameraInputRef.current?.click()} 
+                  <Button
+                    onClick={() => cameraInputRef.current?.click()}
                     icon={<CameraIcon size={20} />}
                     disabled={analyzing}
                   >
                     Chụp ảnh
                   </Button>
                 </BorderGlow>
-                {/* Nút tải ảnh lên */}
-                <Button 
-                  onClick={() => fileInputRef.current?.click()} 
-                  variant="outline" 
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  variant="outline"
                   icon={<UploadIcon size={20} />}
                   disabled={analyzing}
                 >
@@ -165,7 +189,6 @@ export default function ScanPage() {
                 </Button>
               </div>
 
-              {/* Hiển thị lỗi nếu quá trình phân tích hoặc tải ảnh thất bại */}
               {error && (
                 <div className="max-w-lg rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-sm font-medium text-red-500">
                   ⚠️ {error}
@@ -174,21 +197,20 @@ export default function ScanPage() {
             </div>
           </AnimatedContent>
 
-          {/* Các input ẩn xử lý chọn ảnh */}
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileChange} 
-            accept="image/*" 
-            className="hidden" 
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept="image/*"
+            className="hidden"
           />
-          <input 
-            type="file" 
-            ref={cameraInputRef} 
-            onChange={handleFileChange} 
-            accept="image/*" 
-            capture="user" 
-            className="hidden" 
+          <input
+            type="file"
+            ref={cameraInputRef}
+            onChange={handleFileChange}
+            accept="image/*"
+            capture="user"
+            className="hidden"
           />
 
           <AnimatedContent delay={0.4}>
@@ -210,13 +232,12 @@ export default function ScanPage() {
             <div className="pointer-events-none absolute -bottom-20 -left-20 size-80 rounded-full bg-primary/5 blur-[32px]" />
 
             <div className="relative overflow-hidden rounded-[32px] border-4 border-white bg-line shadow-2xl">
-              <img 
-                src={previewUrl || SCAN_PORTRAIT} 
-                alt="Đang quét AI" 
-                className="aspect-[3/4] w-full object-cover transition-all duration-300" 
+              <img
+                src={previewUrl || SCAN_PORTRAIT}
+                alt="Đang quét AI"
+                className="aspect-[3/4] w-full object-cover transition-all duration-300"
               />
 
-              {/* Hiệu ứng quét laser chuyển động đẹp mắt khi đang chạy MediaPipe */}
               {analyzing && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink/60 backdrop-blur-sm transition-opacity duration-300">
                   <div className="relative z-10 flex flex-col items-center gap-4 text-center px-6">
@@ -228,15 +249,13 @@ export default function ScanPage() {
                       Tính toán 478 điểm mốc bằng WebAssembly
                     </p>
                   </div>
-                  {/* Đường laser quét */}
-                  <div 
-                    className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-pink to-transparent shadow-[0_0_15px_#ff57cf]" 
+                  <div
+                    className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-pink to-transparent shadow-[0_0_15px_#ff57cf]"
                     style={{ animation: "laserScan 2.5s ease-in-out infinite" }}
                   />
                 </div>
               )}
 
-              {/* 4 góc khung digital */}
               {[
                 "left-8 top-8 border-l-4 border-t-4 rounded-tl-xl",
                 "right-8 top-8 border-r-4 border-t-4 rounded-tr-xl",
@@ -246,13 +265,11 @@ export default function ScanPage() {
                 <span key={c} className={`absolute size-12 border-pink ${c}`} />
               ))}
 
-              {/* badge độ chính xác */}
               <div className="absolute right-7 top-12 flex items-center gap-2 rounded-2xl border border-magenta/20 bg-white/90 px-4 py-2 shadow-lg backdrop-blur-md">
                 <span className="text-[11px] text-magenta">đã xác thực</span>
                 <span className="text-sm font-semibold text-ink">Chính xác 99.8%</span>
               </div>
 
-              {/* data readout */}
               <div className="absolute inset-x-10 bottom-12 flex items-center justify-between rounded-2xl bg-ink/80 p-4 backdrop-blur-md">
                 <div className="flex items-center gap-3">
                   <span className="size-10 rounded-full border-2 border-pink" />
@@ -271,11 +288,10 @@ export default function ScanPage() {
         </AnimatedContent>
       </section>
 
-      {/* Modal chính sách quyền riêng tư */}
-      <DisclosureModal 
-        isOpen={showDisclosure} 
-        onClose={handleCloseDisclosure} 
-        onAccept={handleAcceptDisclosure} 
+      <DisclosureModal
+        isOpen={showDisclosure}
+        onClose={handleCloseDisclosure}
+        onAccept={handleAcceptDisclosure}
       />
 
       <Footer />

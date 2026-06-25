@@ -50,6 +50,11 @@ public class HairstyleCatalog {
     @Builder.Default
     private boolean premiumOnly = false;
 
+    // Giới tính phù hợp: "Nam", "Nữ", "Unisex"
+    @Column(nullable = false, length = 10)
+    @Builder.Default
+    private String gender = "Unisex";
+
     @Column(name = "ailab_hair_type")
     private Integer ailabHairType;
 

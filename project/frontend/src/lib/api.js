@@ -3,14 +3,20 @@ import axios from "axios";
 // Base URL: Vercel/prod set VITE_API_URL env var, local dùng Vite proxy (/api)
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "/api",
-  headers: { "Content-Type": "application/json" },
 });
 
-// Tự đính JWT token vào mọi request nếu có
+// Tự đính JWT token + xử lý Content-Type cho FormData
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  // Nếu data là FormData → xóa Content-Type để Axios tự set multipart/form-data kèm boundary
+  // Ngược lại mặc định JSON
+  if (config.data instanceof FormData) {
+    delete config.headers["Content-Type"];
+  } else {
+    config.headers["Content-Type"] = config.headers["Content-Type"] || "application/json";
   }
   return config;
 });

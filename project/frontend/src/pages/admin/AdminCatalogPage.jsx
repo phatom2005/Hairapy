@@ -122,7 +122,7 @@ export default function AdminCatalogPage() {
     }
 
     // Không set Content-Type thủ công — Axios tự detect FormData và thêm boundary
-    const config = { headers: { "Content-Type": undefined } };
+    const config = {}; // Content-Type tự xử lý bởi api.js interceptor
     const apiCall = editingItem
       ? api.put(`/admin/catalog/${editingItem.id}`, fd, config)
       : api.post("/admin/catalog", fd, config);

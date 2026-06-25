@@ -51,14 +51,13 @@ public class HairstyleCatalogController {
     ) {
         // ADMIN/TESTER: xem toàn bộ catalog (bao gồm premiumOnly)
         // Người dùng Premium: xem toàn bộ, Free: chỉ xem premiumOnly=false
-        boolean showAll = false;
+        final boolean showAll;
         if (userDetails instanceof User user) {
-            if (user.getRole() == com.hairapy.models.Role.ADMIN
-                    || user.getRole() == com.hairapy.models.Role.TESTER) {
-                showAll = true;
-            } else {
-                showAll = subscriptionService.isPaidUser(user.getId());
-            }
+            showAll = user.getRole() == com.hairapy.models.Role.ADMIN
+                    || user.getRole() == com.hairapy.models.Role.TESTER
+                    || subscriptionService.isPaidUser(user.getId());
+        } else {
+            showAll = false;
         }
 
         // Lấy toàn bộ catalog (có thể mở rộng thêm Specification sau này nếu cần lọc phức tạp)

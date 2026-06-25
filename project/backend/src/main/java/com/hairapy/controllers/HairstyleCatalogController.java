@@ -49,13 +49,16 @@ public class HairstyleCatalogController {
             @RequestParam(required = false) String gender,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        // Kiểm tra người dùng có gói Premium đang hoạt động không
-        boolean isPaid = false;
+        // ADMIN/TESTER: xem toàn bộ catalog (bao gồm premiumOnly)
+        // Người dùng Premium: xem toàn bộ, Free: chỉ xem premiumOnly=false
+        final boolean showAll;
         if (userDetails instanceof User user) {
-            isPaid = subscriptionService.isPaidUser(user.getId());
+            showAll = user.getRole() == com.hairapy.models.Role.ADMIN
+                    || user.getRole() == com.hairapy.models.Role.TESTER
+                    || subscriptionService.isPaidUser(user.getId());
+        } else {
+            showAll = false;
         }
-
-        final boolean showAll = isPaid;
 
         // Lấy toàn bộ catalog (có thể mở rộng thêm Specification sau này nếu cần lọc phức tạp)
         List<HairstyleCatalog> all = hairstyleCatalogRepository.findAll();

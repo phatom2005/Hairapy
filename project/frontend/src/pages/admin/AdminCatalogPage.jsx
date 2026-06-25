@@ -121,7 +121,8 @@ export default function AdminCatalogPage() {
       fd.append("image", imageFile);
     }
 
-    const config = { headers: { "Content-Type": "multipart/form-data" } };
+    // Không set Content-Type thủ công — Axios tự detect FormData và thêm boundary
+    const config = { headers: { "Content-Type": undefined } };
     const apiCall = editingItem
       ? api.put(`/admin/catalog/${editingItem.id}`, fd, config)
       : api.post("/admin/catalog", fd, config);

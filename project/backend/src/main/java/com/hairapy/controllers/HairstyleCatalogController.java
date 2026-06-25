@@ -49,32 +49,66 @@ public class HairstyleCatalogController {
             @RequestParam(required = false) String gender,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        // ADMIN/TESTER: xem toàn bộ catalog (bao gồm premiumOnly)
-        // Người dùng Premium: xem toàn bộ, Free: chỉ xem premiumOnly=false
-        final boolean showAll;
-        if (userDetails instanceof User user) {
-            showAll = user.getRole() == com.hairapy.models.Role.ADMIN
-                    || user.getRole() == com.hairapy.models.Role.TESTER
-                    || subscriptionService.isPaidUser(user.getId());
+        // Chuẩn hóa gender để tránh lỗi font/mojibake giữa FE và BE (ví dụ Nữ -> NÃ¹ hay nu)
+        final String finalGender;
+        if (gender != null && !gender.isBlank()) {
+            String g = gender.trim().toLowerCase();
+            if (g.contains("nữ") || g.contains("nu") || g.contains("nã")) {
+                finalGender = "Nữ";
+            } else if (g.contains("nam")) {
+                finalGender = "Nam";
+            } else {
+                finalGender = gender;
+            }
         } else {
-            showAll = false;
+            finalGender = null;
+        }
+
+        // Chuẩn hóa faceShape từ tiếng Anh sang tiếng Việt để khớp dữ liệu DB
+        final String finalFaceShape;
+        if (faceShape != null && !faceShape.isBlank()) {
+            String fs = faceShape.trim().toLowerCase();
+            switch (fs) {
+                case "oval":
+                    finalFaceShape = "Trái xoan";
+                    break;
+                case "round":
+                    finalFaceShape = "Tròn";
+                    break;
+                case "square":
+                    finalFaceShape = "Vuông";
+                    break;
+                case "heart":
+                    finalFaceShape = "Trái tim";
+                    break;
+                case "oblong":
+                    finalFaceShape = "Dài";
+                    break;
+                case "diamond":
+                    finalFaceShape = "Kim cương";
+                    break;
+                default:
+                    finalFaceShape = faceShape;
+                    break;
+            }
+        } else {
+            finalFaceShape = null;
         }
 
         // Lấy toàn bộ catalog (có thể mở rộng thêm Specification sau này nếu cần lọc phức tạp)
         List<HairstyleCatalog> all = hairstyleCatalogRepository.findAll();
 
-        // Lọc theo quyền hạn và các tiêu chí tìm kiếm
+        // Lọc theo các tiêu chí tìm kiếm (cho phép tất cả người dùng xem toàn bộ kiểu tóc, kể cả Premium)
         List<HairstyleCatalog> result = all.stream()
-                .filter(h -> showAll || !h.isPremiumOnly())
-                .filter(h -> faceShape == null || faceShape.isBlank() || faceShape.equalsIgnoreCase(h.getFaceShape()))
+                .filter(h -> finalFaceShape == null || finalFaceShape.equalsIgnoreCase(h.getFaceShape()))
                 .filter(h -> hairLength == null || hairLength.isBlank() || hairLength.equalsIgnoreCase(h.getHairLength()))
                 .filter(h -> tag == null || tag.isBlank() || tag.equalsIgnoreCase(h.getTag()))
                 .filter(h -> search == null || search.isBlank()
                         || h.getName().toLowerCase().contains(search.toLowerCase()))
                 // Lọc theo giới tính: hiển thị kiểu tóc đúng giới tính + Unisex
-                .filter(h -> gender == null || gender.isBlank()
+                .filter(h -> finalGender == null
                         || "Unisex".equalsIgnoreCase(h.getGender())
-                        || gender.equalsIgnoreCase(h.getGender()))
+                        || finalGender.equalsIgnoreCase(h.getGender()))
                 .toList();
 
         return ResponseEntity.ok(result);

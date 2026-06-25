@@ -8,6 +8,7 @@ import { CameraIcon, UploadIcon } from "../components/icons";
 import { AnimatedContent, BorderGlow } from "../components/animated";
 import { useScanStore } from "../store/useScanStore";
 import { analyzeFace, initFaceAnalyzer } from "../lib/faceAnalysis";
+import api from "../lib/api";
 
 const STATS = [
   { value: "478 điểm", label: "Điểm khuôn mặt" },
@@ -78,6 +79,25 @@ export default function ScanPage() {
       try {
         const result = await analyzeFace(img);
         setResult(result);
+
+        // Gửi kết quả phân tích dáng khuôn mặt lên backend để lưu lịch sử quét
+        const token = localStorage.getItem("token");
+        if (token) {
+          try {
+            const formData = new FormData();
+            formData.append("faceShape", result.faceShape);
+            formData.append("image", file);
+            formData.append("hairType", "Bình thường"); // Mặc định hoặc mở rộng từ kết quả nếu có
+            await api.post("/profile/scans", formData, {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              }
+            });
+          } catch (backendErr) {
+            console.error("Lỗi khi lưu lịch sử quét lên backend:", backendErr);
+          }
+        }
+
         setAnalyzing(false);
         URL.revokeObjectURL(objectUrl);
         navigate("/results");
@@ -144,8 +164,9 @@ export default function ScanPage() {
               <p className="text-sm font-semibold text-mauve">Giới tính của bạn</p>
               <div className="flex gap-3">
                 {[
-                  { value: "Nam", icon: "👨" },
-                  { value: "Nữ", icon: "👩" },
+                  { value: "Nam" },
+                  { value: "Nữ" },
+                  { value: "Unisex" },
                 ].map((g) => (
                   <button
                     key={g.value}
@@ -156,7 +177,6 @@ export default function ScanPage() {
                         : "border-line text-mauve hover:border-primary/50"
                     }`}
                   >
-                    <span>{g.icon}</span>
                     {g.value}
                   </button>
                 ))}

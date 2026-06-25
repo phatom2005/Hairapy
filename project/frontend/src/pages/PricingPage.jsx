@@ -3,6 +3,7 @@ import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import { CheckIcon } from "../components/icons";
 import { AnimatedContent, GlareHover, BorderGlow } from "../components/animated";
+import useAuthStore from "../store/useAuthStore";
 
 const PLANS = [
   {
@@ -41,6 +42,8 @@ const PLANS = [
 ];
 
 export default function PricingPage() {
+  const { user } = useAuthStore();
+
   return (
     <div className="min-h-screen">
       <Navbar />
@@ -72,12 +75,12 @@ export default function PricingPage() {
                   <div className="pointer-events-none absolute inset-[-8%] -z-10 rounded-[40px] bg-pink/25 blur-[50px]" />
                   <BorderGlow rounded="rounded-3xl" thickness={2} className="block h-full w-full">
                     <GlareHover className="h-full rounded-3xl">
-                      <PlanCard plan={p} premium />
+                      <PlanCard plan={p} premium user={user} />
                     </GlareHover>
                   </BorderGlow>
                 </div>
               ) : (
-                <PlanCard plan={p} />
+                <PlanCard plan={p} user={user} />
               )}
             </AnimatedContent>
           ))}
@@ -112,7 +115,37 @@ export default function PricingPage() {
 }
 
 /* Tách card ra để re-use trong cả GlareHover wrapper và standalone */
-function PlanCard({ plan: p, premium = false }) {
+function PlanCard({ plan: p, premium = false, user }) {
+  const getCtaState = () => {
+    if (!user) {
+      return { cta: p.cta, to: p.to, disabled: false };
+    }
+    if (user.role === "ADMIN") {
+      return { cta: "Trang quản trị", to: "/admin", disabled: false };
+    }
+    if (p.name === "Cơ bản") {
+      if (user.role === "USER") {
+        return { cta: "Đang áp dụng", to: null, disabled: true };
+      }
+      return { cta: "Gói cơ bản", to: null, disabled: true };
+    }
+    if (p.name === "Tuần") {
+      if (user.role === "PREMIUM") {
+        return { cta: "Đang dùng Premium", to: null, disabled: true };
+      }
+      return { cta: p.cta, to: p.to, disabled: false };
+    }
+    if (p.name === "Premium") {
+      if (user.role === "PREMIUM") {
+        return { cta: "Đang áp dụng", to: null, disabled: true };
+      }
+      return { cta: p.cta, to: p.to, disabled: false };
+    }
+    return { cta: p.cta, to: p.to, disabled: false };
+  };
+
+  const { cta, to, disabled } = getCtaState();
+
   return (
     <Card className="relative flex h-full flex-col gap-6">
       {p.highlight && (
@@ -143,10 +176,10 @@ function PlanCard({ plan: p, premium = false }) {
 
       {premium ? (
         <BorderGlow rounded="rounded-full" thickness={2} className="mt-auto w-full block">
-          <Button to={p.to} variant={p.variant} className="w-full">{p.cta}</Button>
+          <Button to={to} variant={p.variant} disabled={disabled} className="w-full">{cta}</Button>
         </BorderGlow>
       ) : (
-        <Button to={p.to} variant={p.variant} className="mt-auto w-full">{p.cta}</Button>
+        <Button to={to} variant={p.variant} disabled={disabled} className="mt-auto w-full">{cta}</Button>
       )}
     </Card>
   );

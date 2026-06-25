@@ -7,6 +7,7 @@ import { CheckIcon } from "../components/icons";
 import { useScanStore } from "../store/useScanStore";
 import { useQuery } from "@tanstack/react-query";
 import api from "../lib/api";
+import useAuthStore from "../store/useAuthStore";
 
 // Bản đồ dịch dáng mặt sang tiếng Việt (khớp với ResultsPage)
 const FACE_SHAPE_MAP = {
@@ -28,6 +29,7 @@ export default function SwapPage() {
 
   // Lấy ảnh gốc, kết quả phân tích, giới tính và kiểu tóc đã chọn (nếu có) từ useScanStore
   const { imageFile, previewUrl, selectedHairstyle, analysisResult, gender } = useScanStore();
+  const { user } = useAuthStore();
 
   const [selectedStyle, setSelectedStyle] = useState(selectedHairstyle);
   const [tab, setTab] = useState("Tự nhiên");
@@ -156,6 +158,10 @@ export default function SwapPage() {
                     <button
                       key={s.id}
                       onClick={() => {
+                        if (s.premiumOnly && (!user || (user.role !== "PREMIUM" && user.role !== "ADMIN" && user.role !== "TESTER"))) {
+                          navigate("/pricing");
+                          return;
+                        }
                         setSelectedStyle({
                           id: s.id,
                           name: s.name,
@@ -298,6 +304,10 @@ export default function SwapPage() {
                   <button
                     key={s.id}
                     onClick={() => {
+                      if (s.premiumOnly && (!user || (user.role !== "PREMIUM" && user.role !== "ADMIN" && user.role !== "TESTER"))) {
+                        navigate("/pricing");
+                        return;
+                      }
                       setSelectedStyle({
                         id: s.id,
                         name: s.name,

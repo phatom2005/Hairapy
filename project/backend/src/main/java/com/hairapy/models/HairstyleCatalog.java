@@ -55,8 +55,13 @@ public class HairstyleCatalog {
     @Builder.Default
     private String gender = "Unisex";
 
+    // Mã kiểu tóc cho API cũ (hairstyle-editor basic) — giữ lại để backward compat
     @Column(name = "ailab_hair_type")
     private Integer ailabHairType;
+
+    // Mã kiểu tóc cho Pro API (hairstyle-editor-pro) — dùng Stable Diffusion, chỉ thay tóc
+    @Column(name = "ailab_pro_style", length = 50)
+    private String ailabProStyle;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

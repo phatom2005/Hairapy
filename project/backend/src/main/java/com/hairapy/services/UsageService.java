@@ -54,6 +54,13 @@ public class UsageService {
             throw new IllegalArgumentException("Người dùng chưa đăng nhập.");
         }
 
+        // ADMIN và TESTER: bypass hoàn toàn quota, không giới hạn lượt
+        if (user.getRole() == com.hairapy.models.Role.ADMIN
+                || user.getRole() == com.hairapy.models.Role.TESTER) {
+            log.info("Bypass quota cho user [{}] (role={})", user.getEmail(), user.getRole());
+            return;
+        }
+
         // 1. Kiểm tra trạng thái gói đăng ký (Subscription) của User
         Optional<Subscription> activeSubOpt = subscriptionRepository.findByUserIdAndStatus(user.getId(), SubscriptionStatus.ACTIVE);
         

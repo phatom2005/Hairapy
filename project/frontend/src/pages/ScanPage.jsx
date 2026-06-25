@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { SCAN_PORTRAIT } from "../lib/figmaAssets";
 import { Button, Badge, DisclosureModal } from "../components/ui";
 import Navbar from "../components/layout/Navbar";
@@ -18,6 +18,8 @@ const STATS = [
 
 export default function ScanPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const hairstyleId = searchParams.get("hairstyleId");
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
@@ -100,7 +102,11 @@ export default function ScanPage() {
 
         setAnalyzing(false);
         URL.revokeObjectURL(objectUrl);
-        navigate("/results");
+        if (hairstyleId) {
+          navigate(`/results?hairstyleId=${hairstyleId}`);
+        } else {
+          navigate("/results");
+        }
       } catch (err) {
         console.error("Lỗi phân tích khuôn mặt:", err);
         setError(err.message || "Không thể phân tích khuôn mặt. Hãy chắc chắn ảnh rõ mặt.");

@@ -6,6 +6,7 @@ import { AnimatedContent, SpotlightCard } from "../components/animated";
 import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/Navbar";
 import { Badge, Button, Card, Input } from "../components/ui";
+import { useScanStore } from "../store/useScanStore";
 
 const FILTERS = {
   "Giới tính": ["Nam", "Nữ", "Unisex"],
@@ -49,13 +50,30 @@ export default function CatalogPage() {
   const [lengthFilter, setLengthFilter] = useState(null);
   const [q, setQ] = useState("");
 
-  const handleDetail = (hairstyleId) => {
+  const setSelectedHairstyle = useScanStore((state) => state.setSelectedHairstyle);
+  const previewUrl = useScanStore((state) => state.previewUrl);
+
+  const handleDetail = (hairstyle) => {
     const token = localStorage.getItem("token");
     if (!token) {
       navigate("/login", { state: { from: `/catalog` } });
       return;
     }
-    navigate(`/results?hairstyleId=${hairstyleId}`);
+    
+    // Lưu vào Zustand store để trang results/swap đọc
+    setSelectedHairstyle({
+      id: hairstyle.id,
+      name: hairstyle.name,
+      imageUrl: hairstyle.imageUrl,
+      ailabHairType: hairstyle.ailabHairType,
+      ailabProStyle: hairstyle.ailabProStyle,
+    });
+
+    if (previewUrl) {
+      navigate(`/results?hairstyleId=${hairstyle.id}`);
+    } else {
+      navigate(`/scan?hairstyleId=${hairstyle.id}`);
+    }
   };
 
   const { data: items = [], isLoading, isError } = useHairstyles({
@@ -263,7 +281,7 @@ export default function CatalogPage() {
                           <div className="mt-3 flex items-center justify-between">
                             <span className="text-xs font-semibold text-muted">Độ dài: {i.hairLength} | Phù hợp: {i.gender || "Unisex"}</span>
                             <Button
-                              onClick={() => handleDetail(i.id)}
+                              onClick={() => handleDetail(i)}
                               size="sm"
                               variant="outline"
                               className="px-4 py-2 text-xs"

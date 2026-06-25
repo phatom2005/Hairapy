@@ -15,6 +15,8 @@ export default function AdminCatalogPage() {
   // Trạng thái modal form
   const [isOpen, setIsOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
     tag: "",
@@ -22,7 +24,6 @@ export default function AdminCatalogPage() {
     hairLength: "Vừa",
     gender: "Unisex",
     description: "",
-    imageUrl: "",
     premiumOnly: false,
   });
 
@@ -56,6 +57,8 @@ export default function AdminCatalogPage() {
   // Mở modal thêm mới
   const handleOpenAdd = () => {
     setEditingItem(null);
+    setImageFile(null);
+    setImagePreview(null);
     setFormData({
       name: "",
       tag: "",
@@ -63,7 +66,6 @@ export default function AdminCatalogPage() {
       hairLength: "Vừa",
       gender: "Unisex",
       description: "",
-      imageUrl: "",
       premiumOnly: false,
     });
     setIsOpen(true);
@@ -72,6 +74,8 @@ export default function AdminCatalogPage() {
   // Mở modal chỉnh sửa
   const handleOpenEdit = (item) => {
     setEditingItem(item);
+    setImageFile(null);
+    setImagePreview(item.imageUrl); // Hiện ảnh cũ
     setFormData({
       name: item.name,
       tag: item.tag || "",
@@ -79,27 +83,54 @@ export default function AdminCatalogPage() {
       hairLength: item.hairLength || "Vừa",
       gender: item.gender || "Unisex",
       description: item.description || "",
-      imageUrl: item.imageUrl,
       premiumOnly: item.premiumOnly,
     });
     setIsOpen(true);
   };
 
-  // Submit form
+  // Xử lý chọn file ảnh
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  // Submit form — gửi multipart/form-data
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.imageUrl.trim()) {
-      alert("Vui lòng điền đầy đủ Tên và Ảnh kiểu tóc.");
+    if (!formData.name.trim()) {
+      alert("Vui lòng điền tên kiểu tóc.");
+      return;
+    }
+    if (!editingItem && !imageFile) {
+      alert("Vui lòng chọn ảnh kiểu tóc.");
       return;
     }
 
+    const fd = new FormData();
+    fd.append("name", formData.name);
+    fd.append("tag", formData.tag);
+    fd.append("faceShape", formData.faceShape);
+    fd.append("hairLength", formData.hairLength);
+    fd.append("gender", formData.gender);
+    fd.append("description", formData.description);
+    fd.append("premiumOnly", formData.premiumOnly);
+    if (imageFile) {
+      fd.append("image", imageFile);
+    }
+
+    const config = { headers: { "Content-Type": "multipart/form-data" } };
     const apiCall = editingItem
-      ? api.put(`/admin/catalog/${editingItem.id}`, formData)
-      : api.post("/admin/catalog", formData);
+      ? api.put(`/admin/catalog/${editingItem.id}`, fd, config)
+      : api.post("/admin/catalog", fd, config);
 
     apiCall
       .then(() => {
         setIsOpen(false);
+        setImageFile(null);
+        setImagePreview(null);
         fetchCatalog();
       })
       .catch((err) => {
@@ -263,13 +294,26 @@ export default function AdminCatalogPage() {
                 required
               />
 
-              <Input
-                label="URL Hình ảnh *"
-                placeholder="Nhập link ảnh kiểu tóc..."
-                value={formData.imageUrl}
-                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                required
-              />
+              {/* Upload ảnh — Cloudinary */}
+              <label className="flex flex-col gap-2">
+                <span className="text-sm font-semibold text-mauve">
+                  Hình ảnh {editingItem ? "(chọn ảnh mới nếu muốn thay)" : "*"}
+                </span>
+                <div className="flex items-center gap-4">
+                  {imagePreview && (
+                    <img src={imagePreview} alt="Preview" className="size-16 rounded-xl object-cover border border-line" />
+                  )}
+                  <label className="flex-1 cursor-pointer rounded-2xl border-2 border-dashed border-line bg-canvas px-4 py-3 text-center text-sm text-muted transition hover:border-brand hover:bg-brand/5">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageChange}
+                    />
+                    {imageFile ? imageFile.name : "Nhấn để chọn ảnh..."}
+                  </label>
+                </div>
+              </label>
 
               <Input
                 label="Nhãn tag (tùy chọn)"

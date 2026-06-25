@@ -102,7 +102,7 @@ function MarqueeStrip() {
     "Salon Premium giảm 30%",
   ];
   return (
-    <div className="border-y border-divider/30 bg-ink py-6 text-white">
+    <div className="border-y border-divider/30 bg-lime py-6 text-brand">
       <MarqueeText items={ITEMS} duration={35} textClassName="text-sm font-bold uppercase tracking-[0.2em]" />
     </div>
   );

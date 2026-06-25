@@ -112,7 +112,7 @@ export default function ResultsPage() {
       id: hairstyle.id,
       name: hairstyle.name,
       imageUrl: hairstyle.imageUrl,
-      ailabHairType: hairstyle.ailabHairType,
+      ailabProStyle: hairstyle.ailabProStyle,
     });
     navigate("/swap");
   };

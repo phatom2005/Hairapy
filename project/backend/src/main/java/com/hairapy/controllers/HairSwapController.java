@@ -15,7 +15,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.Map;
 
 /**
- * Controller cung cấp các API đổi kiểu tóc (Hair Swap) sử dụng AI.
+ * Controller cung cấp các API đổi kiểu tóc (Hair Swap) sử dụng AI Pro API.
+ * Pro API chỉ thay kiểu tóc, không thay đổi khuôn mặt.
  */
 @Slf4j
 @RestController
@@ -27,20 +28,20 @@ public class HairSwapController {
     private final UsageService usageService;
 
     /**
-     * API thực hiện ghép kiểu tóc mới lên khuôn mặt của ảnh tải lên.
+     * API thực hiện ghép kiểu tóc mới lên ảnh người dùng (Pro API — hair-only).
      * Endpoint: POST /api/swap/try
      *
-     * @param image file hình ảnh khuôn mặt người dùng.
-     * @param hairType mã số kiểu tóc muốn thử nghiệm.
-     * @return ResponseEntity chứa kết quả ảnh base64 hoặc URL ảnh đã ghép.
+     * @param image     file hình ảnh khuôn mặt người dùng.
+     * @param hairStyle mã kiểu tóc Pro API (ví dụ: "BuzzCut", "LongCurly").
+     * @return ResponseEntity chứa URL ảnh kết quả.
      */
     @PostMapping("/try")
     public ResponseEntity<?> tryHairstyle(
             @RequestParam("image") MultipartFile image,
-            @RequestParam("hairType") int hairType) {
-        
-        log.info("Nhận yêu cầu thử kiểu tóc mới: hairType={}", hairType);
-        
+            @RequestParam("hairStyle") String hairStyle) {
+
+        log.info("Nhận yêu cầu thử kiểu tóc Pro: hairStyle={}", hairStyle);
+
         User currentUser = usageService.getCurrentUser();
         if (currentUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
@@ -52,8 +53,8 @@ public class HairSwapController {
             // 1. Kiểm tra hạn mức sử dụng hôm nay trước khi gọi API
             usageService.checkQuota(currentUser, "HAIR_SWAP");
 
-            // 2. Thực hiện đổi kiểu tóc thông qua AILab
-            String resultImage = hairSwapService.swapHairstyle(image, hairType);
+            // 2. Thực hiện đổi kiểu tóc thông qua AILab Pro API (async)
+            String resultImage = hairSwapService.swapHairstyle(image, hairStyle);
 
             // 3. Ghi lại lịch sử sử dụng sau khi thành công
             usageService.recordUsage(currentUser, "HAIR_SWAP");

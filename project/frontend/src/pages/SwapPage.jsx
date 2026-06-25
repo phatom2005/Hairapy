@@ -62,36 +62,38 @@ export default function SwapPage() {
     }
   }, [previewUrl, navigate]);
 
-  // Thiết lập kiểu tóc đang hiển thị hoạt động
+  // Thiết lập kiểu tóc đang hiển thị hoạt động — ưu tiên ailabProStyle
   const activeStyle = selectedStyle || (styles.length > 0 ? {
     id: styles[0].id,
     name: styles[0].name,
     imageUrl: styles[0].imageUrl,
-    ailabHairType: styles[0].ailabHairType,
+    ailabProStyle: styles[0].ailabProStyle,
   } : null);
 
   if (!previewUrl) {
     return null;
   }
 
-  // Gửi request đổi kiểu tóc đến backend proxy
+  // Gửi request đổi kiểu tóc đến backend proxy — dùng Pro API (chỉ thay tóc)
   const handleApply = async () => {
-    if (!imageFile || activeStyle?.ailabHairType == null) return;
+    if (!imageFile || !activeStyle?.ailabProStyle) return;
 
     setLoading(true);
     setError(null);
 
     const formData = new FormData();
     formData.append("image", imageFile);
-    formData.append("hairType", activeStyle.ailabHairType);
+    formData.append("hairStyle", activeStyle.ailabProStyle);
 
     try {
       const response = await api.post("/swap/try", formData, {
         headers: { "Content-Type": "multipart/form-data" },
+        timeout: 90000, // Pro API là async, cần timeout dài hơn (90 giây)
       });
 
       let imgData = response.data.image;
       if (imgData) {
+        // Pro API trả về URL (không phải base64)
         if (!imgData.startsWith("http") && !imgData.startsWith("data:image")) {
           imgData = `data:image/png;base64,${imgData}`;
         }
@@ -100,7 +102,7 @@ export default function SwapPage() {
         throw new Error("Không có dữ liệu ảnh trả về từ AI.");
       }
     } catch (err) {
-      console.error("Lỗi khi gọi Hair Swap API:", err);
+      console.error("Lỗi khi gọi Hair Swap Pro API:", err);
       const errorData = err.response?.data;
 
       if (err.response?.status === 504 || errorData?.refunded) {
@@ -158,7 +160,7 @@ export default function SwapPage() {
                           id: s.id,
                           name: s.name,
                           imageUrl: s.imageUrl,
-                          ailabHairType: s.ailabHairType,
+                          ailabProStyle: s.ailabProStyle,
                         });
                         setResultImage(null);
                         setError(null);
@@ -221,19 +223,19 @@ export default function SwapPage() {
 
           {error && (
             <div className="text-xs font-semibold text-red-500 bg-red-500/10 p-3 rounded-xl border border-red-500/20">
-              ⚠️ {error}
+              {error}
             </div>
           )}
 
           <div className="relative group w-full">
             <Button
               onClick={handleApply}
-              disabled={loading || activeStyle?.ailabHairType == null}
+              disabled={loading || !activeStyle?.ailabProStyle}
               className="w-full"
             >
-              {loading ? "Đang xử lý..." : "Áp dụng kiểu tóc AI"}
+              {loading ? "AI Pro đang xử lý..." : "Áp dụng kiểu tóc AI"}
             </Button>
-            {activeStyle && activeStyle.ailabHairType == null && (
+            {activeStyle && !activeStyle.ailabProStyle && (
               <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs bg-ink text-white text-[11px] py-1.5 px-3 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-line z-50">
                 Kiểu tóc này chưa hỗ trợ thử nghiệm AI
               </span>
@@ -265,23 +267,23 @@ export default function SwapPage() {
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink/75 backdrop-blur-sm transition-opacity duration-300">
                 <span className="size-14 animate-spin rounded-full border-4 border-pink border-t-transparent shadow-lg" />
                 <p className="mt-4 font-display font-semibold text-white animate-pulse tracking-wide text-lg">
-                  AI đang tạo kiểu tóc mới...
+                  AI Pro đang tạo kiểu tóc mới...
                 </p>
                 <p className="text-xs text-white/60">
-                  Có thể mất tối đa 15 giây để xử lý
+                  Pro API dùng Stable Diffusion, có thể mất 30-60 giây
                 </p>
               </div>
             )}
 
             <div className="absolute left-6 top-6 flex items-center gap-2 rounded-full bg-ink/75 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md">
               <span className={`size-2 rounded-full ${loading ? "bg-amber-400 animate-pulse" : resultImage ? "bg-lime" : "bg-pink"}`} />
-              {loading ? "AI đang ghép..." : resultImage ? "Hoàn tất ghép tóc AI" : "Ảnh gốc - Sẵn sàng ghép"}
+              {loading ? "AI Pro đang ghép..." : resultImage ? "Hoàn tất ghép tóc AI" : "Ảnh gốc - Sẵn sàng ghép"}
             </div>
 
             <div className="absolute inset-x-6 bottom-6 flex items-center justify-between rounded-2xl bg-white/95 px-5 py-3 shadow-lg backdrop-blur-md">
               <div className="max-w-[70%]">
                 <p className="text-sm font-bold text-ink truncate" title={activeStyle?.name}>{activeStyle?.name || "Đang tải..."}</p>
-                <p className="text-xs text-muted">Mã kiểu tóc: AI #{activeStyle?.ailabHairType !== undefined && activeStyle?.ailabHairType !== null ? activeStyle.ailabHairType : "N/A"}</p>
+                <p className="text-xs text-muted">Kiểu: {activeStyle?.ailabProStyle || "N/A"}</p>
               </div>
               <span className="size-8 rounded-full border border-line shrink-0" style={{ backgroundColor: color }} />
             </div>
@@ -300,7 +302,7 @@ export default function SwapPage() {
                         id: s.id,
                         name: s.name,
                         imageUrl: s.imageUrl,
-                        ailabHairType: s.ailabHairType,
+                        ailabProStyle: s.ailabProStyle,
                       });
                       setResultImage(null);
                       setError(null);

@@ -8,6 +8,16 @@ import { useScanStore } from "../store/useScanStore";
 import { useQuery } from "@tanstack/react-query";
 import api from "../lib/api";
 
+// Bản đồ dịch dáng mặt sang tiếng Việt (khớp với ResultsPage)
+const FACE_SHAPE_MAP = {
+  Oval: "Trái xoan",
+  Round: "Tròn",
+  Square: "Vuông",
+  Heart: "Trái tim",
+  Oblong: "Dài",
+  Diamond: "Kim cương",
+};
+
 const PALETTES = {
   "Tự nhiên": ["#1a1a1a", "#3a2a1a", "#6b4423", "#a0703c", "#c89b6a", "#e0c097"],
   "Neon & Pastel": ["#ff57cf", "#2a4ae8", "#d0ee88", "#9b5cff", "#42d6e8", "#ff8fb1"],
@@ -16,8 +26,8 @@ const PALETTES = {
 export default function SwapPage() {
   const navigate = useNavigate();
   
-  // Lấy ảnh gốc và kiểu tóc đã chọn (nếu có) từ useScanStore
-  const { imageFile, previewUrl, selectedHairstyle } = useScanStore();
+  // Lấy ảnh gốc, kết quả phân tích và kiểu tóc đã chọn (nếu có) từ useScanStore
+  const { imageFile, previewUrl, selectedHairstyle, analysisResult } = useScanStore();
 
   const [selectedStyle, setSelectedStyle] = useState(selectedHairstyle);
   const [tab, setTab] = useState("Tự nhiên");
@@ -29,11 +39,17 @@ export default function SwapPage() {
   const [resultImage, setResultImage] = useState(null);
   const [error, setError] = useState(null);
 
-  // Fetch danh sách kiểu tóc từ API để làm mẫu thử
+  // Dịch faceShape sang tiếng Việt để filter đúng với DB
+  const faceShapeVi = analysisResult?.faceShape
+    ? FACE_SHAPE_MAP[analysisResult.faceShape] || null
+    : null;
+
+  // Fetch kiểu tóc phù hợp dáng mặt (khớp với ResultsPage), fallback toàn bộ nếu không có faceShape
   const { data: styles = [] } = useQuery({
-    queryKey: ["hairstyles-swap"],
+    queryKey: ["hairstyles-swap", faceShapeVi],
     queryFn: async () => {
-      const { data } = await api.get("/hairstyles");
+      const params = faceShapeVi ? { faceShape: faceShapeVi } : {};
+      const { data } = await api.get("/hairstyles", { params });
       return data;
     },
   });
@@ -59,7 +75,7 @@ export default function SwapPage() {
 
   // Gửi request đổi kiểu tóc đến backend proxy
   const handleApply = async () => {
-    if (!imageFile || !activeStyle?.ailabHairType) return;
+    if (!imageFile || activeStyle?.ailabHairType == null) return;
 
     setLoading(true);
     setError(null);
@@ -143,12 +159,17 @@ export default function SwapPage() {
                   return (
                     <button 
                       key={s.id} 
-                      onClick={() => setSelectedStyle({
-                        id: s.id,
-                        name: s.name,
-                        imageUrl: s.imageUrl,
-                        ailabHairType: s.ailabHairType
-                      })}
+                      onClick={() => {
+                        setSelectedStyle({
+                          id: s.id,
+                          name: s.name,
+                          imageUrl: s.imageUrl,
+                          ailabHairType: s.ailabHairType,
+                        });
+                        // Reset ảnh kết quả AI cũ khi đổi kiểu tóc để tránh mismatch
+                        setResultImage(null);
+                        setError(null);
+                      }}
                       className={`relative aspect-square overflow-hidden rounded-xl border-2 transition ${
                         isActive ? "border-primary font-bold" : "border-transparent"
                       }`}
@@ -218,12 +239,12 @@ export default function SwapPage() {
           <div className="relative group w-full">
             <Button 
               onClick={handleApply} 
-              disabled={loading || !activeStyle?.ailabHairType} 
+              disabled={loading || activeStyle?.ailabHairType == null}
               className="w-full"
             >
               {loading ? "Đang xử lý..." : "Áp dụng kiểu tóc AI"}
             </Button>
-            {activeStyle && !activeStyle.ailabHairType && (
+            {activeStyle && activeStyle.ailabHairType == null && (
               <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs bg-ink text-white text-[11px] py-1.5 px-3 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-line z-50">
                 Kiểu tóc này chưa hỗ trợ thử nghiệm AI
               </span>
@@ -248,9 +269,11 @@ export default function SwapPage() {
               className="aspect-[3/4] w-full object-cover transition-all duration-300" 
             />
             
-            {/* Lớp phủ màu mô phỏng */}
-            <div className="pointer-events-none absolute inset-0 mix-blend-soft-light"
-              style={{ backgroundColor: color, opacity: shade / 150 }} />
+            {/* Lớp phủ màu mô phỏng — chỉ hiện khi chưa có kết quả AI để tránh làm sai màu ảnh ghép */}
+            {!resultImage && (
+              <div className="pointer-events-none absolute inset-0 mix-blend-soft-light"
+                style={{ backgroundColor: color, opacity: shade / 150 }} />
+            )}
 
             {/* Trạng thái AI loading overlay */}
             {loading && (
@@ -290,12 +313,16 @@ export default function SwapPage() {
                 return (
                   <button 
                     key={s.id} 
-                    onClick={() => setSelectedStyle({
-                      id: s.id,
-                      name: s.name,
-                      imageUrl: s.imageUrl,
-                      ailabHairType: s.ailabHairType
-                    })} 
+                    onClick={() => {
+                      setSelectedStyle({
+                        id: s.id,
+                        name: s.name,
+                        imageUrl: s.imageUrl,
+                        ailabHairType: s.ailabHairType,
+                      });
+                      setResultImage(null);
+                      setError(null);
+                    }}
                     className="shrink-0 relative"
                   >
                     <img 

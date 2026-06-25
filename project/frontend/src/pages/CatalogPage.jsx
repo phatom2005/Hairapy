@@ -230,9 +230,13 @@ export default function CatalogPage() {
                             <Badge variant="premium" className="absolute right-3 top-3 shadow">PREMIUM</Badge>
                           )}
                           {i.faceShape && (
-                            <span className="absolute right-3 bottom-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-mauve">
-                              {i.faceShape}
-                            </span>
+                            <div className="absolute right-3 bottom-3 flex flex-wrap gap-1">
+                              {i.faceShape.split(",").map((s) => (
+                                <span key={s.trim()} className="rounded-full bg-white/90 px-2 py-0.5 text-xs font-semibold text-mauve">
+                                  {s.trim()}
+                                </span>
+                              ))}
+                            </div>
                           )}
 
                           {/* Nút lưu yêu thích */}

@@ -20,7 +20,7 @@ export default function AdminCatalogPage() {
   const [formData, setFormData] = useState({
     name: "",
     tag: "",
-    faceShape: "Oval",
+    faceShapes: ["Oval"],
     hairLength: "Vừa",
     gender: "Unisex",
     description: "",
@@ -62,7 +62,7 @@ export default function AdminCatalogPage() {
     setFormData({
       name: "",
       tag: "",
-      faceShape: "Oval",
+      faceShapes: ["Oval"],
       hairLength: "Vừa",
       gender: "Unisex",
       description: "",
@@ -79,7 +79,7 @@ export default function AdminCatalogPage() {
     setFormData({
       name: item.name,
       tag: item.tag || "",
-      faceShape: item.faceShape || "Oval",
+      faceShapes: item.faceShape ? item.faceShape.split(",").map(s => s.trim()) : ["Oval"],
       hairLength: item.hairLength || "Vừa",
       gender: item.gender || "Unisex",
       description: item.description || "",
@@ -112,7 +112,7 @@ export default function AdminCatalogPage() {
     const fd = new FormData();
     fd.append("name", formData.name);
     fd.append("tag", formData.tag);
-    fd.append("faceShape", formData.faceShape);
+    fd.append("faceShape", formData.faceShapes.join(","));
     fd.append("hairLength", formData.hairLength);
     fd.append("gender", formData.gender);
     fd.append("description", formData.description);
@@ -206,7 +206,17 @@ export default function AdminCatalogPage() {
                     <td className="px-6 py-3">
                       {item.tag ? <Badge variant="new">{item.tag}</Badge> : <span className="text-muted">-</span>}
                     </td>
-                    <td className="px-6 py-3 text-mauve font-medium">{item.faceShape || "-"}</td>
+                    <td className="px-6 py-3">
+                      {item.faceShape ? (
+                        <div className="flex flex-wrap gap-1">
+                          {item.faceShape.split(",").map((s) => (
+                            <span key={s.trim()} className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand">
+                              {s.trim()}
+                            </span>
+                          ))}
+                        </div>
+                      ) : <span className="text-muted">-</span>}
+                    </td>
                     <td className="px-6 py-3 text-mauve font-medium">{item.hairLength || "-"}</td>
                     <td className="px-6 py-3">
                       <Badge variant={item.gender === "Nam" ? "new" : (item.gender === "Nữ" ? "premium" : "neutral")}>
@@ -322,23 +332,40 @@ export default function AdminCatalogPage() {
                 onChange={(e) => setFormData({ ...formData, tag: e.target.value })}
               />
 
-              <div className="grid grid-cols-3 gap-3">
-                {/* Dáng khuôn mặt */}
-                <label className="flex flex-col gap-2">
-                  <span className="text-sm font-semibold text-mauve">Dáng mặt</span>
-                  <select
-                    className="w-full rounded-3xl border-2 border-line bg-white py-3.5 px-4 text-sm text-ink outline-none transition focus:border-brand"
-                    value={formData.faceShape}
-                    onChange={(e) => setFormData({ ...formData, faceShape: e.target.value })}
-                  >
-                    {FACE_SHAPES.map((shape) => (
-                      <option key={shape} value={shape}>
+              {/* Dáng khuôn mặt — multi-select checkboxes */}
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-semibold text-mauve">Dáng mặt phù hợp (chọn nhiều)</span>
+                <div className="flex flex-wrap gap-2">
+                  {FACE_SHAPES.map((shape) => {
+                    const checked = formData.faceShapes.includes(shape);
+                    return (
+                      <label
+                        key={shape}
+                        className={`cursor-pointer rounded-full border-2 px-4 py-2 text-sm font-semibold transition ${
+                          checked
+                            ? "border-brand bg-brand/10 text-brand"
+                            : "border-line bg-white text-mauve hover:border-brand/40"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="hidden"
+                          checked={checked}
+                          onChange={() => {
+                            const next = checked
+                              ? formData.faceShapes.filter((s) => s !== shape)
+                              : [...formData.faceShapes, shape];
+                            if (next.length > 0) setFormData({ ...formData, faceShapes: next });
+                          }}
+                        />
                         {shape}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
 
+              <div className="grid grid-cols-2 gap-3">
                 {/* Độ dài tóc */}
                 <label className="flex flex-col gap-2">
                   <span className="text-sm font-semibold text-mauve">Độ dài</span>

@@ -100,7 +100,17 @@ public class HairstyleCatalogController {
 
         // Lọc theo các tiêu chí tìm kiếm (cho phép tất cả người dùng xem toàn bộ kiểu tóc, kể cả Premium)
         List<HairstyleCatalog> result = all.stream()
-                .filter(h -> finalFaceShape == null || finalFaceShape.equalsIgnoreCase(h.getFaceShape()))
+                // face_shape lưu comma-separated (vd: "Oval,Round") → check xem có chứa dáng mặt cần lọc không
+                .filter(h -> {
+                    if (finalFaceShape == null) return true;
+                    String stored = h.getFaceShape();
+                    if (stored == null || stored.isBlank()) return false;
+                    // Tách comma-separated rồi so sánh từng phần tử
+                    for (String part : stored.split(",")) {
+                        if (part.trim().equalsIgnoreCase(finalFaceShape)) return true;
+                    }
+                    return false;
+                })
                 .filter(h -> hairLength == null || hairLength.isBlank() || hairLength.equalsIgnoreCase(h.getHairLength()))
                 .filter(h -> tag == null || tag.isBlank() || tag.equalsIgnoreCase(h.getTag()))
                 .filter(h -> search == null || search.isBlank()

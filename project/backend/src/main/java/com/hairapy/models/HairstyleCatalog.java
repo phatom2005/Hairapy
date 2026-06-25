@@ -32,7 +32,8 @@ public class HairstyleCatalog {
     private String tag;
 
     // "Trai xoan", "Vuong", "Tron", "Dai"...
-    @Column(name = "face_shape", length = 30)
+    // Comma-separated: "Oval,Round,Heart" — 1 kiểu tóc có thể phù hợp nhiều dáng mặt
+    @Column(name = "face_shape", length = 200)
     private String faceShape;
 
     // "Ngan", "Vua", "Dai"

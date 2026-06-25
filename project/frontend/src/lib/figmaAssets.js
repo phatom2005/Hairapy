@@ -6,6 +6,7 @@ import logoIcon from "../assets/logo/logo-icon.png";   // icon vuông
 import logoFull from "../assets/logo/logo-full.png";   // ngang (icon + chữ)
 import logoStack from "../assets/logo/logo-stack.png"; // dọc (icon trên, chữ dưới)
 import logoWhite from "../assets/logo/logo-white.png"; // dọc, màu trắng (nền tối)
+import logoNgang from "../assets/logo/EXE_Hairapy logo_Logo ngang.png"; // logo ngang mới
 import authBg from "../assets/placeholders/auth-bg.svg";
 import hero from "../assets/placeholders/hero.svg";
 import scan from "../assets/placeholders/scan.svg";
@@ -28,6 +29,7 @@ export const LOGO = logoIcon;        // icon vuông (favicon, ô nhỏ)
 export const LOGO_FULL = logoFull;   // logo ngang -> Navbar, Footer
 export const LOGO_STACK = logoStack; // logo dọc -> màn auth
 export const LOGO_WHITE = logoWhite; // logo dọc trắng -> nền gradient/tối
+export const LOGO_NGANG = logoNgang; // logo ngang mới của EXE_Hairapy
 export const AUTH_BG = authBg;
 export const HERO_IMG = hero;
 export const SCAN_PORTRAIT = scan;

@@ -171,7 +171,7 @@ function Features() {
           {(() => {
             const CameraIconComp = FEATURES[1].icon;
             return (
-              <Link to="/swap" className="block h-full">
+              <Link to="/catalog" className="block h-full">
                 <SpotlightCard spotlightColor={FEATURES[1].spotlight} className="h-full rounded-3xl hover:-translate-y-1.5 transition-all duration-300">
                   <Card className="h-full flex flex-col justify-between">
                     <div>

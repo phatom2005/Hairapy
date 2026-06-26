@@ -53,8 +53,8 @@ public class PaymentService {
             throw new IllegalArgumentException("Gói dịch vụ không hợp lệ");
         }
 
-        // Sinh mã orderCode duy nhất và tránh xung đột (collision)
-        long orderCode = System.currentTimeMillis() * 1000 + ThreadLocalRandom.current().nextInt(1000);
+        // Sinh mã orderCode duy nhất và tránh xung đột (collision) - giới hạn tối đa 15 chữ số của PayOS
+        long orderCode = System.currentTimeMillis() * 10 + ThreadLocalRandom.current().nextInt(10);
 
         // Lưu thông tin giao dịch tạm thời vào cơ sở dữ liệu với trạng thái PENDING
         Payment payment = Payment.builder()
@@ -103,6 +103,12 @@ public class PaymentService {
         String code = data.getCode(); // Mã kết quả giao dịch ("00" là thành công)
 
         log.info("Nhận webhook PayOS: orderCode={}, code={}, reference={}", orderCode, code, data.getReference());
+
+        // Xử lý webhook test từ PayOS (orderCode = 123)
+        if (orderCode == 123) {
+            log.info("Nhận webhook thử nghiệm (test) từ PayOS. Bỏ qua xác thực giao dịch.");
+            return;
+        }
 
         // Tìm kiếm giao dịch thanh toán trong hệ thống của chúng ta
         Payment payment = paymentRepository.findByOrderCode(orderCode)

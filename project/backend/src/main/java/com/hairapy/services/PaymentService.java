@@ -39,11 +39,6 @@ public class PaymentService {
 
     /**
      * Tạo đường dẫn thanh toán qua PayOS cho gói dịch vụ của người dùng.
-     *
-     * @param user     Người dùng hiện tại đăng nhập.
-     * @param planCode Mã gói dịch vụ ("PRO" hoặc "PREMIUM").
-     * @return Checkout URL từ PayOS.
-     * @throws Exception Các lỗi phát sinh khi kết nối SDK PayOS.
      */
     @Transactional
     public String createPaymentLink(User user, String planCode) throws Exception {
@@ -51,7 +46,7 @@ public class PaymentService {
         int amount;
 
         if (plan == SubscriptionPlan.PRO) {
-            amount = 29000; // Gói tuần 29,000 VNĐ
+            amount = 29000; // Gói tuần 29,000 VND
         } else if (plan == SubscriptionPlan.PREMIUM) {
             amount = 79000; // Gói tháng 79,000 VNĐ
         } else {
@@ -71,7 +66,7 @@ public class PaymentService {
                 .build();
         paymentRepository.save(payment);
 
-        log.info("Khởi tạo thanh toán PayOS: orderCode={}, user={}, plan={}, amount={}", 
+        log.info("Khởi tạo thanh toán PayOS: orderCode={}, user={}, plan={}, amount={}",
                 orderCode, user.getEmail(), plan, amount);
 
         // Tạo item mô tả cho hóa đơn PayOS
@@ -98,9 +93,6 @@ public class PaymentService {
 
     /**
      * Xử lý webhook cập nhật trạng thái thanh toán từ PayOS.
-     *
-     * @param webhook Đối tượng webhook nhận từ Controller chứa chữ ký và dữ liệu.
-     * @throws Exception Các lỗi phát sinh trong quá trình xử lý database hoặc xác thực.
      */
     @Transactional
     public void handleWebhook(Webhook webhook) throws Exception {
@@ -125,7 +117,7 @@ public class PaymentService {
 
             // Cập nhật subscription của user
             User user = payment.getUser();
-            
+
             // Hạ cấp/hủy kích hoạt gói active cũ nếu có
             subscriptionRepository.findByUserIdAndStatus(user.getId(), SubscriptionStatus.ACTIVE)
                     .ifPresent(oldSub -> {
@@ -153,7 +145,7 @@ public class PaymentService {
                     .build();
             subscriptionRepository.save(newSub);
 
-            log.info("Nâng cấp gói tài khoản thành công cho user: {}, gói: {}, hạn dùng đến: {}", 
+            log.info("Nâng cấp gói tài khoản thành công cho user: {}, gói: {}, hạn dùng đến: {}",
                     user.getEmail(), payment.getPlan(), endDate);
 
         } else {
@@ -166,10 +158,6 @@ public class PaymentService {
 
     /**
      * Lấy trạng thái giao dịch thanh toán realtime từ PayOS.
-     *
-     * @param orderCode Mã hóa đơn cần kiểm tra.
-     * @return Trạng thái thanh toán của hóa đơn.
-     * @throws Exception Các lỗi phát sinh khi gọi SDK PayOS.
      */
     public String getPaymentStatus(long orderCode) throws Exception {
         PaymentLinkData paymentLinkData = payOS.getPaymentLinkInformation(orderCode);

@@ -22,7 +22,6 @@ public class PayOSConfig {
 
     @Bean
     public PayOS payOS() {
-        // Khởi tạo đối tượng PayOS từ thông tin cấu hình API Keys
         return new PayOS(clientId, apiKey, checksumKey);
     }
 }

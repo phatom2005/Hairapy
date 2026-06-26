@@ -80,7 +80,7 @@ public class UsageService {
         int limit;
         if ("HAIR_SWAP".equals(feature)) {
             limit = isPaid ? 20 : 5;
-        } else if ("AI_SCAN".equals(feature)) {
+        } else if ("FACE_SCAN".equals(feature)) {
             limit = isPaid ? 5 : 1;
         } else {
             // Mặc định không giới hạn cho các tính năng khác

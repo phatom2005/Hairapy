@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
+import Cropper from "react-easy-crop";
 import api from "../../lib/api";
 import { Card, Badge, Button, Input } from "../../components/ui";
+import { getCroppedImg } from "../../lib/cropImage.js";
 
 const FACE_SHAPES = ["Oval", "Round", "Square", "Heart", "Oblong", "Diamond"];
 const HAIR_LENGTHS = ["Ngắn", "Vừa", "Dài"];
@@ -17,6 +19,13 @@ export default function AdminCatalogPage() {
   const [editingItem, setEditingItem] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+
+  // States cho tính năng Crop ảnh Option A
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [cropInteracted, setCropInteracted] = useState(false);
+
   const [formData, setFormData] = useState({
     name: "",
     tag: "",
@@ -59,6 +68,10 @@ export default function AdminCatalogPage() {
     setEditingItem(null);
     setImageFile(null);
     setImagePreview(null);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setCroppedAreaPixels(null);
+    setCropInteracted(false);
     setFormData({
       name: "",
       tag: "",
@@ -76,6 +89,10 @@ export default function AdminCatalogPage() {
     setEditingItem(item);
     setImageFile(null);
     setImagePreview(item.imageUrl); // Hiện ảnh cũ
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setCroppedAreaPixels(null);
+    setCropInteracted(false);
     setFormData({
       name: item.name,
       tag: item.tag || "",
@@ -94,11 +111,18 @@ export default function AdminCatalogPage() {
     if (file) {
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+      setCropInteracted(true); // Vì là file mới tải lên, chắc chắn cần crop
     }
   };
 
+  const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
   // Submit form — gửi multipart/form-data
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name.trim()) {
       alert("Vui lòng điền tên kiểu tóc.");
@@ -109,35 +133,57 @@ export default function AdminCatalogPage() {
       return;
     }
 
-    const fd = new FormData();
-    fd.append("name", formData.name);
-    fd.append("tag", formData.tag);
-    fd.append("faceShape", formData.faceShapes.join(","));
-    fd.append("hairLength", formData.hairLength);
-    fd.append("gender", formData.gender);
-    fd.append("description", formData.description);
-    fd.append("premiumOnly", formData.premiumOnly);
-    if (imageFile) {
-      fd.append("image", imageFile);
+    try {
+      const fd = new FormData();
+      fd.append("name", formData.name);
+      fd.append("tag", formData.tag);
+      fd.append("faceShape", formData.faceShapes.join(","));
+      fd.append("hairLength", formData.hairLength);
+      fd.append("gender", formData.gender);
+      fd.append("description", formData.description);
+      fd.append("premiumOnly", formData.premiumOnly);
+
+      // Nếu có croppedAreaPixels (nghĩa là user có thay đổi khung hình) và thực sự có tương tác chỉnh sửa
+      if (croppedAreaPixels && cropInteracted) {
+        // Trường hợp 1: Có chọn file ảnh mới -> crop bình thường
+        // Trường hợp 2: Không chọn file mới nhưng có ảnh cũ và thay đổi zoom/crop -> tải ảnh cũ về và crop
+        if (imageFile || editingItem) {
+          try {
+            // Tải ảnh về dưới dạng blob trước để chắc chắn không bị lỗi CORS "dirty canvas" khi vẽ
+            let activeUrl = imagePreview;
+            if (!imageFile && editingItem) {
+              // Thêm query parameter ngẫu nhiên để tránh trình duyệt lấy cache không có header CORS
+              const corsUrl = `${editingItem.imageUrl}${editingItem.imageUrl.includes('?') ? '&' : '?'}t=${Date.now()}`;
+              const response = await fetch(corsUrl);
+              const blob = await response.blob();
+              activeUrl = URL.createObjectURL(blob);
+            }
+            const croppedImageBlob = await getCroppedImg(activeUrl, croppedAreaPixels);
+            fd.append("image", croppedImageBlob, "cropped-hair.jpg");
+          } catch (cropErr) {
+            console.error("Lỗi khi crop ảnh cũ:", cropErr);
+            alert("Lưu ý: Không thể crop trực tiếp ảnh cũ từ xa do chính sách CORS của trình duyệt. Vui lòng nhấn vào nút 'Nhấn để chọn ảnh...' và tải lại ảnh lên để thực hiện căn chỉnh.");
+            return;
+          }
+        }
+      }
+
+      // Không set Content-Type thủ công — Axios tự detect FormData và thêm boundary
+      const config = {}; // Content-Type tự xử lý bởi api.js interceptor
+      const apiCall = editingItem
+        ? api.put(`/admin/catalog/${editingItem.id}`, fd, config)
+        : api.post("/admin/catalog", fd, config);
+
+      await apiCall;
+      setIsOpen(false);
+      setImageFile(null);
+      setImagePreview(null);
+      fetchCatalog();
+    } catch (err) {
+      console.error("Lỗi khi lưu catalog kiểu tóc:", err);
+      const errMsg = err.response?.data?.message || err.message || "Không xác định";
+      alert(`Thao tác thất bại. Chi tiết lỗi: ${errMsg}`);
     }
-
-    // Không set Content-Type thủ công — Axios tự detect FormData và thêm boundary
-    const config = {}; // Content-Type tự xử lý bởi api.js interceptor
-    const apiCall = editingItem
-      ? api.put(`/admin/catalog/${editingItem.id}`, fd, config)
-      : api.post("/admin/catalog", fd, config);
-
-    apiCall
-      .then(() => {
-        setIsOpen(false);
-        setImageFile(null);
-        setImagePreview(null);
-        fetchCatalog();
-      })
-      .catch((err) => {
-        console.error(err);
-        alert("Thao tác thất bại. Vui lòng thử lại.");
-      });
   };
 
   // Xóa kiểu tóc
@@ -306,14 +352,11 @@ export default function AdminCatalogPage() {
               />
 
               {/* Upload ảnh — Cloudinary */}
-              <label className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2">
                 <span className="text-sm font-semibold text-mauve">
                   Hình ảnh {editingItem ? "(chọn ảnh mới nếu muốn thay)" : "*"}
                 </span>
                 <div className="flex items-center gap-4">
-                  {imagePreview && (
-                    <img src={imagePreview} alt="Preview" className="size-16 rounded-xl object-cover border border-line" />
-                  )}
                   <label className="flex-1 cursor-pointer rounded-2xl border-2 border-dashed border-line bg-canvas px-4 py-3 text-center text-sm text-muted transition hover:border-brand hover:bg-brand/5">
                     <input
                       type="file"
@@ -324,7 +367,47 @@ export default function AdminCatalogPage() {
                     {imageFile ? imageFile.name : "Nhấn để chọn ảnh..."}
                   </label>
                 </div>
-              </label>
+
+                {imagePreview && (
+                  <div className="mt-2 flex flex-col gap-2">
+                    <span className="text-xs font-semibold text-mauve">
+                      Cân chỉnh khung hiển thị (Kéo thả ảnh hoặc kéo thanh trượt để Zoom, ảnh sẽ tự động được cắt theo tỷ lệ 4:5 của Bộ sưu tập):
+                    </span>
+                    {/* Container for React Easy Crop */}
+                    <div className="relative h-72 w-full overflow-hidden rounded-2xl border border-line bg-canvas">
+                      <Cropper
+                        image={imagePreview}
+                        crop={crop}
+                        zoom={zoom}
+                        aspect={4 / 5}
+                        onCropChange={(c) => { setCrop(c); setCropInteracted(true); }}
+                        onZoomChange={(z) => { setZoom(z); setCropInteracted(true); }}
+                        onCropComplete={onCropComplete}
+                        style={{
+                          containerStyle: {
+                            borderRadius: '16px',
+                          }
+                        }}
+                      />
+                    </div>
+                    {/* Zoom Slider Controls */}
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-muted">Zoom:</span>
+                      <input
+                        type="range"
+                        value={zoom}
+                        min={1}
+                        max={3}
+                        step={0.1}
+                        aria-label="Zoom"
+                        onChange={(e) => setZoom(Number(e.target.value))}
+                        className="h-1.5 flex-1 cursor-pointer appearance-none rounded-lg bg-line accent-brand"
+                      />
+                      <span className="text-xs font-semibold text-ink">{zoom}x</span>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <Input
                 label="Nhãn tag (tùy chọn)"

@@ -4,9 +4,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import vn.payos.PayOS;
+import vn.payos.ClientOptions;
 
 /**
- * Cấu hình kết nối SDK PayOS để thực hiện thanh toán hóa đơn.
+ * Cấu hình kết nối SDK PayOS v2 để thực hiện thanh toán hóa đơn.
  */
 @Configuration
 public class PayOSConfig {
@@ -22,7 +23,10 @@ public class PayOSConfig {
 
     @Bean
     public PayOS payOS() {
-        // Khởi tạo đối tượng PayOS từ thông tin cấu hình API Keys
-        return new PayOS(clientId, apiKey, checksumKey);
+        return new PayOS(ClientOptions.builder()
+                .clientId(clientId)
+                .apiKey(apiKey)
+                .checksumKey(checksumKey)
+                .build());
     }
 }

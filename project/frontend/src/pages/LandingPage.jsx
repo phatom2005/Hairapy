@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "motion/react";
 import useAuthStore from "../store/useAuthStore";
 import {
@@ -135,30 +136,32 @@ function Features() {
           {(() => {
             const ScanIconComp = FEATURES[0].icon;
             return (
-              <SpotlightCard spotlightColor={FEATURES[0].spotlight} className="h-full rounded-3xl hover:-translate-y-1.5 transition-all duration-300">
-                <Card className="h-full flex flex-col justify-between md:flex-row gap-8 items-center relative">
-                  <div className="flex-1 flex flex-col justify-center">
-                    <span className={`mb-4 flex size-14 items-center justify-center rounded-2xl ${FEATURES[0].iconBg} ${FEATURES[0].iconColor}`}>
-                      <ScanIconComp size={26} />
-                    </span>
-                    <h3 className="mb-2 text-2xl font-bold text-ink">{FEATURES[0].title}</h3>
-                    <p className="leading-relaxed text-mauve max-w-md">{FEATURES[0].desc}</p>
-                  </div>
-                  {/* Góc quét giả lập sử dụng màu sắc pink nguyên bản */}
-                  <div className="w-full md:w-48 h-32 md:h-40 flex items-center justify-center rounded-2xl bg-pink/5 border border-divider/20 relative overflow-hidden shrink-0">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-24 h-24 rounded-full border border-pink/20 animate-ping absolute duration-1000" />
-                      <div className="w-16 h-16 rounded-full border-2 border-brand/20 flex items-center justify-center bg-white shadow-sm">
-                        <ScanIconComp size={26} className="text-brand animate-pulse" />
-                      </div>
+              <Link to="/scan" className="block h-full">
+                <SpotlightCard spotlightColor={FEATURES[0].spotlight} className="h-full rounded-3xl hover:-translate-y-1.5 transition-all duration-300">
+                  <Card className="h-full flex flex-col justify-between md:flex-row gap-8 items-center relative">
+                    <div className="flex-1 flex flex-col justify-center">
+                      <span className={`mb-4 flex size-14 items-center justify-center rounded-2xl ${FEATURES[0].iconBg} ${FEATURES[0].iconColor}`}>
+                        <ScanIconComp size={26} />
+                      </span>
+                      <h3 className="mb-2 text-2xl font-bold text-ink">{FEATURES[0].title}</h3>
+                      <p className="leading-relaxed text-mauve max-w-md">{FEATURES[0].desc}</p>
                     </div>
-                    <div className="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-pink/30" />
-                    <div className="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-pink/30" />
-                    <div className="absolute bottom-2 left-2 w-3 h-3 border-b-2 border-l-2 border-pink/30" />
-                    <div className="absolute bottom-2 right-2 w-3 h-3 border-b-2 border-r-2 border-pink/30" />
-                  </div>
-                </Card>
-              </SpotlightCard>
+                    {/* Góc quét giả lập sử dụng màu sắc pink nguyên bản */}
+                    <div className="w-full md:w-48 h-32 md:h-40 flex items-center justify-center rounded-2xl bg-pink/5 border border-divider/20 relative overflow-hidden shrink-0">
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-24 h-24 rounded-full border border-pink/20 animate-ping absolute duration-1000" />
+                        <div className="w-16 h-16 rounded-full border-2 border-brand/20 flex items-center justify-center bg-white shadow-sm">
+                          <ScanIconComp size={26} className="text-brand animate-pulse" />
+                        </div>
+                      </div>
+                      <div className="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-pink/30" />
+                      <div className="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-pink/30" />
+                      <div className="absolute bottom-2 left-2 w-3 h-3 border-b-2 border-l-2 border-pink/30" />
+                      <div className="absolute bottom-2 right-2 w-3 h-3 border-b-2 border-r-2 border-pink/30" />
+                    </div>
+                  </Card>
+                </SpotlightCard>
+              </Link>
             );
           })()}
         </AnimatedContent>
@@ -168,21 +171,23 @@ function Features() {
           {(() => {
             const CameraIconComp = FEATURES[1].icon;
             return (
-              <SpotlightCard spotlightColor={FEATURES[1].spotlight} className="h-full rounded-3xl hover:-translate-y-1.5 transition-all duration-300">
-                <Card className="h-full flex flex-col justify-between">
-                  <div>
-                    <span className={`mb-4 flex size-14 items-center justify-center rounded-2xl ${FEATURES[1].iconBg} ${FEATURES[1].iconColor}`}>
-                      <CameraIconComp size={26} />
-                    </span>
-                    <h3 className="mb-2 text-2xl font-bold text-ink">{FEATURES[1].title}</h3>
-                    <p className="leading-relaxed text-mauve">{FEATURES[1].desc}</p>
-                  </div>
-                  <div className="mt-6 flex items-center gap-2 text-xs font-bold text-brand uppercase tracking-wider">
-                    <span className="flex h-2 w-2 rounded-full bg-brand animate-pulse" />
-                    AR Trial Ready
-                  </div>
-                </Card>
-              </SpotlightCard>
+              <Link to="/catalog" className="block h-full">
+                <SpotlightCard spotlightColor={FEATURES[1].spotlight} className="h-full rounded-3xl hover:-translate-y-1.5 transition-all duration-300">
+                  <Card className="h-full flex flex-col justify-between">
+                    <div>
+                      <span className={`mb-4 flex size-14 items-center justify-center rounded-2xl ${FEATURES[1].iconBg} ${FEATURES[1].iconColor}`}>
+                        <CameraIconComp size={26} />
+                      </span>
+                      <h3 className="mb-2 text-2xl font-bold text-ink">{FEATURES[1].title}</h3>
+                      <p className="leading-relaxed text-mauve">{FEATURES[1].desc}</p>
+                    </div>
+                    <div className="mt-6 flex items-center gap-2 text-xs font-bold text-brand uppercase tracking-wider">
+                      <span className="flex h-2 w-2 rounded-full bg-brand animate-pulse" />
+                      AR Trial Ready
+                    </div>
+                  </Card>
+                </SpotlightCard>
+              </Link>
             );
           })()}
         </AnimatedContent>

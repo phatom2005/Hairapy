@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import api from "../lib/api";
-import { Button, Card, Badge } from "../components/ui";
-import Navbar from "../components/layout/Navbar";
-import Footer from "../components/layout/Footer";
-import { CheckIcon, ShieldIcon, CrownIcon } from "../components/icons";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatedContent, BorderGlow, GlareHover } from "../components/animated";
+import { CheckIcon, CrownIcon, ShieldIcon } from "../components/icons";
+import Footer from "../components/layout/Footer";
+import Navbar from "../components/layout/Navbar";
+import { Badge, Button, Card } from "../components/ui";
+import api from "../lib/api";
 
 export default function CheckoutPage() {
   const [searchParams] = useSearchParams();
@@ -17,8 +17,8 @@ export default function CheckoutPage() {
 
   // Xác định thông tin chi tiết của gói
   const isPremium = plan === "PREMIUM";
-  const planName = isPremium ? "Premium (Tháng)" : "Pro (Tuần)";
-  const planPrice = isPremium ? "199.000đ" : "59.000đ";
+  const planName = isPremium ? "Tháng" : "Pro (Tuần)";
+  const planPrice = isPremium ? "79.000vnđ" : "29.000vnđ";
   const planPeriod = isPremium ? "30 ngày" : "7 ngày";
 
   const features = isPremium

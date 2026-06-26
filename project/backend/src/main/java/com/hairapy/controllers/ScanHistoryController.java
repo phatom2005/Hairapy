@@ -60,8 +60,11 @@ public class ScanHistoryController {
         }
 
         try {
+            // Kiểm tra quota và ghi nhận lượt sử dụng
+            usageService.checkQuota(currentUser, "FACE_SCAN");
+
             log.info("Lưu lịch sử quét khuôn mặt cho user: {}, faceShape: {}", currentUser.getEmail(), faceShape);
-            
+
             // Upload ảnh lên Cloudinary
             String cloudinaryUrl = cloudinaryService.uploadFile(image, "scans");
 
@@ -73,6 +76,10 @@ public class ScanHistoryController {
                     .build();
 
             scanHistoryRepository.save(history);
+
+            // Ghi nhận lượt sử dụng vào usage_history để dashboard đếm đúng
+            usageService.recordUsage(currentUser, "FACE_SCAN");
+
             return ResponseEntity.ok(history);
         } catch (Exception e) {
             log.error("Lỗi khi lưu lịch sử quét khuôn mặt:", e);

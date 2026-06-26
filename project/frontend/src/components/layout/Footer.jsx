@@ -1,4 +1,5 @@
-import { LOGO } from "../../lib/figmaAssets";
+import { LOGO_NGANG } from "../../lib/figmaAssets";
+import { Link } from "react-router-dom";
 
 function FooterCol({ title, links }) {
   return (
@@ -16,10 +17,9 @@ export default function Footer() {
     <footer className="rounded-t-3xl bg-white px-6 sm:px-16">
       <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-8 py-12 sm:px-16 md:grid-cols-2">
         <div className="flex flex-col gap-6">
-          <div className="flex items-center gap-3">
-            <img src={LOGO} alt="Hairapy" className="size-12" />
-            <span className="text-2xl font-black text-magenta">Hairapy</span>
-          </div>
+          <Link to="/" className="inline-flex items-center">
+            <img src={LOGO_NGANG} alt="Hairapy" className="h-20 w-auto" />
+          </Link>
           <p className="max-w-sm text-mauve">
             Hairapy AI - Ứng dụng dẫn đầu về công nghệ làm đẹp cho thế hệ mới. Chúng tôi tin rằng
             mỗi người đều xứng đáng có một diện mạo tự tin nhất.

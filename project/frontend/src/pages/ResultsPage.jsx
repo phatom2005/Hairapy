@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatedContent, BorderGlow, GlareHover, SpotlightCard } from "../components/animated";
 import { ArrowRight, CheckIcon, StarIcon } from "../components/icons";
 import Footer from "../components/layout/Footer";
@@ -62,6 +62,8 @@ const REASONS_MAP = {
 
 export default function ResultsPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const hairstyleId = searchParams.get("hairstyleId");
   const queryClient = useQueryClient();
 
   // Lấy kết quả phân tích, ảnh preview, giới tính và hàm set kiểu tóc từ Zustand store
@@ -70,9 +72,25 @@ export default function ResultsPage() {
 
   useEffect(() => {
     if (!analysisResult) {
-      navigate("/scan");
+      // Bảo toàn hairstyleId khi redirect qua scan
+      if (hairstyleId) {
+        navigate(`/scan?hairstyleId=${hairstyleId}`);
+      } else {
+        navigate("/scan");
+      }
     }
-  }, [analysisResult, navigate]);
+  }, [analysisResult, navigate, hairstyleId]);
+
+  // Fetch kiểu tóc được chọn từ catalog nếu có
+  const { data: chosenHairstyle = null } = useQuery({
+    queryKey: ["hairstyle-chosen", hairstyleId],
+    queryFn: async () => {
+      if (!hairstyleId) return null;
+      const { data } = await api.get(`/hairstyles/${hairstyleId}`);
+      return data;
+    },
+    enabled: !!hairstyleId,
+  });
 
   const faceShape = analysisResult?.faceShape;
   const metrics = analysisResult?.metrics;
@@ -168,7 +186,7 @@ export default function ResultsPage() {
       ailabHairType: hairstyle.ailabHairType,
       ailabProStyle: hairstyle.ailabProStyle,
     });
-    navigate("/swap");
+    navigate(`/swap?hairstyleId=${hairstyle.id}`);
   };
 
   return (
@@ -226,6 +244,45 @@ export default function ResultsPage() {
           </Card>
 
           <div className="flex flex-col gap-6">
+            {chosenHairstyle && (
+              <AnimatedContent delay={0}>
+                <div className="mb-6 rounded-2xl bg-canvas p-4 border border-primary/20 shadow-sm">
+                  <p className="mb-3 text-sm font-bold text-mauve">Kiểu tóc bạn chọn từ bộ sưu tập:</p>
+                  <SpotlightCard className="rounded-2xl">
+                    <Card padded={false} className="overflow-hidden">
+                      <div className="flex flex-col sm:flex-row gap-4 items-center">
+                        <img
+                          src={chosenHairstyle.imageUrl}
+                          alt={chosenHairstyle.name}
+                          className="h-32 w-32 rounded-xl object-cover shrink-0"
+                          onError={(e) => { e.target.src = `https://placehold.co/300x300?text=${encodeURIComponent(chosenHairstyle.name)}`; }}
+                        />
+                        <div className="flex flex-1 flex-col justify-between w-full">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-bold text-ink text-base">{chosenHairstyle.name}</h4>
+                              {chosenHairstyle.premiumOnly && (
+                                <Badge variant="premium">PRO</Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-mauve line-clamp-2">{chosenHairstyle.description}</p>
+                            <p className="text-[11px] font-semibold text-muted">
+                              Độ dài: {chosenHairstyle.hairLength} | Phù hợp: {chosenHairstyle.gender || "Unisex"}
+                            </p>
+                          </div>
+                          <div className="mt-3 flex justify-end">
+                            <Button onClick={() => handleTryStyle(chosenHairstyle)} size="sm" className="px-4 py-2 text-xs">
+                              Thử kiểu này ngay
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  </SpotlightCard>
+                </div>
+              </AnimatedContent>
+            )}
+
             <SectionHeading
               center={false}
               title={`Kiểu tóc dành cho gương mặt ${(FACE_SHAPE_TRANSLATION[faceShape] || "").split(" (")[0]}`}

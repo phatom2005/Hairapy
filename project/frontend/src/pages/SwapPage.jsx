@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button, Card } from "../components/ui";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
@@ -26,6 +26,8 @@ const PALETTES = {
 
 export default function SwapPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const hairstyleId = searchParams.get("hairstyleId");
 
   // Lấy ảnh gốc, kết quả phân tích, giới tính và kiểu tóc đã chọn (nếu có) từ useScanStore
   const { imageFile, previewUrl, selectedHairstyle, analysisResult, gender } = useScanStore();
@@ -57,19 +59,40 @@ export default function SwapPage() {
     },
   });
 
+  // Fetch kiểu tóc được chọn từ catalog nếu có hairstyleId trên URL
+  const { data: chosenHairstyle = null } = useQuery({
+    queryKey: ["hairstyle-chosen-swap", hairstyleId],
+    queryFn: async () => {
+      if (!hairstyleId) return null;
+      const { data } = await api.get(`/hairstyles/${hairstyleId}`);
+      return data;
+    },
+    enabled: !!hairstyleId,
+  });
+
   // Bảo vệ route: Nếu không có ảnh preview thì chuyển hướng về /scan
   useEffect(() => {
     if (!previewUrl) {
-      navigate("/scan");
+      if (hairstyleId) {
+        navigate(`/scan?hairstyleId=${hairstyleId}`);
+      } else {
+        navigate("/scan");
+      }
     }
-  }, [previewUrl, navigate]);
+  }, [previewUrl, navigate, hairstyleId]);
+
+  // Đảm bảo kiểu tóc đã chọn từ catalog xuất hiện trong danh sách hiển thị, kể cả khi không thuộc đề xuất
+  const displayedStyles = [...styles];
+  if (chosenHairstyle && !styles.some((s) => s.id === chosenHairstyle.id)) {
+    displayedStyles.unshift(chosenHairstyle);
+  }
 
   // Thiết lập kiểu tóc đang hiển thị hoạt động — ưu tiên ailabProStyle
-  const activeStyle = selectedStyle || (styles.length > 0 ? {
-    id: styles[0].id,
-    name: styles[0].name,
-    imageUrl: styles[0].imageUrl,
-    ailabProStyle: styles[0].ailabProStyle,
+  const activeStyle = selectedStyle || (displayedStyles.length > 0 ? {
+    id: displayedStyles[0].id,
+    name: displayedStyles[0].name,
+    imageUrl: displayedStyles[0].imageUrl,
+    ailabProStyle: displayedStyles[0].ailabProStyle,
   } : null);
 
   if (!previewUrl) {
@@ -146,13 +169,13 @@ export default function SwapPage() {
         <Card className="flex flex-col gap-6">
           <div>
             <h2 className="mb-3 text-lg font-bold text-ink">Chọn kiểu tóc</h2>
-            {styles.length === 0 ? (
+            {displayedStyles.length === 0 ? (
               <div className="text-center py-6 text-xs text-muted">
                 Đang tải danh sách kiểu tóc...
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4 max-h-[300px] overflow-y-auto pr-1">
-                {styles.map((s) => {
+                {displayedStyles.map((s) => {
                   const isActive = activeStyle?.id === s.id;
                   return (
                     <button
@@ -296,9 +319,9 @@ export default function SwapPage() {
           </div>
 
           <div>
-            <p className="mb-3 text-sm font-bold text-mauve">Tất cả kiểu tóc có sẵn:</p>
+            <p className="mb-3 text-sm font-bold text-mauve">Các kiểu tóc phù hợp hoặc đã chọn:</p>
             <div className="flex gap-3 overflow-x-auto pb-2 pr-1">
-              {styles.map((s) => {
+              {displayedStyles.map((s) => {
                 const isActive = activeStyle?.id === s.id;
                 return (
                   <button

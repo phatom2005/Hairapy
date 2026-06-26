@@ -45,7 +45,7 @@ public class PaymentService {
         if (plan == SubscriptionPlan.PRO) {
             amount = 29000; // Gói tuần 29,000 VND
         } else if (plan == SubscriptionPlan.PREMIUM) {
-            amount = 199000; // Gói tháng 199,000 VND
+            amount = 79000; // Gói tháng 79,000 VNĐ
         } else {
             throw new IllegalArgumentException("Gói dịch vụ không hợp lệ");
         }

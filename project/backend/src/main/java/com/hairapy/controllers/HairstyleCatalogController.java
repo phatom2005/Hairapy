@@ -123,4 +123,11 @@ public class HairstyleCatalogController {
 
         return ResponseEntity.ok(result);
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<HairstyleCatalog> getHairstyleById(@org.springframework.web.bind.annotation.PathVariable Long id) {
+        return hairstyleCatalogRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
 }

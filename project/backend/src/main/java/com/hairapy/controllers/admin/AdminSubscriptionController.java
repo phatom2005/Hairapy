@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/admin/subscriptions")
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class AdminSubscriptionController {
 
     private final SubscriptionRepository subscriptionRepository;
@@ -49,6 +51,7 @@ public class AdminSubscriptionController {
     /**
      * Hủy gói đăng ký của người dùng (chuyển đổi trạng thái về CANCELLED).
      */
+    @Transactional // ghi DB nên cần read-write, override class-level readOnly
     @PutMapping("/{id}/cancel")
     public ResponseEntity<AdminSubscriptionResponse> cancelSubscription(@PathVariable Long id) {
         Subscription subscription = subscriptionRepository.findById(id)

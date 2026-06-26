@@ -262,8 +262,8 @@ const PERKS = ["Kiểu tóc Premium mỗi tuần", "Không quảng cáo", "Mã g
 
 const PLANS = [
   { name: "Cơ bản", price: "0đ", period: "/ vĩnh viễn", label: "GÓI MIỄN PHÍ", to: "/register", desc: "1 lần quét AI & 5 lần thử kiểu tóc mỗi ngày." },
-  { name: "Tuần", price: "59k", period: "/ tuần", label: "TRẢI NGHIỆM NHANH", to: "/checkout?plan=PRO", desc: "5 lần quét AI & 20 lần thử tóc mỗi ngày, ảnh HD không logo." },
-  { name: "Premium", price: "199k", period: "/ tháng", label: "ƯU ĐÃI LỚN NHẤT", to: "/checkout?plan=PREMIUM", desc: "Ảnh HD không watermark & tư vấn 1:1 trực tiếp cùng Stylist." },
+  { name: "Tuần", price: "49k", period: "/ tuần", label: "TRẢI NGHIỆM NHANH", to: "/checkout?plan=PRO", desc: "5 lần quét AI & 20 lần thử tóc mỗi ngày, ảnh HD không logo." },
+  { name: "Premium", price: "99k", period: "/ tháng", label: "ƯU ĐÃI LỚN NHẤT", to: "/checkout?plan=PREMIUM", desc: "Ảnh HD không watermark & tư vấn 1:1 trực tiếp cùng Stylist." },
 ];
 
 function PremiumUpsell() {

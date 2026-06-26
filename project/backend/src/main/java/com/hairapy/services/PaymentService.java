@@ -76,13 +76,21 @@ public class PaymentService {
                 .price(amount)
                 .build();
 
+        // Chuẩn hóa frontendUrl để tránh lỗi double slash (//) khiến PayOS signature mismatch
+        String baseUrl = frontendUrl.trim();
+        if (baseUrl.endsWith("/")) {
+            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+        }
+        String returnUrl = baseUrl + "/payment/success";
+        String cancelUrl = baseUrl + "/payment/cancel";
+
         // Tạo đối tượng dữ liệu thanh toán để gọi PayOS SDK
         PaymentData paymentData = PaymentData.builder()
                 .orderCode(orderCode)
                 .amount(amount)
                 .description("Hairapy " + planCode)
-                .returnUrl(frontendUrl + "/payment/success")
-                .cancelUrl(frontendUrl + "/payment/cancel")
+                .returnUrl(returnUrl)
+                .cancelUrl(cancelUrl)
                 .items(Collections.singletonList(item))
                 .build();
 

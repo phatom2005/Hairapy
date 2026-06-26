@@ -18,7 +18,7 @@ export default function CheckoutPage() {
   // Xác định thông tin chi tiết của gói
   const isPremium = plan === "PREMIUM";
   const planName = isPremium ? "Tháng" : "Pro (Tuần)";
-  const planPrice = isPremium ? "79.000vnđ" : "29.000vnđ";
+  const planPrice = isPremium ? "99.000vnđ" : "49.000vnđ";
   const planPeriod = isPremium ? "30 ngày" : "7 ngày";
 
   const features = isPremium

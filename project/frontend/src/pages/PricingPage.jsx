@@ -19,7 +19,7 @@ const PLANS = [
   },
   {
     name: "Tuần", tagline: "Trải nghiệm nhanh",
-    price: "29.000vnđ", period: "/ tuần", highlight: false,
+    price: "49.000vnđ", period: "/ tuần", highlight: false,
     cta: "Mua gói Tuần", to: "/checkout?plan=PRO", variant: "outline",
     features: [
       { text: "5 lần quét AI mỗi ngày", on: true },
@@ -30,7 +30,7 @@ const PLANS = [
   },
   {
     name: "Tháng", tagline: "Trải nghiệm không giới hạn",
-    price: "79.000vnđ", period: "/ tháng", highlight: true,
+    price: "99.000vnđ", period: "/ tháng", highlight: true,
     cta: "Nâng cấp ngay", to: "/checkout?plan=PREMIUM", variant: "pink",
     features: [
       { text: "5 lần quét AI mỗi ngày", on: true },

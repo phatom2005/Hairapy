@@ -96,12 +96,7 @@
 			<version>${sentry.version}</version>
 		</dependency>
 
-		<!-- PayOS Java SDK -->
-		<dependency>
-			<groupId>vn.payos</groupId>
-			<artifactId>payos-java</artifactId>
-			<version>1.0.3</version>
-		</dependency>
+		<!-- PayOS: gọi REST API trực tiếp qua RestTemplate, không cần SDK -->
 
 		<!-- Cloudinary SDK — lưu ảnh user upload, kết quả AI, catalog -->
 		<dependency>

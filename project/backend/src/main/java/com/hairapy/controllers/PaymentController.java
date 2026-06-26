@@ -11,8 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import vn.payos.type.Webhook;
-
 import java.util.Map;
 
 /**
@@ -65,7 +63,7 @@ public class PaymentController {
      * Endpoint: POST /api/payments/webhook
      */
     @PostMapping("/webhook")
-    public ResponseEntity<?> handleWebhook(@RequestBody Webhook webhookBody) {
+    public ResponseEntity<?> handleWebhook(@RequestBody Map<String, Object> webhookBody) {
         try {
             paymentService.handleWebhook(webhookBody);
             // Trả về HTTP 200 OK cho PayOS biết hệ thống đã xử lý thành công

@@ -11,5 +11,3 @@ ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.saved_hairstyles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.scan_history ENABLE ROW LEVEL SECURITY;
 
--- Table owner (user Flyway dùng để migrate) mặc định bypass RLS nên bật luôn cho bảng này cũng an toàn
-ALTER TABLE public.flyway_schema_history ENABLE ROW LEVEL SECURITY;

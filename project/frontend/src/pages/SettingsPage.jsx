@@ -6,13 +6,42 @@ import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import { UserIcon, CameraIcon } from "../components/icons";
 import useAuthStore from "../store/useAuthStore";
+import api from "../lib/api";
 
 const NAV = ["Thông tin cá nhân", "Thông báo", "Bảo mật", "Gói dịch vụ"];
 
 export default function SettingsPage() {
   const [active, setActive] = useState(NAV[0]);
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { user, logout, updateUser } = useAuthStore();
+
+  const [fullName, setFullName] = useState(user?.fullName || "");
+  const [phone, setPhone] = useState(user?.phone || "");
+  const [dob, setDob] = useState(user?.dateOfBirth || "");
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState(null);
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setSaveMessage(null);
+    try {
+      const { data } = await api.put("/auth/me", {
+        fullName,
+        phone: phone || null,
+        dateOfBirth: dob || null,
+      });
+      updateUser(data);
+      setSaveMessage({ type: "success", text: "Đã lưu thay đổi." });
+    } catch (err) {
+      const msg = err.response?.data?.message
+        || (err.response?.data?.errors && Object.values(err.response.data.errors).join(", "))
+        || "Không thể lưu thay đổi. Vui lòng thử lại.";
+      setSaveMessage({ type: "error", text: msg });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="min-h-screen">
@@ -60,15 +89,22 @@ export default function SettingsPage() {
           </div>
 
           {/* Form */}
-          <form className="flex flex-col gap-8" onSubmit={(e) => e.preventDefault()}>
+          <form className="flex flex-col gap-8" onSubmit={handleSaveProfile}>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <Input label="Họ và tên" defaultValue={user?.fullName || (user?.email ? user.email.split("@")[0] : "Nguyễn Hoàng Nam")} />
+              <Input label="Họ và tên" value={fullName} onChange={(e) => setFullName(e.target.value)} />
               <Input label="Email" type="email" defaultValue={user?.email || ""} readOnly />
-              <Input label="Số điện thoại" defaultValue="+84 987 654 321" />
-              <Input label="Ngày sinh" type="date" defaultValue="1998-05-15" />
+              <Input label="Số điện thoại" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <Input label="Ngày sinh" type="date" value={dob || ""} onChange={(e) => setDob(e.target.value)} />
             </div>
+            {saveMessage && (
+              <p className={saveMessage.type === "success" ? "text-sm text-green-600" : "text-sm text-red-600"}>
+                {saveMessage.text}
+              </p>
+            )}
             <div className="flex justify-end">
-              <Button type="submit" variant="brand" className="px-12">Lưu thay đổi</Button>
+              <Button type="submit" variant="brand" className="px-12" disabled={saving}>
+                {saving ? "Đang lưu..." : "Lưu thay đổi"}
+              </Button>
             </div>
           </form>
         </Card>

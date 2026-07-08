@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -162,6 +163,55 @@ class AuthControllerTest {
     void getCurrentUser_NoToken() throws Exception {
         // Gửi request không kèm token -> Nhận về 403 Forbidden
         mockMvc.perform(get("/api/auth/me"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void updateCurrentUser_Success() throws Exception {
+        // Đăng ký trước để lấy JWT token hợp lệ
+        RegisterRequest registerRequest = new RegisterRequest("Nguyễn Anh", "test@example.com", "password123", "password123");
+
+        String responseJson = mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(registerRequest)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        String token = objectMapper.readTree(responseJson).get("token").asText();
+
+        // Gửi request cập nhật profile
+        com.hairapy.dto.auth.UpdateProfileRequest updateRequest = new com.hairapy.dto.auth.UpdateProfileRequest(
+                "Nguyễn Anh Cập Nhật", "+84999999999", java.time.LocalDate.of(2000, 1, 1));
+
+        mockMvc.perform(put("/api/auth/me")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("test@example.com"))
+                .andExpect(jsonPath("$.role").value("USER"))
+                .andExpect(jsonPath("$.fullName").value("Nguyễn Anh Cập Nhật"))
+                .andExpect(jsonPath("$.phone").value("+84999999999"))
+                .andExpect(jsonPath("$.dateOfBirth").value("2000-01-01"));
+
+        // Lấy lại thông tin để kiểm tra DB thực tế đã thay đổi
+        mockMvc.perform(get("/api/auth/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fullName").value("Nguyễn Anh Cập Nhật"))
+                .andExpect(jsonPath("$.phone").value("+84999999999"))
+                .andExpect(jsonPath("$.dateOfBirth").value("2000-01-01"));
+    }
+
+    @Test
+    void updateCurrentUser_NoToken() throws Exception {
+        // Gửi request không kèm token -> Nhận về 403 Forbidden
+        com.hairapy.dto.auth.UpdateProfileRequest updateRequest = new com.hairapy.dto.auth.UpdateProfileRequest(
+                "Nguyễn Anh Cập Nhật", "+84999999999", java.time.LocalDate.of(2000, 1, 1));
+
+        mockMvc.perform(put("/api/auth/me")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isForbidden());
     }
 }

@@ -67,6 +67,23 @@ public class AuthController {
 
         // Trả về role hiệu lực (bạo gồm cả PREMIUM nếu có subscription đang hoạt động)
         String effectiveRole = authService.resolveEffectiveRole(user);
-        return ResponseEntity.ok(new UserMeResponse(user.getEmail(), effectiveRole, user.getFullName()));
+        return ResponseEntity.ok(new UserMeResponse(
+                user.getEmail(), effectiveRole, user.getFullName(), user.getPhone(), user.getDateOfBirth()));
+    }
+
+    /**
+     * Endpoint cập nhật hồ sơ cá nhân (Settings page) của người dùng hiện tại.
+     */
+    @PutMapping("/me")
+    public ResponseEntity<?> updateCurrentUser(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @jakarta.validation.Valid @RequestBody com.hairapy.dto.auth.UpdateProfileRequest request) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        User user = userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin người dùng"));
+        UserMeResponse updated = authService.updateProfile(user, request);
+        return ResponseEntity.ok(updated);
     }
 }

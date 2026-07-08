@@ -12,6 +12,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Service xử lý các nghiệp vụ liên quan đến xác thực người dùng (Đăng ký, Đăng nhập).
@@ -102,5 +103,20 @@ public class AuthService {
             return "PREMIUM";
         }
         return "USER";
+    }
+
+    /**
+     * Cập nhật hồ sơ cá nhân (fullName, phone, dateOfBirth) cho user hiện tại.
+     */
+    @Transactional
+    public com.hairapy.dto.auth.UserMeResponse updateProfile(User user, com.hairapy.dto.auth.UpdateProfileRequest request) {
+        user.setFullName(request.fullName());
+        user.setPhone(request.phone());
+        user.setDateOfBirth(request.dateOfBirth());
+        userRepository.save(user);
+
+        String effectiveRole = resolveEffectiveRole(user);
+        return new com.hairapy.dto.auth.UserMeResponse(
+                user.getEmail(), effectiveRole, user.getFullName(), user.getPhone(), user.getDateOfBirth());
     }
 }

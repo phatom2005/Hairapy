@@ -109,6 +109,7 @@ export default function SwapPage() {
     const formData = new FormData();
     formData.append("image", imageFile);
     formData.append("hairStyle", activeStyle.ailabProStyle);
+    formData.append("hairstyleId", activeStyle.id);
 
     try {
       const response = await api.post("/swap/try", formData, {

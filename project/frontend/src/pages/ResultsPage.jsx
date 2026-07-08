@@ -1,5 +1,4 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
 import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatedContent, BorderGlow, GlareHover, SpotlightCard } from "../components/animated";
@@ -30,7 +29,6 @@ const FACE_SHAPE_MAP = {
   Diamond: "Kim cương",
 };
 
-const BASE = import.meta.env.VITE_API_URL || "/api";
 
 // Lý do lựa chọn kiểu tóc dựa theo dáng mặt
 const REASONS_MAP = {
@@ -115,9 +113,7 @@ export default function ResultsPage() {
     queryFn: async () => {
       const token = localStorage.getItem("token");
       if (!token) return [];
-      const { data } = await axios.get(`${BASE}/profile/saved-styles`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const { data } = await api.get("/profile/saved-styles");
       return data;
     }
   });
@@ -134,16 +130,13 @@ export default function ResultsPage() {
 
     try {
       const isSaved = savedIds.has(hairstyleId);
-      const headers = { Authorization: `Bearer ${token}` };
       if (isSaved) {
-        await axios.delete(`${BASE}/profile/saved-styles`, {
-          params: { hairstyleId },
-          headers
+        await api.delete("/profile/saved-styles", {
+          params: { hairstyleId }
         });
       } else {
-        await axios.post(`${BASE}/profile/saved-styles`, null, {
-          params: { hairstyleId },
-          headers
+        await api.post("/profile/saved-styles", null, {
+          params: { hairstyleId }
         });
       }
       queryClient.invalidateQueries({ queryKey: ["profile-saved-styles"] });

@@ -38,6 +38,12 @@ public class User implements UserDetails {
     @Column(name = "full_name", length = 100)
     private String fullName;
 
+    @Column(length = 20)
+    private String phone;
+
+    @Column(name = "date_of_birth")
+    private java.time.LocalDate dateOfBirth;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default

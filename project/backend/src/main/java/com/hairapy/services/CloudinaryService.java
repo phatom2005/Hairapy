@@ -53,13 +53,36 @@ public class CloudinaryService {
      * @return URL ảnh permanent trên Cloudinary.
      */
     public String uploadFromUrl(String imageUrl, String folder) {
+        return uploadFromUrl(imageUrl, folder, false);
+    }
+
+    /**
+     * Upload ảnh từ URL, có thể gắn watermark text "Hairapy" (dùng cho user Free).
+     *
+     * @param watermark true → gắn watermark góc dưới phải, dùng cho tier Free.
+     */
+    public String uploadFromUrl(String imageUrl, String folder, boolean watermark) {
         try {
-            Map result = cloudinary.uploader().upload(imageUrl, ObjectUtils.asMap(
+            Map<String, Object> options = new java.util.HashMap<>(ObjectUtils.asMap(
                     "folder", "hairapy/" + folder,
                     "resource_type", "image"
             ));
+
+            if (watermark) {
+                options.put("transformation", java.util.List.of(
+                        ObjectUtils.asMap(
+                                "overlay", "text:Arial_60_bold:Hairapy",
+                                "gravity", "south_east",
+                                "x", 30, "y", 30,
+                                "opacity", 65,
+                                "color", "white"
+                        )
+                ));
+            }
+
+            Map result = cloudinary.uploader().upload(imageUrl, options);
             String url = (String) result.get("secure_url");
-            log.info("Upload ảnh từ URL lên Cloudinary thành công: folder={}", folder);
+            log.info("Upload ảnh từ URL lên Cloudinary thành công: folder={}, watermark={}", folder, watermark);
             return url;
         } catch (IOException e) {
             log.error("Lỗi upload ảnh từ URL lên Cloudinary: {}", e.getMessage());

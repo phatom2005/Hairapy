@@ -2,9 +2,12 @@ package com.hairapy.controllers;
 
 import com.hairapy.exceptions.AiTimeoutException;
 import com.hairapy.exceptions.QuotaExceededException;
+import com.hairapy.exceptions.PremiumRequiredException;
 import com.hairapy.models.User;
 import com.hairapy.services.HairSwapService;
 import com.hairapy.services.UsageService;
+import com.hairapy.services.SubscriptionService;
+import com.hairapy.repositories.HairstyleCatalogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -26,6 +29,8 @@ public class HairSwapController {
 
     private final HairSwapService hairSwapService;
     private final UsageService usageService;
+    private final SubscriptionService subscriptionService;
+    private final HairstyleCatalogRepository hairstyleCatalogRepository;
 
     /**
      * API thực hiện ghép kiểu tóc mới lên ảnh người dùng (Pro API — hair-only).
@@ -38,9 +43,10 @@ public class HairSwapController {
     @PostMapping("/try")
     public ResponseEntity<?> tryHairstyle(
             @RequestParam("image") MultipartFile image,
-            @RequestParam("hairStyle") String hairStyle) {
+            @RequestParam("hairStyle") String hairStyle,
+            @RequestParam(value = "hairstyleId", required = false) Long hairstyleId) {
 
-        log.info("Nhận yêu cầu thử kiểu tóc Pro: hairStyle={}", hairStyle);
+        log.info("Nhận yêu cầu thử kiểu tóc Pro: hairStyle={}, hairstyleId={}", hairStyle, hairstyleId);
 
         User currentUser = usageService.getCurrentUser();
         if (currentUser == null) {
@@ -49,17 +55,32 @@ public class HairSwapController {
             ));
         }
 
+        boolean isPaidUser = subscriptionService.isPaidUser(currentUser.getId());
+        com.hairapy.models.UsageHistory reservation = null;
+
         try {
-            // 1. Kiểm tra hạn mức sử dụng hôm nay trước khi gọi API
-            usageService.checkQuota(currentUser, "HAIR_SWAP");
+            // 0. Chặn Free user thử style premiumOnly
+            if (hairstyleId != null) {
+                hairstyleCatalogRepository.findById(hairstyleId).ifPresent(style -> {
+                    if (style.isPremiumOnly() && !isPaidUser) {
+                        throw new PremiumRequiredException(
+                                "Kiểu tóc này chỉ dành cho gói Premium. Nâng cấp để thử ngay!");
+                    }
+                });
+            }
+
+            // 1. Kiểm tra + ghi nhận lượt dùng ngay (atomic) — thay cho checkQuota() tách rời trước đây
+            reservation = usageService.reserveUsage(currentUser, "HAIR_SWAP");
 
             // 2. Thực hiện đổi kiểu tóc thông qua AILab Pro API (async)
-            String resultImage = hairSwapService.swapHairstyle(image, hairStyle);
-
-            // 3. Ghi lại lịch sử sử dụng sau khi thành công
-            usageService.recordUsage(currentUser, "HAIR_SWAP");
+            String resultImage = hairSwapService.swapHairstyle(image, hairStyle, isPaidUser);
 
             return ResponseEntity.ok(Map.of("image", resultImage));
+        } catch (PremiumRequiredException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "error", e.getMessage(),
+                    "requiresPremium", true
+            ));
         } catch (QuotaExceededException e) {
             log.warn("User {} vượt quá quota HAIR_SWAP: {}", currentUser.getEmail(), e.getMessage());
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(Map.of(
@@ -68,19 +89,21 @@ public class HairSwapController {
                     "limit", e.getLimit()
             ));
         } catch (AiTimeoutException e) {
+            usageService.releaseUsage(reservation); // đã reserve trước khi gọi AI — phải hoàn lượt tường minh
             log.warn("Yêu cầu AI timeout cho user {}: {}", currentUser.getEmail(), e.getMessage());
             return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT).body(Map.of(
                     "error", "AI xử lý quá lâu. Lượt của bạn đã được hoàn lại, vui lòng thử lại.",
                     "refunded", true
             ));
         } catch (IllegalArgumentException e) {
+            usageService.releaseUsage(reservation);
             log.warn("Yêu cầu không hợp lệ: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
+            usageService.releaseUsage(reservation);
             log.error("Lỗi hệ thống khi xử lý thử kiểu tóc:", e);
             return ResponseEntity.internalServerError().body(Map.of(
-                    "error", "Không thể xử lý ảnh bằng AI. Vui lòng thử lại sau.",
-                    "details", e.getMessage()
+                    "error", "Không thể xử lý ảnh bằng AI. Vui lòng thử lại sau."
             ));
         }
     }

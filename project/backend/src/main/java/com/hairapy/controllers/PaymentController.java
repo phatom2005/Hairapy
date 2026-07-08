@@ -52,8 +52,7 @@ public class PaymentController {
         } catch (Exception e) {
             log.error("Lỗi khi khởi tạo link thanh toán PayOS cho user {}: ", currentUser.getEmail(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                    "error", "Không thể khởi tạo thanh toán. Vui lòng thử lại sau.",
-                    "details", e.getMessage()
+                    "error", "Không thể khởi tạo thanh toán. Vui lòng thử lại sau."
             ));
         }
     }
@@ -73,7 +72,7 @@ public class PaymentController {
             // Trả về BAD_REQUEST hoặc INTERNAL_SERVER_ERROR nếu xác thực chữ ký thất bại
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
                     "success", false,
-                    "error", e.getMessage()
+                    "error", "Không thể xử lý webhook."
             ));
         }
     }
@@ -117,6 +116,7 @@ public class PaymentController {
                     payment.setStatus(PaymentStatus.PAID);
                     payment.setPaidAt(java.time.LocalDateTime.now());
                     paymentRepository.save(payment);
+                    paymentService.grantSubscriptionIfNeeded(payment);
                 } else if ("CANCELLED".equals(payosStatus)) {
                     payment.setStatus(PaymentStatus.CANCELLED);
                     paymentRepository.save(payment);

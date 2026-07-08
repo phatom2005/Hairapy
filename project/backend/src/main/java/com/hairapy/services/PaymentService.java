@@ -49,11 +49,15 @@ public class PaymentService {
 
     public PaymentService(PaymentRepository paymentRepository,
                           SubscriptionRepository subscriptionRepository,
-                          ObjectMapper objectMapper) {
+                          ObjectMapper objectMapper,
+                          org.springframework.boot.web.client.RestTemplateBuilder restTemplateBuilder) {
         this.paymentRepository = paymentRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.objectMapper = objectMapper;
-        this.restTemplate = new RestTemplate();
+        this.restTemplate = restTemplateBuilder
+                .connectTimeout(java.time.Duration.ofSeconds(10))
+                .readTimeout(java.time.Duration.ofSeconds(10))
+                .build();
     }
 
     /**
@@ -167,7 +171,9 @@ public class PaymentService {
         String signData = buildSignatureData(data);
         String expectedSignature = hmacSHA256(checksumKey.trim(), signData);
 
-        if (!expectedSignature.equals(receivedSignature)) {
+        if (!java.security.MessageDigest.isEqual(
+                expectedSignature.getBytes(StandardCharsets.UTF_8),
+                receivedSignature.getBytes(StandardCharsets.UTF_8))) {
             log.error("Webhook signature không khớp! expected={}, received={}", expectedSignature, receivedSignature);
             throw new SecurityException("Webhook signature không hợp lệ");
         }
@@ -196,39 +202,53 @@ public class PaymentService {
             payment.setPayosTransactionId(reference);
             paymentRepository.save(payment);
 
-            User user = payment.getUser();
-
-            // Hủy gói active cũ nếu có
-            subscriptionRepository.findByUserIdAndStatus(user.getId(), SubscriptionStatus.ACTIVE)
-                    .ifPresent(oldSub -> {
-                        oldSub.setStatus(SubscriptionStatus.EXPIRED);
-                        subscriptionRepository.save(oldSub);
-                        log.info("Hủy gói active cũ ID: {} của user: {}", oldSub.getId(), user.getEmail());
-                    });
-
-            // Tạo subscription mới
-            LocalDateTime startDate = LocalDateTime.now();
-            LocalDateTime endDate = (payment.getPlan() == SubscriptionPlan.PRO)
-                    ? startDate.plusDays(7)    // Gói Tuần
-                    : startDate.plusDays(30);  // Gói Tháng (PREMIUM)
-
-            Subscription newSub = Subscription.builder()
-                    .user(user)
-                    .plan(payment.getPlan())
-                    .status(SubscriptionStatus.ACTIVE)
-                    .startDate(startDate)
-                    .endDate(endDate)
-                    .build();
-            subscriptionRepository.save(newSub);
-
-            log.info("Nâng cấp gói thành công: user={}, plan={}, hết hạn={}",
-                    user.getEmail(), payment.getPlan(), endDate);
-
+            grantSubscriptionIfNeeded(payment);
         } else {
             payment.setStatus(PaymentStatus.CANCELLED);
             paymentRepository.save(payment);
             log.warn("Giao dịch thất bại/hủy: orderCode={}, code={}", orderCode, code);
         }
+    }
+
+    /**
+     * Cấp Subscription cho payment đã PAID — idempotent, an toàn khi gọi nhiều lần
+     * (webhook lặp lại, hoặc cả webhook lẫn poll FE cùng trigger).
+     */
+    @Transactional
+    public void grantSubscriptionIfNeeded(Payment payment) {
+        if (payment.isSubscriptionGranted()) {
+            log.info("Payment orderCode={} đã được cấp gói trước đó, bỏ qua.", payment.getOrderCode());
+            return;
+        }
+
+        User user = payment.getUser();
+
+        subscriptionRepository.findByUserIdAndStatus(user.getId(), SubscriptionStatus.ACTIVE)
+                .ifPresent(oldSub -> {
+                    oldSub.setStatus(SubscriptionStatus.EXPIRED);
+                    subscriptionRepository.save(oldSub);
+                    log.info("Hủy gói active cũ ID: {} của user: {}", oldSub.getId(), user.getEmail());
+                });
+
+        LocalDateTime startDate = LocalDateTime.now();
+        LocalDateTime endDate = (payment.getPlan() == SubscriptionPlan.PRO)
+                ? startDate.plusDays(7)
+                : startDate.plusDays(30);
+
+        Subscription newSub = Subscription.builder()
+                .user(user)
+                .plan(payment.getPlan())
+                .status(SubscriptionStatus.ACTIVE)
+                .startDate(startDate)
+                .endDate(endDate)
+                .build();
+        subscriptionRepository.save(newSub);
+
+        payment.setSubscriptionGranted(true);
+        paymentRepository.save(payment);
+
+        log.info("Nâng cấp gói thành công: user={}, plan={}, hết hạn={}",
+                user.getEmail(), payment.getPlan(), endDate);
     }
 
     /**

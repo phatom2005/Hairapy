@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Service quản lý giới hạn sử dụng (quota) các tính năng AI của người dùng.
@@ -28,6 +30,11 @@ public class UsageService {
     private final UserRepository userRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final UsageHistoryRepository usageHistoryRepository;
+
+    // Khoá theo userId để chống race condition khi 2 request cùng user gửi đồng thời lúc còn 1 lượt cuối.
+    // LƯU Ý: đây là in-JVM lock, chỉ đúng khi backend chạy 1 instance (đúng hiện trạng MVP — xem scheduler-decision).
+    // Nếu sau này scale nhiều instance, phải đổi sang Postgres advisory lock hoặc Redis distributed lock.
+    private final ConcurrentHashMap<Long, Object> userLocks = new ConcurrentHashMap<>();
 
     /**
      * Lấy thông tin User hiện tại đang đăng nhập từ Security Context.
@@ -44,80 +51,74 @@ public class UsageService {
     }
 
     /**
-     * Kiểm tra hạn mức sử dụng (quota) hôm nay của người dùng cho tính năng cụ thể.
+     * Kiểm tra quota VÀ ghi nhận lượt dùng ngay trong 1 bước (atomic ở mức JVM, synchronized theo userId) —
+     * thay cho check-rồi-record tách rời như trước (dễ dính race condition khi 2 request đồng thời).
+     * Nếu bước xử lý sau đó (gọi AI...) thất bại, gọi releaseUsage(reservation) để hoàn lượt.
      *
-     * @param user người dùng hiện tại.
-     * @param feature tên tính năng cần kiểm tra (ví dụ: HAIR_SWAP, AI_SCAN).
+     * @return UsageHistory vừa ghi — dùng để releaseUsage() nếu cần hoàn lượt.
      */
-    public void checkQuota(User user, String feature) {
+    @Transactional
+    public UsageHistory reserveUsage(User user, String feature) {
         if (user == null) {
             throw new IllegalArgumentException("Người dùng chưa đăng nhập.");
         }
 
-        // ADMIN và TESTER: bypass hoàn toàn quota, không giới hạn lượt
-        if (user.getRole() == com.hairapy.models.Role.ADMIN
-                || user.getRole() == com.hairapy.models.Role.TESTER) {
-            log.info("Bypass quota cho user [{}] (role={})", user.getEmail(), user.getRole());
-            return;
-        }
+        Object lock = userLocks.computeIfAbsent(user.getId(), k -> new Object());
+        synchronized (lock) {
+            boolean bypass = user.getRole() == com.hairapy.models.Role.ADMIN
+                    || user.getRole() == com.hairapy.models.Role.TESTER;
 
-        // 1. Kiểm tra trạng thái gói đăng ký (Subscription) của User
-        Optional<Subscription> activeSubOpt = subscriptionRepository.findByUserIdAndStatus(user.getId(), SubscriptionStatus.ACTIVE);
-        
-        boolean isPaid = false;
-        if (activeSubOpt.isPresent()) {
-            Subscription sub = activeSubOpt.get();
-            // Điều kiện active: status là ACTIVE và thời hạn kết thúc (nếu có) phải sau thời điểm hiện tại
-            if (sub.getEndDate() == null || sub.getEndDate().isAfter(LocalDateTime.now())) {
-                // Sử dụng method plan.isPaid() đã định nghĩa sẵn
-                isPaid = sub.getPlan().isPaid();
+            if (!bypass) {
+                Optional<Subscription> activeSubOpt =
+                        subscriptionRepository.findByUserIdAndStatus(user.getId(), SubscriptionStatus.ACTIVE);
+                boolean isPaid = false;
+                if (activeSubOpt.isPresent()) {
+                    Subscription sub = activeSubOpt.get();
+                    if (sub.getEndDate() == null || sub.getEndDate().isAfter(LocalDateTime.now())) {
+                        isPaid = sub.getPlan().isPaid();
+                    }
+                }
+
+                int limit;
+                if ("HAIR_SWAP".equals(feature)) {
+                    limit = isPaid ? 20 : 5;
+                } else if ("FACE_SCAN".equals(feature)) {
+                    limit = isPaid ? 5 : 1;
+                } else {
+                    limit = Integer.MAX_VALUE; // tính năng khác: không giới hạn
+                }
+
+                LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+                long todayCount = usageHistoryRepository.countTodayUsage(user.getId(), feature, startOfDay);
+
+                log.info("Kiểm tra giới hạn dùng cho user [{}]: feature={}, used={}, limit={}, isPaid={}",
+                        user.getEmail(), feature, todayCount, limit, isPaid);
+
+                if (todayCount >= limit) {
+                    throw new QuotaExceededException("Bạn đã hết lượt sử dụng tính năng này hôm nay.", limit);
+                }
+            } else {
+                log.info("Bypass quota cho user [{}] (role={})", user.getEmail(), user.getRole());
             }
-        }
 
-        // 2. Xác định giới hạn (limit) theo tier (Free vs Paid)
-        // - Free user: scan 1 lần/ngày, swap 5 lần/ngày
-        // - Premium/Paid user: scan 5 lần/ngày, swap 20 lần/ngày
-        int limit;
-        if ("HAIR_SWAP".equals(feature)) {
-            limit = isPaid ? 20 : 5;
-        } else if ("FACE_SCAN".equals(feature)) {
-            limit = isPaid ? 5 : 1;
-        } else {
-            // Mặc định không giới hạn cho các tính năng khác
-            return;
-        }
-
-        // 3. Đếm số lượt sử dụng của user trong ngày hôm nay (từ 00:00)
-        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
-        long todayCount = usageHistoryRepository.countTodayUsage(user.getId(), feature, startOfDay);
-
-        log.info("Kiểm tra giới hạn dùng cho user [{}]: feature={}, used={}, limit={}, isPaid={}", 
-                user.getEmail(), feature, todayCount, limit, isPaid);
-
-        if (todayCount >= limit) {
-            throw new QuotaExceededException("Bạn đã hết lượt sử dụng tính năng này hôm nay.", limit);
+            UsageHistory history = UsageHistory.builder()
+                    .user(user)
+                    .feature(feature)
+                    .usedAt(LocalDateTime.now())
+                    .build();
+            usageHistoryRepository.save(history);
+            log.info("Đã ghi nhận (reserve) lượt sử dụng: user={}, feature={}, id={}", user.getEmail(), feature, history.getId());
+            return history;
         }
     }
 
     /**
-     * Ghi lại một lượt sử dụng tính năng sau khi xử lý thành công.
-     *
-     * @param user người dùng thực hiện.
-     * @param feature tên tính năng (ví dụ: HAIR_SWAP).
+     * Hoàn lượt: xoá bản ghi UsageHistory vừa reserve khi bước xử lý sau đó thất bại (vd AI timeout, lỗi hệ thống).
      */
-    public void recordUsage(User user, String feature) {
-        if (user == null) {
-            log.warn("Không thể lưu UsageHistory vì user rỗng.");
-            return;
-        }
-
-        UsageHistory history = UsageHistory.builder()
-                .user(user)
-                .feature(feature)
-                .usedAt(LocalDateTime.now())
-                .build();
-        
-        usageHistoryRepository.save(history);
-        log.info("Đã lưu lịch sử sử dụng thành công cho user: {}, tính năng: {}", user.getEmail(), feature);
+    @Transactional
+    public void releaseUsage(UsageHistory reservation) {
+        if (reservation == null || reservation.getId() == null) return;
+        usageHistoryRepository.deleteById(reservation.getId());
+        log.info("Đã hoàn lượt sử dụng: id={}", reservation.getId());
     }
 }

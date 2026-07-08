@@ -44,7 +44,7 @@ public class HairSwapService {
      * @param hairStyle mã kiểu tóc Pro API (ví dụ: "BuzzCut", "LongCurly", "BobCut").
      * @return URL ảnh kết quả (temporary, hết hạn sau 24h).
      */
-    public String swapHairstyle(MultipartFile image, String hairStyle) {
+    public String swapHairstyle(MultipartFile image, String hairStyle, boolean isPaidUser) {
         if (image.isEmpty()) {
             throw new IllegalArgumentException("Ảnh không được để trống.");
         }
@@ -60,9 +60,9 @@ public class HairSwapService {
         // === BƯỚC 2: Poll kết quả cho đến khi hoàn thành hoặc timeout ===
         String tempUrl = pollForResult(taskId);
 
-        // === BƯỚC 3: Upload ảnh kết quả lên Cloudinary để lưu trữ lâu dài ===
+        // === BƯỚC 3: Upload ảnh kết quả — Free user bị gắn watermark, Premium thì không ===
         try {
-            return cloudinaryService.uploadFromUrl(tempUrl, "ai-results");
+            return cloudinaryService.uploadFromUrl(tempUrl, "ai-results", !isPaidUser);
         } catch (Exception e) {
             log.error("Không thể upload ảnh kết quả lên Cloudinary, sử dụng URL tạm thời của AILab: {}", tempUrl, e);
             return tempUrl;

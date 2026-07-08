@@ -49,4 +49,8 @@ public class Payment {
 
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
+
+    @Column(name = "subscription_granted", nullable = false)
+    @Builder.Default
+    private boolean subscriptionGranted = false;
 }

@@ -1,15 +1,12 @@
-﻿import { useQuery, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatedContent } from "../components/animated";
 import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/Navbar";
 import { Badge, Button, Card } from "../components/ui";
+import api from "../lib/api";
 import { useScanStore } from "../store/useScanStore";
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-const BASE = import.meta.env.VITE_API_URL || "/api";
 
 const GENDER_OPTS = ["Nam", "Nữ", "Unisex"];
 const FACE_OPTS = ["Tròn", "Vuông", "Trái xoan", "Dài", "Trái tim", "Kim cương"];
@@ -38,9 +35,7 @@ function useHairstyles({ faceShape, search, gender, hairLength, tag }) {
       if (gender) params.gender = gender;
       if (hairLength) params.hairLength = hairLength;
       if (tag) params.tag = tag;
-      const token = localStorage.getItem("token");
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const { data } = await axios.get(`${BASE}/hairstyles`, { params, headers });
+      const { data } = await api.get("/hairstyles", { params });
       return data;
     },
     staleTime: 60_000,
@@ -241,10 +236,8 @@ export default function CatalogPage() {
     queryKey: ["profile-saved-styles"],
     queryFn: async () => {
       const token = localStorage.getItem("token");
-      if (!token) return [];
-      const { data } = await axios.get(`${BASE}/profile/saved-styles`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      if (!token) return []; // giữ guard này — tránh gọi API thừa khi chưa đăng nhập
+      const { data } = await api.get("/profile/saved-styles");
       return data;
     },
   });
@@ -282,11 +275,10 @@ export default function CatalogPage() {
     }
     try {
       const isSaved = savedIds.has(hairstyleId);
-      const headers = { Authorization: `Bearer ${token}` };
       if (isSaved) {
-        await axios.delete(`${BASE}/profile/saved-styles`, { params: { hairstyleId }, headers });
+        await api.delete("/profile/saved-styles", { params: { hairstyleId } });
       } else {
-        await axios.post(`${BASE}/profile/saved-styles`, null, { params: { hairstyleId }, headers });
+        await api.post("/profile/saved-styles", null, { params: { hairstyleId } });
       }
       queryClient.invalidateQueries({ queryKey: ["profile-saved-styles"] });
     } catch (err) {

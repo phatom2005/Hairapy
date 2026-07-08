@@ -93,6 +93,12 @@ const useAuthStore = create((set, get) => ({
   },
 
   /**
+   * Cập nhật thông tin user cục bộ trong store (sau khi PUT /auth/me thành công),
+   * tránh phải gọi lại hydrate()/auth/me thêm 1 round-trip không cần thiết.
+   */
+  updateUser: (partial) => set((state) => ({ user: { ...state.user, ...partial } })),
+
+  /**
    * Xóa thông báo lỗi hiện tại.
    */
   clearError: () => set({ error: null }),

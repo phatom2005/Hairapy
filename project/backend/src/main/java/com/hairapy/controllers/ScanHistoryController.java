@@ -1,5 +1,7 @@
 package com.hairapy.controllers;
 
+import com.hairapy.dto.ScanHistoryResponse;
+import com.hairapy.exceptions.QuotaExceededException;
 import com.hairapy.models.ScanHistory;
 import com.hairapy.models.User;
 import com.hairapy.repositories.ScanHistoryRepository;
@@ -37,7 +39,8 @@ public class ScanHistoryController {
         if (currentUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Vui lòng đăng nhập."));
         }
-        List<ScanHistory> history = scanHistoryRepository.findByUserOrderByCreatedAtDesc(currentUser);
+        List<ScanHistoryResponse> history = scanHistoryRepository.findByUserOrderByCreatedAtDesc(currentUser)
+                .stream().map(ScanHistoryResponse::from).toList();
         long count = scanHistoryRepository.countByUser(currentUser);
         return ResponseEntity.ok(Map.of(
                 "scans", history,
@@ -53,19 +56,18 @@ public class ScanHistoryController {
             @RequestParam("faceShape") String faceShape,
             @RequestParam(value = "hairType", required = false) String hairType,
             @RequestParam("image") MultipartFile image) {
-        
+
         User currentUser = usageService.getCurrentUser();
         if (currentUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Vui lòng đăng nhập."));
         }
 
+        com.hairapy.models.UsageHistory reservation = null;
         try {
-            // Kiểm tra quota và ghi nhận lượt sử dụng
-            usageService.checkQuota(currentUser, "FACE_SCAN");
+            reservation = usageService.reserveUsage(currentUser, "FACE_SCAN");
 
             log.info("Lưu lịch sử quét khuôn mặt cho user: {}, faceShape: {}", currentUser.getEmail(), faceShape);
 
-            // Upload ảnh lên Cloudinary
             String cloudinaryUrl = cloudinaryService.uploadFile(image, "scans");
 
             ScanHistory history = ScanHistory.builder()
@@ -77,15 +79,19 @@ public class ScanHistoryController {
 
             scanHistoryRepository.save(history);
 
-            // Ghi nhận lượt sử dụng vào usage_history để dashboard đếm đúng
-            usageService.recordUsage(currentUser, "FACE_SCAN");
-
-            return ResponseEntity.ok(history);
+            return ResponseEntity.ok(ScanHistoryResponse.from(history));
+        } catch (QuotaExceededException e) {
+            log.warn("User {} vượt quá quota FACE_SCAN: {}", currentUser.getEmail(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(Map.of(
+                    "error", "Bạn đã hết lượt quét khuôn mặt hôm nay.",
+                    "remaining", 0,
+                    "limit", e.getLimit()
+            ));
         } catch (Exception e) {
+            usageService.releaseUsage(reservation); // upload/save thất bại sau khi đã reserve — hoàn lượt
             log.error("Lỗi khi lưu lịch sử quét khuôn mặt:", e);
             return ResponseEntity.internalServerError().body(Map.of(
-                    "error", "Không thể lưu lịch sử quét khuôn mặt.",
-                    "details", e.getMessage()
+                    "error", "Không thể lưu lịch sử quét khuôn mặt."
             ));
         }
     }

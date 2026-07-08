@@ -1,6 +1,5 @@
 package com.hairapy.controllers.admin;
 
-import com.hairapy.dto.admin.UpdateHairstyleRequest;
 import com.hairapy.exceptions.ResourceNotFoundException;
 import com.hairapy.models.HairstyleCatalog;
 import com.hairapy.repositories.HairstyleCatalogRepository;

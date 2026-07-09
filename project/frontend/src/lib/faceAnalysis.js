@@ -64,6 +64,60 @@ export async function initFaceAnalyzer() {
   return initPromise;
 }
 
+/**
+ * Phân loại hình dáng khuôn mặt từ 4 số đo (không phụ thuộc MediaPipe/landmark thật) —
+ * tách riêng thành pure function để unit test độc lập.
+ *
+ * Thuật toán dựa theo cách phân loại phổ biến bằng 3 tỷ lệ:
+ * - R1 = faceLength / cheekboneWidth (dài/rộng) — chỉ số quan trọng nhất, quyết định nhóm
+ *   "ngắn/rộng" (Round/Square), "dài" (Oblong), hay "cân đối" (Oval/Heart/Diamond).
+ * - R2 = foreheadWidth / jawWidth — trán rộng hơn hàm rõ rệt là đặc trưng mặt Heart.
+ * - R3 = cheekboneWidth / trung bình(forehead, jaw) — gò má nổi bật nhất là đặc trưng mặt Diamond.
+ *
+ * Khác bản cũ: bản cũ dùng nhiều điều kiện AND hẹp, khiến phần lớn khuôn mặt "bình thường"
+ * (không cực đoan) rơi vào nhánh mặc định Oval dù tỷ lệ trán/hàm/gò má thực ra lệch rõ về
+ * Heart/Diamond. Bản mới luôn kiểm tra R2/R3 trước khi kết luận Oval, nên Oval chỉ thắng khi
+ * tỷ lệ thực sự cân đối — không phải vì "không khớp điều kiện nào khác".
+ */
+export function classifyFaceShape({ foreheadWidth, cheekboneWidth, jawWidth, faceLength }) {
+  if (faceLength === 0 || cheekboneWidth === 0) {
+    throw new Error("Kích thước khuôn mặt không hợp lệ để phân tích.");
+  }
+
+  const r1 = faceLength / cheekboneWidth;
+  const r2 = foreheadWidth / jawWidth;
+  const r3 = cheekboneWidth / ((foreheadWidth + jawWidth) / 2);
+  const jawToCheek = jawWidth / cheekboneWidth;
+
+  let faceShape;
+
+  if (r1 <= 1.15) {
+    // Mặt "ngắn/rộng" — phân biệt Round (hàm mềm) và Square (hàm gần vuông, rộng gần bằng gò má).
+    faceShape = jawToCheek > 0.88 ? "Square" : "Round";
+  } else if (r1 >= 1.6) {
+    faceShape = "Oblong";
+  } else if (r2 >= 1.15) {
+    faceShape = "Heart";
+  } else if (r3 >= 1.1) {
+    faceShape = "Diamond";
+  } else {
+    faceShape = "Oval";
+  }
+
+  return {
+    faceShape,
+    metrics: {
+      r1, r2, r3, jawToCheek, foreheadWidth, cheekboneWidth, jawWidth, faceLength,
+      // Alias giữ tương thích ngược — ResultsPage.jsx đang đọc trực tiếp 2 field cũ này
+      // (metrics.widthToLength, metrics.foreheadToJaw) để hiển thị "Tỷ lệ rộng/dài",
+      // "Tỷ lệ trán/hàm" và tính symmetryScore/styleScore. KHÔNG xoá 2 field này,
+      // nếu không ResultsPage sẽ hiện "N/A" cho 2 dòng biometrics đó.
+      widthToLength: 1 / r1,
+      foreheadToJaw: r2,
+    },
+  };
+}
+
 // Hàm phân tích hình dáng khuôn mặt từ phần tử hình ảnh (HTMLImageElement)
 export async function analyzeFace(imageElement) {
   const landmarker = await initFaceAnalyzer();
@@ -96,41 +150,7 @@ export async function analyzeFace(imageElement) {
   const jawWidth = calculateDistance(p172, p397);
   const faceLength = calculateDistance(p10, p152);
 
-  if (faceLength === 0 || cheekboneWidth === 0) {
-    throw new Error("Kích thước khuôn mặt không hợp lệ để phân tích.");
-  }
+  const { faceShape, metrics } = classifyFaceShape({ foreheadWidth, cheekboneWidth, jawWidth, faceLength });
 
-  // Tính các tỷ lệ khuôn mặt
-  const widthToLength = cheekboneWidth / faceLength;
-  const foreheadToJaw = foreheadWidth / jawWidth;
-  const jawToCheek = jawWidth / cheekboneWidth;
-
-  // Phân loại hình dáng khuôn mặt theo thuật toán chỉ định
-  let faceShape = "Oval"; // Mặc định là mặt Oval
-
-  if (widthToLength > 0.85 && jawToCheek > 0.85) {
-    faceShape = "Round";
-  } else if (widthToLength > 0.8 && jawToCheek > 0.9 && foreheadToJaw < 1.1) {
-    faceShape = "Square";
-  } else if (widthToLength < 0.65) {
-    faceShape = "Oblong";
-  } else if (foreheadToJaw > 1.15 && jawToCheek < 0.8) {
-    faceShape = "Heart";
-  } else if (jawToCheek < 0.78 && foreheadToJaw < 0.95) {
-    faceShape = "Diamond";
-  }
-
-  return {
-    faceShape,
-    landmarks,
-    metrics: {
-      foreheadWidth,
-      cheekboneWidth,
-      jawWidth,
-      faceLength,
-      widthToLength,
-      foreheadToJaw,
-      jawToCheek
-    }
-  };
+  return { faceShape, landmarks, metrics };
 }

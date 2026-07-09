@@ -207,8 +207,11 @@ export default function ResultsPage() {
               </dl>
             </div>
 
-            <p className="flex items-center gap-2 text-xs text-muted">
-              <CheckIcon size={14} className="text-lime" /> Phân tích bởi <b className="text-mauve">MediaPipe Face Landmarker</b>, chạy trực tiếp trên trình duyệt của bạn
+            <p className="flex items-start gap-2 text-xs text-muted leading-relaxed">
+              <CheckIcon size={14} className="text-lime shrink-0 mt-0.5" />
+              <span>
+                Phân tích bởi <b className="text-mauve font-semibold">MediaPipe Face Landmarker</b>, chạy trực tiếp trên trình duyệt của bạn
+              </span>
             </p>
           </Card>
 

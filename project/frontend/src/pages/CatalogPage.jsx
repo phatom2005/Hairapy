@@ -52,7 +52,7 @@ function FilterSelect({ label, options, value, onChange }) {
         className={`h-9 cursor-pointer appearance-none rounded-full border pl-3 pr-8 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-primary/40 ${
           value
             ? "border-primary bg-primary text-white"
-            : "border-line bg-surface text-ink hover:border-primary/50"
+            : "border-line bg-white text-ink hover:border-primary/50"
         }`}
       >
         <option value="">{label}</option>
@@ -313,7 +313,7 @@ export default function CatalogPage() {
                 placeholder="Tìm kiểu tóc..."
                 value={q}
                 onChange={(e) => setParam("q", e.target.value)}
-                className="h-9 w-full rounded-full border border-ink/30 bg-surface pl-4 pr-8 text-sm text-ink placeholder-mauve transition hover:border-ink/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="h-9 w-full rounded-full border border-ink/30 bg-white pl-4 pr-8 text-sm text-ink placeholder-mauve transition hover:border-ink/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
               {q && (
                 <button
@@ -383,7 +383,7 @@ export default function CatalogPage() {
               ) : (
                 pageItems.map((item, idx) => (
                   <AnimatedContent key={item.id} delay={idx * 0.04}>
-                    <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line/60 bg-surface shadow-sm transition-shadow duration-300 hover:shadow-lg">
+                    <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line/60 bg-white shadow-sm transition-shadow duration-300 hover:shadow-lg">
                       <div className="relative overflow-hidden">
                         <img
                           src={item.imageUrl}
@@ -421,11 +421,11 @@ export default function CatalogPage() {
                               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">{item.gender}</span>
                             )}
                             {item.hairLength && (
-                              <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium text-mauve ring-1 ring-line">{item.hairLength}</span>
+                              <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-mauve ring-1 ring-line">{item.hairLength}</span>
                             )}
                             {item.faceShape &&
                               item.faceShape.split(",").slice(0, 2).map((s) => (
-                                <span key={s.trim()} className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium text-mauve ring-1 ring-line">
+                                <span key={s.trim()} className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-mauve ring-1 ring-line">
                                   {s.trim()}
                                 </span>
                               ))}
@@ -473,7 +473,7 @@ export default function CatalogPage() {
                         className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
                           s === pageSize
                             ? "bg-primary text-white"
-                            : "bg-surface text-mauve ring-1 ring-line hover:ring-primary"
+                            : "bg-white text-mauve ring-1 ring-line hover:ring-primary"
                         }`}
                       >
                         {s}

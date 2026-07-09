@@ -13,13 +13,7 @@ import scan from "../assets/placeholders/scan.svg";
 import avatar from "../assets/placeholders/avatar.svg";
 import salonMap from "../assets/placeholders/map.svg";
 
-import style1 from "../assets/placeholders/style-1.svg";
-import style2 from "../assets/placeholders/style-2.svg";
-import style3 from "../assets/placeholders/style-3.svg";
-import style4 from "../assets/placeholders/style-4.svg";
-import style5 from "../assets/placeholders/style-5.svg";
-import style6 from "../assets/placeholders/style-6.svg";
-import style7 from "../assets/placeholders/style-7.svg";
+
 
 import salon1 from "../assets/placeholders/salon-1.svg";
 import salon2 from "../assets/placeholders/salon-2.svg";
@@ -35,15 +29,7 @@ export const HERO_IMG = hero;
 export const SCAN_PORTRAIT = scan;
 export const PROFILE_IMG = avatar;
 
-export const TRENDS = [
-  { img: style1, name: "Wolf Cut Pastel", desc: "Được đề xuất cho mặt tròn", badge: "New" },
-  { img: style2, name: "Modern Fade", desc: "Phong cách quý ông", badge: "Hot" },
-  { img: style3, name: "Sunset Curls", desc: "Dành cho tóc dài", badge: "New" },
-  { img: style4, name: "Sleek Bob", desc: "Thanh lịch & Cá tính", badge: null },
-  { img: style5, name: "Mullet Layer", desc: "Cá tính & Phóng khoáng", badge: "Hot" },
-  { img: style6, name: "Pixie Cut", desc: "Mạnh mẽ & Hiện đại", badge: "New" },
-  { img: style7, name: "Long Wavy", desc: "Quyến rũ & Tự nhiên", badge: null },
-];
+
 
 export const SALON_MAP = salonMap;
 export const SALONS = [

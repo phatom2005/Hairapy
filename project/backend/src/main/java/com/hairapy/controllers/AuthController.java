@@ -7,6 +7,7 @@ import com.hairapy.dto.auth.UserMeResponse;
 import com.hairapy.models.User;
 import com.hairapy.repositories.UserRepository;
 import com.hairapy.services.AuthService;
+import com.hairapy.security.TokenBlacklistService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final UserRepository userRepository;
+    private final TokenBlacklistService tokenBlacklistService;
 
     /**
      * Endpoint đăng ký tài khoản mới.
@@ -85,5 +87,19 @@ public class AuthController {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin người dùng"));
         UserMeResponse updated = authService.updateProfile(user, request);
         return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * Endpoint đăng xuất — thu hồi token hiện tại bằng cách đưa vào blacklist Redis
+     * (TTL = thời gian còn lại của token). Sau khi gọi, token này không dùng được nữa
+     * dù chưa hết hạn tự nhiên.
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            tokenBlacklistService.blacklist(token);
+        }
+        return ResponseEntity.ok().build();
     }
 }

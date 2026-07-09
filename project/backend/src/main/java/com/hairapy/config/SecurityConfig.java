@@ -1,6 +1,7 @@
 package com.hairapy.config;
 
 import com.hairapy.security.JwtFilter;
+import com.hairapy.security.RateLimitFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,6 +24,7 @@ import static org.springframework.security.config.Customizer.withDefaults;
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
+    private final RateLimitFilter rateLimitFilter;
 
     @Bean
     @SuppressWarnings("lgtm[java/spring-disabled-csrf-protection]") // Intentional: REST API stateless (JWT), không dùng session/cookie → CSRF không áp dụng
@@ -40,6 +42,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(rateLimitFilter, JwtFilter.class)
                 .build();
     }
 

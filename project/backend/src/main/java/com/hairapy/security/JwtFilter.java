@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,6 +23,10 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final TokenBlacklistService tokenBlacklistService;
+
+    @Value("${app.jwt.blacklist.enabled:true}")
+    private boolean blacklistEnabled;
 
     @Override
     protected void doFilterInternal(
@@ -38,6 +43,15 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         final String token = authHeader.substring(7);
+
+        // Token đã bị thu hồi (logout) -> coi như không có auth, KHÔNG set SecurityContext.
+        // Giữ nguyên hành vi 403 hiện tại của endpoint protected (giống token thiếu/sai),
+        // không cần custom response riêng cho trường hợp này.
+        if (blacklistEnabled && tokenBlacklistService.isBlacklisted(token)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         final String username = jwtService.extractUsername(token);
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {

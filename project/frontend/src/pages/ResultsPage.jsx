@@ -157,13 +157,6 @@ export default function ResultsPage() {
     { label: "Tỷ lệ hàm/gò má", value: metrics?.jawToCheek ? metrics.jawToCheek.toFixed(2) : "N/A" },
   ];
 
-  const symmetryScore = Math.min(99, Math.round(90 + (metrics?.widthToLength ? (1 - Math.abs(0.75 - metrics.widthToLength)) * 10 : 5)));
-  const styleScore = Math.round(85 + (metrics?.foreheadToJaw ? Math.min(14, metrics.foreheadToJaw * 10) : 10));
-
-  const SCORES = [
-    { label: "Điểm cân đối", value: symmetryScore },
-    { label: "Độ hợp phong cách", value: styleScore },
-  ];
 
   const reasons = REASONS_MAP[faceShape] || REASONS_MAP.Oval;
 
@@ -214,25 +207,8 @@ export default function ResultsPage() {
               </dl>
             </div>
 
-            <div>
-              <p className="mb-3 text-xs font-bold uppercase tracking-widest text-muted">Điểm chuẩn</p>
-              <div className="flex flex-col gap-3">
-                {SCORES.map((s) => (
-                  <div key={s.label}>
-                    <div className="mb-1 flex justify-between text-sm">
-                      <span className="text-mauve">{s.label}</span>
-                      <span className="font-bold text-magenta">{s.value}%</span>
-                    </div>
-                    <div className="h-2 w-full rounded-full bg-line">
-                      <div className="h-2 rounded-full bg-magenta" style={{ width: `${s.value}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             <p className="flex items-center gap-2 text-xs text-muted">
-              <CheckIcon size={14} className="text-lime" /> Dữ liệu được xác thực bởi <b className="text-mauve">Hairapy AI v4.2</b>
+              <CheckIcon size={14} className="text-lime" /> Phân tích bởi <b className="text-mauve">MediaPipe Face Landmarker</b>, chạy trực tiếp trên trình duyệt của bạn
             </p>
           </Card>
 

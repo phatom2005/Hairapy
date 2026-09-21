@@ -1,3 +1,4 @@
+import QuotaBadge from "../components/QuotaBadge";
 import { useRef, useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { SCAN_PORTRAIT } from "../lib/figmaAssets";
@@ -195,6 +196,7 @@ export default function ScanPage() {
 
           <AnimatedContent delay={0.2}>
             <div className="flex flex-col gap-4">
+              <QuotaBadge feature="FACE_SCAN" />
               <div className="flex flex-wrap gap-4">
                 <BorderGlow rounded="rounded-full" thickness={2}>
                   <Button

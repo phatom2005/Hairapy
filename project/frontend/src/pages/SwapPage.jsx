@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import QuotaBadge from "../components/QuotaBadge";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button, Card } from "../components/ui";
 import Navbar from "../components/layout/Navbar";
@@ -41,6 +42,16 @@ export default function SwapPage() {
   const [loading, setLoading] = useState(false);
   const [resultImage, setResultImage] = useState(null);
   const [error, setError] = useState(null);
+
+  // Ref giữ id của setTimeout đang chạy để clear khi cần (đổi kiểu tóc mới / unmount / có kết quả)
+  const pollTimeoutRef = useRef(null);
+
+  // Dọn polling đang chạy khi component unmount — tránh setState trên component đã unmount
+  useEffect(() => {
+    return () => {
+      if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
+    };
+  }, []);
 
   // Dịch faceShape sang tiếng Việt để filter đúng với DB
   const faceShapeVi = analysisResult?.faceShape
@@ -99,9 +110,75 @@ export default function SwapPage() {
     return null;
   }
 
-  // Gửi request đổi kiểu tóc đến backend proxy — dùng Pro API (chỉ thay tóc)
+  // Cấu hình polling — khớp với TASK_TIMEOUT=75s phía backend, cộng buffer nhỏ
+  const POLL_INTERVAL_MS = 3000;
+  const MAX_POLL_ATTEMPTS = 30; // 30 * 3s = 90s — luôn dài hơn TASK_TIMEOUT backend (75s)
+
+  // Xử lý 1 phản hồi lỗi (dùng chung cho cả bước submit lẫn bước poll status)
+  const handleSwapError = (errMsg, errDetails) => {
+    const combined = `${errMsg}${errDetails}`.toLowerCase();
+    const isCreditError = combined.includes("credit");
+    const isKeyError = combined.includes("key");
+
+    if (isCreditError || isKeyError) {
+      setError("Tài khoản AILabTools đã hết điểm (Credits) hoặc chưa cấu hình API Key chính xác. Vui lòng đăng ký/nạp thêm tại ailabtools.com và cấu hình biến AILAB_API_KEY trên Railway. (Hệ thống đã tự động chuyển sang Chế độ Mô phỏng để không gián đoạn demo).");
+      setResultImage(previewUrl);
+    } else {
+      setError(`${errMsg}${errDetails}`);
+    }
+    setLoading(false);
+  };
+
+  // Poll trạng thái task — tự gọi lại chính nó qua setTimeout cho tới khi DONE/ERROR/hết lượt thử
+  const pollTaskStatus = async (taskId, attempt = 1) => {
+    try {
+      const { data } = await api.get(`/swap/status/${taskId}`, { timeout: 15000 });
+
+      if (data.status === "DONE") {
+        setResultImage(data.image);
+        setLoading(false);
+        return;
+      }
+
+      if (data.status === "ERROR") {
+        handleSwapError(data.error || "AI xử lý quá lâu hoặc gặp sự cố, vui lòng thử lại.", "");
+        return;
+      }
+
+      // Vẫn PENDING — poll tiếp nếu chưa vượt số lần thử tối đa
+      if (attempt >= MAX_POLL_ATTEMPTS) {
+        setError("AI xử lý quá lâu. Vui lòng thử lại.");
+        setLoading(false);
+        return;
+      }
+
+      pollTimeoutRef.current = setTimeout(() => pollTaskStatus(taskId, attempt + 1), POLL_INTERVAL_MS);
+    } catch (err) {
+      console.error("Lỗi khi poll trạng thái hair-swap:", err);
+      // Task không tồn tại (404, vd bị dọn do timeout phía server) — dừng, báo lỗi
+      if (err.response?.status === 404) {
+        setError("Tác vụ đã hết hạn. Vui lòng thử lại.");
+        setLoading(false);
+        return;
+      }
+      // Lỗi mạng thoáng qua khi poll — thử lại nếu còn lượt, không huỷ ngay
+      if (attempt >= MAX_POLL_ATTEMPTS) {
+        setError("Không thể kết nối tới máy chủ. Vui lòng thử lại.");
+        setLoading(false);
+        return;
+      }
+      pollTimeoutRef.current = setTimeout(() => pollTaskStatus(taskId, attempt + 1), POLL_INTERVAL_MS);
+    }
+  };
+
+  // Gửi request bắt đầu đổi kiểu tóc đến backend — submit nhanh rồi poll status riêng
   const handleApply = async () => {
     if (!imageFile || !activeStyle?.ailabProStyle) return;
+
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current);
+      pollTimeoutRef.current = null;
+    }
 
     setLoading(true);
     setError(null);
@@ -112,23 +189,20 @@ export default function SwapPage() {
     formData.append("hairstyleId", activeStyle.id);
 
     try {
-      const response = await api.post("/swap/try", formData, {
+      const response = await api.post("/swap/submit", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-        timeout: 90000, // Pro API là async, cần timeout dài hơn (90 giây)
+        timeout: 20000, // Bước submit giờ nhanh (không còn chờ AI xử lý xong ở đây)
       });
 
-      let imgData = response.data.image;
-      if (imgData) {
-        // Pro API trả về URL (không phải base64)
-        if (!imgData.startsWith("http") && !imgData.startsWith("data:image")) {
-          imgData = `data:image/png;base64,${imgData}`;
-        }
-        setResultImage(imgData);
-      } else {
-        throw new Error("Không có dữ liệu ảnh trả về từ AI.");
+      const taskId = response.data.taskId;
+      if (!taskId) {
+        throw new Error("Không nhận được mã tác vụ từ máy chủ.");
       }
+
+      // Bắt đầu poll status — đợi 1 nhịp trước lần check đầu vì AI vừa mới submit
+      pollTimeoutRef.current = setTimeout(() => pollTaskStatus(taskId, 1), POLL_INTERVAL_MS);
     } catch (err) {
-      console.error("Lỗi khi gọi Hair Swap Pro API:", err);
+      console.error("Lỗi khi submit Hair Swap Pro API:", err);
       const errorData = err.response?.data;
 
       if (err.response?.status === 504 || errorData?.refunded) {
@@ -145,18 +219,7 @@ export default function SwapPage() {
 
       const errMsg = errorData?.error || "AI xử lý quá lâu hoặc gặp sự cố, vui lòng thử lại.";
       const errDetails = errorData?.details ? ` (Chi tiết: ${errorData.details})` : "";
-
-      const isCreditError = errDetails.toLowerCase().includes("credits") || errDetails.toLowerCase().includes("credit");
-      const isKeyError = errDetails.toLowerCase().includes("key");
-
-      if (isCreditError || isKeyError) {
-        setError("Tài khoản AILabTools đã hết điểm (Credits) hoặc chưa cấu hình API Key chính xác. Vui lòng đăng ký/nạp thêm tại ailabtools.com và cấu hình biến AILAB_API_KEY trên Railway. (Hệ thống đã tự động chuyển sang Chế độ Mô phỏng để không gián đoạn demo).");
-        setResultImage(previewUrl);
-      } else {
-        setError(`${errMsg}${errDetails}`);
-      }
-    } finally {
-      setLoading(false);
+      handleSwapError(errMsg, errDetails);
     }
   };
 
@@ -257,6 +320,7 @@ export default function SwapPage() {
             </div>
           )}
 
+          <QuotaBadge feature="HAIR_SWAP" />
           <div className="relative group w-full">
             <Button
               onClick={handleApply}

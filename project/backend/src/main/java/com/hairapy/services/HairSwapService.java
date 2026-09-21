@@ -1,6 +1,7 @@
 package com.hairapy.services;
 
 import com.hairapy.config.AiLabConfig;
+import com.hairapy.dto.HairSwapPollResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
@@ -18,6 +19,12 @@ import java.util.Map;
 /**
  * Service kết nối AILabTools Hairstyle Changer Pro API (async).
  * Pro API dùng Stable Diffusion — chỉ thay kiểu tóc, KHÔNG thay đổi khuôn mặt.
+ *
+ * THIẾT KẾ ASYNC (submit-rồi-poll-từ-client): service này KHÔNG còn tự poll và
+ * Thread.sleep chờ AILab nữa (khác bản cũ) — mỗi phương thức ở đây chỉ thực hiện
+ * ĐÚNG 1 lần gọi HTTP rồi trả về ngay, không chặn thread. Việc "chờ" (đợi vài giây
+ * giữa các lần kiểm tra) do HairSwapController + HairSwapTaskStore điều phối theo
+ * từng lần request GET /api/swap/status/{taskId} riêng biệt từ trình duyệt.
  */
 @Slf4j
 @Service
@@ -33,18 +40,15 @@ public class HairSwapService {
     // Endpoint poll kết quả async task
     private static final String AILAB_ASYNC_RESULT_URL = "https://www.ailabapi.com/api/common/query-async-task-result";
 
-    // Polling config: tối đa 60 giây, mỗi 5 giây poll 1 lần
-    private static final int MAX_POLL_ATTEMPTS = 12;
-    private static final int POLL_INTERVAL_MS = 5000;
-
     /**
-     * Gọi Pro API để đổi kiểu tóc — chỉ thay tóc, giữ nguyên khuôn mặt.
+     * Gửi request tạo task async lên Pro API — chỉ thay tóc, giữ nguyên khuôn mặt.
+     * Trả về NGAY task_id (không chờ AI xử lý xong) — nhanh, không chặn thread lâu.
      *
-     * @param image    file ảnh của người dùng.
+     * @param image     file ảnh của người dùng.
      * @param hairStyle mã kiểu tóc Pro API (ví dụ: "BuzzCut", "LongCurly", "BobCut").
-     * @return URL ảnh kết quả (temporary, hết hạn sau 24h).
+     * @return task_id để poll kết quả sau qua checkStatus().
      */
-    public String swapHairstyle(MultipartFile image, String hairStyle, boolean isPaidUser) {
+    public String submitTask(MultipartFile image, String hairStyle) {
         if (image.isEmpty()) {
             throw new IllegalArgumentException("Ảnh không được để trống.");
         }
@@ -54,26 +58,6 @@ public class HairSwapService {
             throw new IllegalArgumentException("Định dạng tệp không hợp lệ. Chỉ chấp nhận ảnh.");
         }
 
-        // === BƯỚC 1: Submit async task lên Pro API ===
-        String taskId = submitProTask(image, hairStyle);
-
-        // === BƯỚC 2: Poll kết quả cho đến khi hoàn thành hoặc timeout ===
-        String tempUrl = pollForResult(taskId);
-
-        // === BƯỚC 3: Upload ảnh kết quả — Free user bị gắn watermark, Premium thì không ===
-        try {
-            return cloudinaryService.uploadFromUrl(tempUrl, "ai-results", !isPaidUser);
-        } catch (Exception e) {
-            log.error("Không thể upload ảnh kết quả lên Cloudinary, sử dụng URL tạm thời của AILab: {}", tempUrl, e);
-            return tempUrl;
-        }
-    }
-
-    /**
-     * Gửi request tạo task async lên Pro API.
-     * Trả về task_id để poll kết quả sau.
-     */
-    private String submitProTask(MultipartFile image, String hairStyle) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         headers.set("ailabapi-api-key", aiLabConfig.getApiKey());
@@ -104,7 +88,7 @@ public class HairSwapService {
 
         // Log an toàn
         String maskedKey = maskApiKey(aiLabConfig.getApiKey());
-        log.info("Gửi Pro Hair Swap request: hairStyle={}, apiKey={}", hairStyle, maskedKey);
+        log.info("Gửi Pro Hair Swap request (submit): hairStyle={}, apiKey={}", hairStyle, maskedKey);
 
         ResponseEntity<Map> response;
         try {
@@ -143,77 +127,79 @@ public class HairSwapService {
     }
 
     /**
-     * Poll kết quả async task cho đến khi hoàn thành (task_status=2) hoặc timeout.
-     * Trả về URL ảnh kết quả.
+     * Kiểm tra trạng thái task — ĐÚNG 1 LẦN gọi HTTP, KHÔNG lặp, KHÔNG Thread.sleep.
+     * Gọi lại nhiều lần (từ controller, mỗi lần ứng với 1 request GET status/{taskId}
+     * riêng từ FE) để mô phỏng polling mà không chặn thread nào trong lúc "chờ".
      */
-    private String pollForResult(String taskId) {
+    public HairSwapPollResult checkStatus(String taskId) {
         HttpHeaders headers = new HttpHeaders();
         headers.set("ailabapi-api-key", aiLabConfig.getApiKey());
 
-        for (int attempt = 1; attempt <= MAX_POLL_ATTEMPTS; attempt++) {
-            // Chờ trước khi poll (lần đầu cũng chờ vì task vừa submit)
-            try {
-                Thread.sleep(POLL_INTERVAL_MS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new RuntimeException("Polling bị gián đoạn.");
-            }
+        String url = AILAB_ASYNC_RESULT_URL + "?task_id=" + taskId;
+        HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
-            String url = AILAB_ASYNC_RESULT_URL + "?task_id=" + taskId;
-            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
-
-            ResponseEntity<Map> response;
-            try {
-                response = aiRestTemplate.exchange(url, HttpMethod.GET, requestEntity, Map.class);
-            } catch (Exception e) {
-                log.warn("Lỗi khi poll kết quả (lần {}): {}", attempt, e.getMessage());
-                continue; // Thử lại lần tiếp
-            }
-
-            if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
-                log.warn("Poll lần {} trả về status không hợp lệ: {}", attempt, response.getStatusCode());
-                continue;
-            }
-
-            Map<String, Object> body = response.getBody();
-
-            // Kiểm tra error
-            Object errorCodeObj = body.get("error_code");
-            if (errorCodeObj != null && Integer.parseInt(errorCodeObj.toString()) != 0) {
-                Object errorMsg = body.get("error_msg");
-                log.error("Poll lỗi: [Code: {}] {}", errorCodeObj, errorMsg);
-                throw new RuntimeException("Dịch vụ AI báo lỗi: " + errorMsg);
-            }
-
-            // Kiểm tra task_status: 0=queued, 1=processing, 2=success
-            Object taskStatusObj = body.get("task_status");
-            int taskStatus = taskStatusObj != null ? Integer.parseInt(taskStatusObj.toString()) : 0;
-
-            log.info("Poll lần {}/{}: taskId={}, status={}", attempt, MAX_POLL_ATTEMPTS, taskId, taskStatus);
-
-            if (taskStatus == 2) {
-                // Thành công — lấy ảnh từ data.images[]
-                Map<String, Object> data = (Map<String, Object>) body.get("data");
-                if (data == null) {
-                    throw new RuntimeException("Không tìm thấy dữ liệu kết quả từ dịch vụ AI.");
-                }
-
-                List<String> images = (List<String>) data.get("images");
-                if (images == null || images.isEmpty()) {
-                    throw new RuntimeException("Dữ liệu ảnh trả về từ dịch vụ AI bị rỗng.");
-                }
-
-                String resultUrl = images.get(0);
-                log.info("Pro API hoàn tất: taskId={}, resultUrl={}...", taskId, resultUrl.substring(0, Math.min(60, resultUrl.length())));
-                return resultUrl;
-            }
-
-            // task_status 0 hoặc 1 → tiếp tục poll
+        ResponseEntity<Map> response;
+        try {
+            response = aiRestTemplate.exchange(url, HttpMethod.GET, requestEntity, Map.class);
+        } catch (Exception e) {
+            // Lỗi mạng thoáng qua khi check status — coi như PENDING, để lần poll sau thử lại
+            // (khác timeout thật sự, được HairSwapController quyết định dựa trên tổng thời gian trôi qua).
+            log.warn("Lỗi khi check status taskId={}: {}", taskId, e.getMessage());
+            return HairSwapPollResult.pending();
         }
 
-        // Hết số lần poll → timeout
-        log.warn("Pro API timeout sau {} lần poll ({}s): taskId={}", MAX_POLL_ATTEMPTS, MAX_POLL_ATTEMPTS * POLL_INTERVAL_MS / 1000, taskId);
-        throw new com.hairapy.exceptions.AiTimeoutException("AI xử lý quá lâu, lượt của bạn đã được hoàn lại.");
+        if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+            log.warn("Check status trả về status không hợp lệ: {}", response.getStatusCode());
+            return HairSwapPollResult.pending();
+        }
+
+        Map<String, Object> body = response.getBody();
+
+        // Kiểm tra error
+        Object errorCodeObj = body.get("error_code");
+        if (errorCodeObj != null && Integer.parseInt(errorCodeObj.toString()) != 0) {
+            Object errorMsg = body.get("error_msg");
+            log.error("Check status lỗi: [Code: {}] {}", errorCodeObj, errorMsg);
+            return HairSwapPollResult.error("Dịch vụ AI báo lỗi: " + errorMsg);
+        }
+
+        // Kiểm tra task_status: 0=queued, 1=processing, 2=success
+        Object taskStatusObj = body.get("task_status");
+        int taskStatus = taskStatusObj != null ? Integer.parseInt(taskStatusObj.toString()) : 0;
+
+        if (taskStatus == 2) {
+            // Thành công — lấy ảnh từ data.images[]
+            Map<String, Object> data = (Map<String, Object>) body.get("data");
+            if (data == null) {
+                return HairSwapPollResult.error("Không tìm thấy dữ liệu kết quả từ dịch vụ AI.");
+            }
+
+            List<String> images = (List<String>) data.get("images");
+            if (images == null || images.isEmpty()) {
+                return HairSwapPollResult.error("Dữ liệu ảnh trả về từ dịch vụ AI bị rỗng.");
+            }
+
+            String resultUrl = images.get(0);
+            log.info("Pro API hoàn tất: taskId={}, resultUrl={}...", taskId, resultUrl.substring(0, Math.min(60, resultUrl.length())));
+            return HairSwapPollResult.done(resultUrl);
+        }
+
+        // task_status 0 hoặc 1 → vẫn đang xử lý
+        return HairSwapPollResult.pending();
+    }
+
+    /**
+     * Upload ảnh kết quả (URL tạm của AILab) lên Cloudinary — Free user bị gắn
+     * watermark, Premium thì không. Gọi ĐÚNG 1 LẦN khi checkStatus() lần đầu phát
+     * hiện DONE (controller đảm bảo not-double-call qua HairSwapTask.tryMarkUploaded()).
+     */
+    public String uploadResult(String tempUrl, boolean isPaidUser) {
+        try {
+            return cloudinaryService.uploadFromUrl(tempUrl, "ai-results", !isPaidUser);
+        } catch (Exception e) {
+            log.error("Không thể upload ảnh kết quả lên Cloudinary, sử dụng URL tạm thời của AILab: {}", tempUrl, e);
+            return tempUrl;
+        }
     }
 
     /**

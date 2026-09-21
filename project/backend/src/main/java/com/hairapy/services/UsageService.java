@@ -1,5 +1,6 @@
 package com.hairapy.services;
 
+import com.hairapy.dto.UsageSummaryResponse;
 import com.hairapy.exceptions.QuotaExceededException;
 import com.hairapy.models.Subscription;
 import com.hairapy.models.SubscriptionStatus;
@@ -50,6 +51,15 @@ public class UsageService {
         return userRepository.findByEmail(email).orElse(null);
     }
 
+    private int getDailyLimit(String feature, boolean isPaid) {
+        if ("HAIR_SWAP".equals(feature)) {
+            return isPaid ? 20 : 5;
+        } else if ("FACE_SCAN".equals(feature)) {
+            return isPaid ? 5 : 1;
+        }
+        return Integer.MAX_VALUE;
+    }
+
     /**
      * Kiểm tra quota VÀ ghi nhận lượt dùng ngay trong 1 bước (atomic ở mức JVM, synchronized theo userId) —
      * thay cho check-rồi-record tách rời như trước (dễ dính race condition khi 2 request đồng thời).
@@ -79,14 +89,7 @@ public class UsageService {
                     }
                 }
 
-                int limit;
-                if ("HAIR_SWAP".equals(feature)) {
-                    limit = isPaid ? 20 : 5;
-                } else if ("FACE_SCAN".equals(feature)) {
-                    limit = isPaid ? 5 : 1;
-                } else {
-                    limit = Integer.MAX_VALUE; // tính năng khác: không giới hạn
-                }
+                int limit = getDailyLimit(feature, isPaid);
 
                 LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
                 long todayCount = usageHistoryRepository.countTodayUsage(user.getId(), feature, startOfDay);
@@ -120,5 +123,46 @@ public class UsageService {
         if (reservation == null || reservation.getId() == null) return;
         usageHistoryRepository.deleteById(reservation.getId());
         log.info("Đã hoàn lượt sử dụng: id={}", reservation.getId());
+    }
+
+    /**
+     * Lấy thông tin quota hiện tại của user (đã dùng / hạn mức) cho cả FACE_SCAN và HAIR_SWAP,
+     * để FE hiển thị "còn bao nhiêu lượt hôm nay" TRƯỚC khi user bấm nút — không đợi bị 429 mới biết.
+     * Copy nguyên logic tính isPaid từ reserveUsage() (bao gồm check hết hạn endDate) để đồng nhất,
+     * KHÔNG dùng SubscriptionService.isPaidUser() vì hàm đó thiếu check endDate.
+     */
+    @Transactional(readOnly = true)
+    public UsageSummaryResponse getUsageSummary(User user) {
+        if (user == null) {
+            throw new IllegalArgumentException("Người dùng chưa đăng nhập.");
+        }
+
+        boolean unlimited = user.getRole() == com.hairapy.models.Role.ADMIN
+                || user.getRole() == com.hairapy.models.Role.TESTER;
+
+        boolean isPaid = false;
+        if (!unlimited) {
+            Optional<Subscription> activeSubOpt =
+                    subscriptionRepository.findByUserIdAndStatus(user.getId(), SubscriptionStatus.ACTIVE);
+            if (activeSubOpt.isPresent()) {
+                Subscription sub = activeSubOpt.get();
+                if (sub.getEndDate() == null || sub.getEndDate().isAfter(LocalDateTime.now())) {
+                    isPaid = sub.getPlan().isPaid();
+                }
+            }
+        }
+
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+
+        long faceScanUsed = usageHistoryRepository.countTodayUsage(user.getId(), "FACE_SCAN", startOfDay);
+        long hairSwapUsed = usageHistoryRepository.countTodayUsage(user.getId(), "HAIR_SWAP", startOfDay);
+
+        int faceScanLimit = unlimited ? Integer.MAX_VALUE : getDailyLimit("FACE_SCAN", isPaid);
+        int hairSwapLimit = unlimited ? Integer.MAX_VALUE : getDailyLimit("HAIR_SWAP", isPaid);
+
+        return new UsageSummaryResponse(
+                new UsageSummaryResponse.FeatureUsage(faceScanUsed, faceScanLimit, unlimited),
+                new UsageSummaryResponse.FeatureUsage(hairSwapUsed, hairSwapLimit, unlimited)
+        );
     }
 }

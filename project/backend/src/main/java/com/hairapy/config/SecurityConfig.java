@@ -39,6 +39,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/payments/webhook").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/hairstyles/**").permitAll()
+                        .requestMatchers("/api/salons/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

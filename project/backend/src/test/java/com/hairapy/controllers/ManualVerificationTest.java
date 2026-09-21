@@ -252,7 +252,7 @@ public class ManualVerificationTest {
         MockMultipartFile file = new MockMultipartFile("image", "test.jpg", "image/jpeg", "dummy image content".getBytes());
 
         // Gửi request thử kiểu tóc premium
-        mockMvc.perform(multipart("/api/swap/try")
+        mockMvc.perform(multipart("/api/swap/submit")
                         .file(file)
                         .param("hairStyle", "LongWavyPremium")
                         .param("hairstyleId", String.valueOf(premiumStyle.getId())))

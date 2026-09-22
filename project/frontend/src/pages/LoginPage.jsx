@@ -73,12 +73,12 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               rightSlot={
-                <span
-                  className="text-xs font-bold text-mauve/50 cursor-not-allowed select-none"
-                  title="Tính năng đang phát triển, sắp ra mắt"
+                <Link
+                  to="/forgot-password"
+                  className="text-xs font-bold text-mauve hover:text-primary"
                 >
                   Quên mật khẩu?
-                </span>
+                </Link>
               }
             />
             <BorderGlow rounded="rounded-full" thickness={2} className="w-full block">

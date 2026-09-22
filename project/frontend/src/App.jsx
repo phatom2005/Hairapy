@@ -34,7 +34,10 @@ export default function App() {
   const hydrated = useAuthStore((state) => state.hydrated);
   const loginWithFacebook = useAuthStore((state) => state.loginWithFacebook);
   const navigate = useNavigate();
-  const [fbProcessing, setFbProcessing] = useState(false);
+  // Khởi tạo trực tiếp từ URL hash lúc render đầu (không setState đồng bộ trong effect)
+  const [fbProcessing, setFbProcessing] = useState(() =>
+    window.location.hash.includes("access_token=")
+  );
 
   // Gọi hàm hydrate để kiểm tra token và tải thông tin user khi load/refresh trang
   useEffect(() => {
@@ -44,6 +47,8 @@ export default function App() {
   // Xử lý callback từ Facebook OAuth Redirect Flow (Đăng nhập Facebook).
   // Facebook redirect về đúng gốc domain kèm access_token trong URL hash
   // (vì dùng response_type=token, không dùng FB SDK/FedCM - xem AuthShell.jsx).
+  // Lưu ý: mọi setFbProcessing bên dưới đều nằm trong callback bất đồng bộ
+  // (.then/.catch/.finally), không gọi đồng bộ ngay trong thân effect.
   useEffect(() => {
     if (!window.location.hash.includes("access_token=")) return;
 
@@ -56,17 +61,21 @@ export default function App() {
     // Xóa access_token khỏi URL ngay để tránh lộ token qua lịch sử trình duyệt/URL
     window.history.replaceState(null, "", window.location.pathname + window.location.search);
 
-    if (oauthError) {
-      alert("Đăng nhập Facebook đã bị hủy hoặc thất bại.");
-      return;
-    }
-    if (!accessToken) return;
+    const run = async () => {
+      if (oauthError) {
+        alert("Đăng nhập Facebook đã bị hủy hoặc thất bại.");
+        return;
+      }
+      if (!accessToken) return;
+      try {
+        await loginWithFacebook(accessToken);
+        navigate(redirectTo);
+      } catch (err) {
+        alert(err.message || "Đăng nhập Facebook thất bại.");
+      }
+    };
 
-    setFbProcessing(true);
-    loginWithFacebook(accessToken)
-      .then(() => navigate(redirectTo))
-      .catch((err) => alert(err.message || "Đăng nhập Facebook thất bại."))
-      .finally(() => setFbProcessing(false));
+    run().finally(() => setFbProcessing(false));
     // Chỉ chạy 1 lần khi component mount (đọc hash lúc redirect về)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

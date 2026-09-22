@@ -73,7 +73,6 @@ export function SocialButtons({ redirectTo = "/profile" }) {
   const [facebookLoading, setFacebookLoading] = useState(false);
   const navigate = useNavigate();
   const loginWithGoogle = useAuthStore((s) => s.loginWithGoogle);
-  const loginWithFacebook = useAuthStore((s) => s.loginWithFacebook);
 
   const base =
     "flex items-center justify-center gap-3 rounded-3xl border-2 border-line bg-white py-[14px] " +

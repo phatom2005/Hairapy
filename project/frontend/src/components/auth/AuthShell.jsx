@@ -143,6 +143,20 @@ export function SocialButtons({ redirectTo = "/profile" }) {
     }
   };
 
+  const handleFacebookResponse = async (response) => {
+    try {
+      if (response.authResponse?.accessToken) {
+        await loginWithFacebook(response.authResponse.accessToken);
+        navigate(redirectTo);
+      } else {
+        setFacebookLoading(false);
+      }
+    } catch (err) {
+      setFacebookLoading(false);
+      alert(err.message || "Đăng nhập Facebook thất bại.");
+    }
+  };
+
   const handleFacebookClick = async () => {
     const appId = import.meta.env.VITE_FACEBOOK_APP_ID;
     if (!appId) {
@@ -155,19 +169,12 @@ export function SocialButtons({ redirectTo = "/profile" }) {
       if (!window.FB) {
         throw new Error("Facebook SDK không khả dụng.");
       }
+      // LUU Y: FB SDK khong chap nhan callback la async function truyen truc tiep
+      // (ne'm loi noi bo "Expression is of type asyncfunction, not function").
+      // Phai dung callback dong bo, roi goi ham async rieng ben trong.
       window.FB.login(
-        async (response) => {
-          try {
-            if (response.authResponse?.accessToken) {
-              await loginWithFacebook(response.authResponse.accessToken);
-              navigate(redirectTo);
-            } else {
-              setFacebookLoading(false);
-            }
-          } catch (err) {
-            setFacebookLoading(false);
-            alert(err.message || "Đăng nhập Facebook thất bại.");
-          }
+        (response) => {
+          handleFacebookResponse(response);
         },
         { scope: "email,public_profile" }
       );

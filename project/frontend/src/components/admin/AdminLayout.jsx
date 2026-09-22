@@ -6,7 +6,8 @@ import {
   ScissorsIcon,
   CrownIcon,
   ActivityIcon,
-  HomeIcon
+  HomeIcon,
+  StarIcon
 } from "../icons";
 import logoStack from "../../assets/logo/logo-stack.png";
 
@@ -23,6 +24,7 @@ export default function AdminLayout() {
     { to: "/admin", label: "Dashboard", icon: <DashboardIcon />, end: true },
     { to: "/admin/users", label: "Người dùng", icon: <UsersIcon /> },
     { to: "/admin/catalog", label: "Kho kiểu tóc", icon: <ScissorsIcon /> },
+    { to: "/admin/salons", label: "Salon đối tác", icon: <StarIcon size={18} /> },
     { to: "/admin/subscriptions", label: "Gói đăng ký", icon: <CrownIcon /> },
     { to: "/admin/usage", label: "Nhật ký sử dụng", icon: <ActivityIcon /> },
   ];

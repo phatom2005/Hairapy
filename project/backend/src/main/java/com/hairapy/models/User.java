@@ -31,8 +31,8 @@ public class User implements UserDetails {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @NotBlank
-    @Column(nullable = false)
+    // Nullable — user dang nhap qua Google/Facebook khong co mat khau noi bo (khong con @NotBlank).
+    @Column(name = "password_hash")
     private String passwordHash;
 
     @Column(name = "full_name", length = 100)
@@ -48,6 +48,14 @@ public class User implements UserDetails {
     @Column(nullable = false, length = 20)
     @Builder.Default
     private Role role = Role.USER;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private AuthProvider provider = AuthProvider.LOCAL;
+
+    @Column(name = "provider_id", length = 255)
+    private String providerId;
 
     @CreationTimestamp
     @Column(updatable = false)

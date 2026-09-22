@@ -63,6 +63,25 @@ const useAuthStore = create((set, get) => ({
   },
 
   /**
+   * Đăng nhập qua Google — nhận access_token Google Identity Services trả về từ frontend,
+   * backend tự xác minh + tạo/đăng nhập user.
+   */
+  loginWithGoogle: async (googleAccessToken) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await api.post("/auth/google", { accessToken: googleAccessToken });
+      const { token, email: userEmail, role, fullName } = res.data;
+      localStorage.setItem("token", token);
+      set({ token, user: { email: userEmail, role, fullName }, loading: false });
+      return true;
+    } catch (err) {
+      const errMsg = err.response?.data?.message || "Đăng nhập Google thất bại. Vui lòng thử lại.";
+      set({ error: errMsg, loading: false });
+      throw new Error(errMsg, { cause: err });
+    }
+  },
+
+  /**
    * Đăng xuất, xóa toàn bộ thông tin xác thực khỏi store và localStorage.
    */
   logout: () => {

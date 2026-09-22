@@ -1,7 +1,10 @@
 // Khung Login + Register: một thẻ frosted bo góc đặt giữa, nổi trên SoftAurora.
 // Không còn vệt chia dọc (seam) như bản split full-height trước.
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { LOGO_STACK } from "../../lib/figmaAssets";
 import { GoogleIcon, FacebookIcon } from "../icons";
+import useAuthStore from "../../store/useAuthStore";
 
 export function AuthShell({ children }) {
   return (
@@ -45,14 +48,76 @@ export function OrDivider({ label }) {
   );
 }
 
-export function SocialButtons() {
+// Lazy-load script Google Identity Services 1 lần duy nhất, tái dùng promise cho các lần gọi sau.
+let googleScriptPromise = null;
+function loadGoogleScript() {
+  if (googleScriptPromise) return googleScriptPromise;
+  googleScriptPromise = new Promise((resolve, reject) => {
+    if (window.google?.accounts?.oauth2) {
+      resolve();
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Không tải được Google Identity Services"));
+    document.head.appendChild(script);
+  });
+  return googleScriptPromise;
+}
+
+export function SocialButtons({ redirectTo = "/profile" }) {
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const navigate = useNavigate();
+  const loginWithGoogle = useAuthStore((s) => s.loginWithGoogle);
+
   const base =
     "flex items-center justify-center gap-3 rounded-3xl border-2 border-line bg-white py-[14px] " +
-    "text-sm font-semibold text-ink transition hover:bg-canvas";
+    "text-sm font-semibold text-ink transition hover:bg-canvas disabled:opacity-50 disabled:cursor-not-allowed";
+
+  const handleGoogleClick = async () => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      alert("Đăng nhập Google chưa được cấu hình.");
+      return;
+    }
+    setGoogleLoading(true);
+    try {
+      await loadGoogleScript();
+      const client = window.google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: "openid email profile",
+        callback: async (tokenResponse) => {
+          try {
+            if (tokenResponse.access_token) {
+              await loginWithGoogle(tokenResponse.access_token);
+              navigate(redirectTo);
+            }
+          } catch (err) {
+            alert(err.message || "Đăng nhập Google thất bại.");
+          } finally {
+            setGoogleLoading(false);
+          }
+        },
+        error_callback: () => setGoogleLoading(false),
+      });
+      client.requestAccessToken();
+    } catch {
+      setGoogleLoading(false);
+      alert("Không thể kết nối tới Google. Vui lòng thử lại.");
+    }
+  };
+
   return (
     <div className="grid w-full grid-cols-2 gap-4">
-      <button type="button" className={base}><GoogleIcon /> Google</button>
-      <button type="button" className={base}><FacebookIcon /> Facebook</button>
+      <button type="button" className={base} onClick={handleGoogleClick} disabled={googleLoading}>
+        <GoogleIcon /> {googleLoading ? "Đang kết nối..." : "Google"}
+      </button>
+      <button type="button" className={base} disabled title="Đăng nhập Facebook sắp ra mắt">
+        <FacebookIcon /> Facebook
+      </button>
     </div>
   );
 }

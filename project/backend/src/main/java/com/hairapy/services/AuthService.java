@@ -26,6 +26,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final SubscriptionService subscriptionService;
+    private final GoogleAuthService googleAuthService;
 
     /**
      * Đăng ký tài khoản người dùng mới.
@@ -118,5 +119,36 @@ public class AuthService {
         String effectiveRole = resolveEffectiveRole(user);
         return new com.hairapy.dto.auth.UserMeResponse(
                 user.getEmail(), effectiveRole, user.getFullName(), user.getPhone(), user.getDateOfBirth());
+    }
+
+    /**
+     * Đăng nhập/đăng ký qua Google. Nếu email đã tồn tại (kể cả tài khoản LOCAL trước đó),
+     * đăng nhập luôn vào tài khoản đó — an toàn vì Google đã xác thực chủ sở hữu email.
+     */
+    @Transactional
+    public AuthResponse loginWithGoogle(String accessToken) {
+        GoogleAuthService.GoogleProfile profile = googleAuthService.verifyAndFetchProfile(accessToken);
+
+        User user = userRepository.findByEmail(profile.email()).orElseGet(() -> {
+            User newUser = User.builder()
+                    .email(profile.email())
+                    .passwordHash(null)
+                    .fullName(profile.name())
+                    .role(Role.USER)
+                    .provider(com.hairapy.models.AuthProvider.GOOGLE)
+                    .providerId(profile.sub())
+                    .build();
+            return userRepository.save(newUser);
+        });
+
+        if (user.getProviderId() == null) {
+            user.setProviderId(profile.sub());
+            userRepository.save(user);
+        }
+
+        String token = jwtService.generateToken(user);
+        String effectiveRole = resolveEffectiveRole(user);
+
+        return new AuthResponse(token, user.getEmail(), effectiveRole, user.getFullName());
     }
 }

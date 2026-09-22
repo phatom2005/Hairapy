@@ -27,6 +27,7 @@ public class AuthController {
     private final AuthService authService;
     private final UserRepository userRepository;
     private final TokenBlacklistService tokenBlacklistService;
+    private final com.hairapy.services.PasswordResetService passwordResetService;
 
     /**
      * Endpoint đăng ký tài khoản mới.
@@ -101,5 +102,24 @@ public class AuthController {
             tokenBlacklistService.blacklist(token);
         }
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@Valid @RequestBody com.hairapy.dto.auth.ForgotPasswordRequest request) {
+        passwordResetService.requestReset(request.email());
+        return ResponseEntity.ok(java.util.Map.of(
+                "message", "Nếu email tồn tại trong hệ thống, liên kết đặt lại mật khẩu đã được gửi."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody com.hairapy.dto.auth.ResetPasswordRequest request) {
+        passwordResetService.confirmReset(request.token(), request.newPassword(), request.confirmPassword());
+        return ResponseEntity.ok(java.util.Map.of("message", "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại."));
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> loginWithGoogle(@Valid @RequestBody com.hairapy.dto.auth.GoogleLoginRequest request) {
+        AuthResponse response = authService.loginWithGoogle(request.accessToken());
+        return ResponseEntity.ok(response);
     }
 }

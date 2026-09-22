@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { SoftAurora } from "./components/animated";
 import useAuthStore from "./store/useAuthStore";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -32,14 +32,48 @@ import AdminUsagePage from "./pages/admin/AdminUsagePage";
 export default function App() {
   const hydrate = useAuthStore((state) => state.hydrate);
   const hydrated = useAuthStore((state) => state.hydrated);
+  const loginWithFacebook = useAuthStore((state) => state.loginWithFacebook);
+  const navigate = useNavigate();
+  const [fbProcessing, setFbProcessing] = useState(false);
 
   // Gọi hàm hydrate để kiểm tra token và tải thông tin user khi load/refresh trang
   useEffect(() => {
     hydrate();
   }, [hydrate]);
 
+  // Xử lý callback từ Facebook OAuth Redirect Flow (Đăng nhập Facebook).
+  // Facebook redirect về đúng gốc domain kèm access_token trong URL hash
+  // (vì dùng response_type=token, không dùng FB SDK/FedCM - xem AuthShell.jsx).
+  useEffect(() => {
+    if (!window.location.hash.includes("access_token=")) return;
+
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    const accessToken = params.get("access_token");
+    const oauthError = params.get("error");
+    const redirectTo = sessionStorage.getItem("fbLoginRedirectTo") || "/profile";
+    sessionStorage.removeItem("fbLoginRedirectTo");
+
+    // Xóa access_token khỏi URL ngay để tránh lộ token qua lịch sử trình duyệt/URL
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+
+    if (oauthError) {
+      alert("Đăng nhập Facebook đã bị hủy hoặc thất bại.");
+      return;
+    }
+    if (!accessToken) return;
+
+    setFbProcessing(true);
+    loginWithFacebook(accessToken)
+      .then(() => navigate(redirectTo))
+      .catch((err) => alert(err.message || "Đăng nhập Facebook thất bại."))
+      .finally(() => setFbProcessing(false));
+    // Chỉ chạy 1 lần khi component mount (đọc hash lúc redirect về)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Hiển thị loading spinner cho đến khi đồng bộ xong trạng thái đăng nhập
-  if (!hydrated) {
+  // (hoặc trong lúc đang xử lý callback đăng nhập Facebook)
+  if (!hydrated || fbProcessing) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-canvas">
         <div className="size-10 animate-spin rounded-full border-4 border-brand border-t-transparent" />

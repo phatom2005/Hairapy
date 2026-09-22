@@ -68,37 +68,6 @@ function loadGoogleScript() {
   return googleScriptPromise;
 }
 
-// Lazy-load script Facebook SDK 1 lần duy nhất
-let facebookScriptPromise = null;
-function loadFacebookScript() {
-  if (facebookScriptPromise) return facebookScriptPromise;
-  facebookScriptPromise = new Promise((resolve, reject) => {
-    if (window.FB) {
-      resolve();
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://connect.facebook.net/en_US/sdk.js";
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      const appId = import.meta.env.VITE_FACEBOOK_APP_ID;
-      if (window.FB && appId) {
-        window.FB.init({
-          appId,
-          cookie: true,
-          xfbml: false,
-          version: "v21.0",
-        });
-      }
-      resolve();
-    };
-    script.onerror = () => reject(new Error("Không tải được Facebook SDK"));
-    document.head.appendChild(script);
-  });
-  return facebookScriptPromise;
-}
-
 export function SocialButtons({ redirectTo = "/profile" }) {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [facebookLoading, setFacebookLoading] = useState(false);
@@ -143,45 +112,31 @@ export function SocialButtons({ redirectTo = "/profile" }) {
     }
   };
 
-  const handleFacebookResponse = async (response) => {
-    try {
-      if (response.authResponse?.accessToken) {
-        await loginWithFacebook(response.authResponse.accessToken);
-        navigate(redirectTo);
-      } else {
-        setFacebookLoading(false);
-      }
-    } catch (err) {
-      setFacebookLoading(false);
-      alert(err.message || "Đăng nhập Facebook thất bại.");
-    }
-  };
-
-  const handleFacebookClick = async () => {
+  // LUU Y: FB JS SDK (FB.login) dung co che FedCM cua Chrome de xac thuc, va
+  // hien tai (9/2026) trien khai FedCM cua Facebook con nhieu loi/khong on dinh
+  // ("Not signed in with the identity provider", "Provider's accounts list
+  // endpoint content type must be a JSON content type"...) xay ra ngay ca khi
+  // app va tai khoan deu cau hinh dung. De tranh phu thuoc FedCM, dung OAuth
+  // Redirect Flow co dien cua Facebook (dieu huong nguyen trang thay vi mo
+  // popup) - on dinh, duoc Meta ho tro chinh thuc, khong dinh FedCM.
+  const handleFacebookClick = () => {
     const appId = import.meta.env.VITE_FACEBOOK_APP_ID;
     if (!appId) {
       alert("Đăng nhập Facebook chưa được cấu hình.");
       return;
     }
+    // Luu lai trang can quay ve sau khi Facebook redirect lai, vi redirect_uri
+    // phai khop chinh xac voi URI da khai bao trong Meta Dashboard (goc domain).
     setFacebookLoading(true);
-    try {
-      await loadFacebookScript();
-      if (!window.FB) {
-        throw new Error("Facebook SDK không khả dụng.");
-      }
-      // LUU Y: FB SDK khong chap nhan callback la async function truyen truc tiep
-      // (ne'm loi noi bo "Expression is of type asyncfunction, not function").
-      // Phai dung callback dong bo, roi goi ham async rieng ben trong.
-      window.FB.login(
-        (response) => {
-          handleFacebookResponse(response);
-        },
-        { scope: "email,public_profile" }
-      );
-    } catch (err) {
-      setFacebookLoading(false);
-      alert(err.message || "Không thể kết nối tới Facebook. Vui lòng thử lại.");
-    }
+    sessionStorage.setItem("fbLoginRedirectTo", redirectTo);
+    const redirectUri = `${window.location.origin}/`;
+    const oauthUrl =
+      `https://www.facebook.com/v21.0/dialog/oauth` +
+      `?client_id=${encodeURIComponent(appId)}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&response_type=token` +
+      `&scope=${encodeURIComponent("email,public_profile")}`;
+    window.location.href = oauthUrl;
   };
 
   return (

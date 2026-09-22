@@ -2,11 +2,8 @@ package com.hairapy.services;
 
 import com.hairapy.dto.UsageSummaryResponse;
 import com.hairapy.exceptions.QuotaExceededException;
-import com.hairapy.models.Subscription;
-import com.hairapy.models.SubscriptionStatus;
 import com.hairapy.models.UsageHistory;
 import com.hairapy.models.User;
-import com.hairapy.repositories.SubscriptionRepository;
 import com.hairapy.repositories.UsageHistoryRepository;
 import com.hairapy.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +13,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,8 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class UsageService {
 
     private final UserRepository userRepository;
-    private final SubscriptionRepository subscriptionRepository;
     private final UsageHistoryRepository usageHistoryRepository;
+    private final SubscriptionService subscriptionService;
 
     // Khoá theo userId để chống race condition khi 2 request cùng user gửi đồng thời lúc còn 1 lượt cuối.
     // LƯU Ý: đây là in-JVM lock, chỉ đúng khi backend chạy 1 instance (đúng hiện trạng MVP — xem scheduler-decision).
@@ -79,15 +75,7 @@ public class UsageService {
                     || user.getRole() == com.hairapy.models.Role.TESTER;
 
             if (!bypass) {
-                Optional<Subscription> activeSubOpt =
-                        subscriptionRepository.findByUserIdAndStatus(user.getId(), SubscriptionStatus.ACTIVE);
-                boolean isPaid = false;
-                if (activeSubOpt.isPresent()) {
-                    Subscription sub = activeSubOpt.get();
-                    if (sub.getEndDate() == null || sub.getEndDate().isAfter(LocalDateTime.now())) {
-                        isPaid = sub.getPlan().isPaid();
-                    }
-                }
+                boolean isPaid = subscriptionService.isPaidUser(user.getId());
 
                 int limit = getDailyLimit(feature, isPaid);
 
@@ -128,8 +116,7 @@ public class UsageService {
     /**
      * Lấy thông tin quota hiện tại của user (đã dùng / hạn mức) cho cả FACE_SCAN và HAIR_SWAP,
      * để FE hiển thị "còn bao nhiêu lượt hôm nay" TRƯỚC khi user bấm nút — không đợi bị 429 mới biết.
-     * Copy nguyên logic tính isPaid từ reserveUsage() (bao gồm check hết hạn endDate) để đồng nhất,
-     * KHÔNG dùng SubscriptionService.isPaidUser() vì hàm đó thiếu check endDate.
+     * Dùng chung subscriptionService.isPaidUser() với reserveUsage() — không còn tự lặp logic endDate riêng.
      */
     @Transactional(readOnly = true)
     public UsageSummaryResponse getUsageSummary(User user) {
@@ -140,17 +127,7 @@ public class UsageService {
         boolean unlimited = user.getRole() == com.hairapy.models.Role.ADMIN
                 || user.getRole() == com.hairapy.models.Role.TESTER;
 
-        boolean isPaid = false;
-        if (!unlimited) {
-            Optional<Subscription> activeSubOpt =
-                    subscriptionRepository.findByUserIdAndStatus(user.getId(), SubscriptionStatus.ACTIVE);
-            if (activeSubOpt.isPresent()) {
-                Subscription sub = activeSubOpt.get();
-                if (sub.getEndDate() == null || sub.getEndDate().isAfter(LocalDateTime.now())) {
-                    isPaid = sub.getPlan().isPaid();
-                }
-            }
-        }
+        boolean isPaid = !unlimited && subscriptionService.isPaidUser(user.getId());
 
         LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
 

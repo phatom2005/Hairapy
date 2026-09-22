@@ -10,6 +10,13 @@ export default function AdminSubscriptionsPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
+  const [showGrantModal, setShowGrantModal] = useState(false);
+  const [grantEmail, setGrantEmail] = useState("");
+  const [grantPlan, setGrantPlan] = useState("PREMIUM");
+  const [grantDays, setGrantDays] = useState("");
+  const [grantError, setGrantError] = useState("");
+  const [grantLoading, setGrantLoading] = useState(false);
+
   const fetchSubscriptions = useCallback(() => {
     setLoading(true);
     const params = {
@@ -62,6 +69,45 @@ export default function AdminSubscriptionsPage() {
       });
   };
 
+  const openGrantModal = () => {
+    setGrantEmail("");
+    setGrantPlan("PREMIUM");
+    setGrantDays("");
+    setGrantError("");
+    setShowGrantModal(true);
+  };
+
+  const handleGrantSubmit = (e) => {
+    e.preventDefault();
+    if (!grantEmail.trim()) {
+      setGrantError("Vui lòng nhập email người dùng.");
+      return;
+    }
+
+    setGrantError("");
+    setGrantLoading(true);
+    api
+      .post("/admin/subscriptions/grant", {
+        email: grantEmail.trim(),
+        plan: grantPlan,
+        days: grantDays ? Number(grantDays) : null,
+      })
+      .then(() => {
+        setGrantLoading(false);
+        setShowGrantModal(false);
+        fetchSubscriptions();
+      })
+      .catch((err) => {
+        setGrantLoading(false);
+        const msg =
+          err?.response?.status === 404
+            ? "Không tìm thấy người dùng với email này."
+            : "Cấp gói dịch vụ thất bại. Vui lòng kiểm tra lại thông tin.";
+        setGrantError(msg);
+        console.error(err);
+      });
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
     const date = new Date(dateStr);
@@ -106,11 +152,11 @@ export default function AdminSubscriptionsPage() {
           <h2 className="font-display text-3xl font-bold text-ink">Quản lý đăng ký dịch vụ</h2>
           <p className="text-sm text-mauve">Danh sách và trạng thái các gói thành viên trả phí</p>
         </div>
-        <div className="w-full sm:w-48">
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-end">
           <label className="flex flex-col gap-1">
             <span className="text-xs font-bold uppercase tracking-wider text-muted px-1">Trạng thái</span>
             <select
-              className="w-full rounded-2xl border-2 border-line bg-white py-2.5 px-4 text-sm font-semibold text-ink outline-none transition focus:border-brand"
+              className="w-full rounded-2xl border-2 border-line bg-white py-2.5 px-4 text-sm font-semibold text-ink outline-none transition focus:border-brand sm:w-48"
               value={statusFilter}
               onChange={(e) => {
                 setStatusFilter(e.target.value);
@@ -123,6 +169,9 @@ export default function AdminSubscriptionsPage() {
               <option value="CANCELLED">Đã hủy (CANCELLED)</option>
             </select>
           </label>
+          <Button className="rounded-2xl px-5 py-2.5 text-sm font-bold" onClick={openGrantModal}>
+            + Cấp gói thủ công
+          </Button>
         </div>
       </div>
 
@@ -216,6 +265,78 @@ export default function AdminSubscriptionsPage() {
           </div>
         </div>
       )}
+
+      {/* Grant Subscription Modal */}
+      {showGrantModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl">
+            <h3 className="font-display text-xl font-bold text-ink">Cấp gói dịch vụ thủ công</h3>
+            <p className="mt-1 text-sm text-mauve">
+              Dùng cho hỗ trợ khách hàng, tặng gói, hoặc khắc phục sự cố thanh toán.
+            </p>
+
+            <form onSubmit={handleGrantSubmit} className="mt-5 space-y-4">
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted px-1">
+                  Email người dùng
+                </span>
+                <input
+                  type="email"
+                  required
+                  className="w-full rounded-2xl border-2 border-line bg-white py-2.5 px-4 text-sm font-semibold text-ink outline-none transition focus:border-brand"
+                  placeholder="user@example.com"
+                  value={grantEmail}
+                  onChange={(e) => setGrantEmail(e.target.value)}
+                />
+              </label>
+
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted px-1">Gói dịch vụ</span>
+                <select
+                  className="w-full rounded-2xl border-2 border-line bg-white py-2.5 px-4 text-sm font-semibold text-ink outline-none transition focus:border-brand"
+                  value={grantPlan}
+                  onChange={(e) => setGrantPlan(e.target.value)}
+                >
+                  <option value="PRO">PRO (mặc định 7 ngày)</option>
+                  <option value="PREMIUM">PREMIUM (mặc định 30 ngày)</option>
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted px-1">
+                  Số ngày (tuỳ chọn — để trống dùng mặc định)
+                </span>
+                <input
+                  type="number"
+                  min="1"
+                  className="w-full rounded-2xl border-2 border-line bg-white py-2.5 px-4 text-sm font-semibold text-ink outline-none transition focus:border-brand"
+                  placeholder="Vd: 30"
+                  value={grantDays}
+                  onChange={(e) => setGrantDays(e.target.value)}
+                />
+              </label>
+
+              {grantError && <p className="text-sm font-semibold text-rose-600">{grantError}</p>}
+
+              <div className="flex justify-end gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-2xl px-5 py-2.5 text-sm font-bold"
+                  onClick={() => setShowGrantModal(false)}
+                  disabled={grantLoading}
+                >
+                  Hủy
+                </Button>
+                <Button type="submit" className="rounded-2xl px-5 py-2.5 text-sm font-bold" disabled={grantLoading}>
+                  {grantLoading ? "Đang xử lý..." : "Xác nhận cấp gói"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

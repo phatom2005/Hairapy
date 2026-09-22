@@ -1,16 +1,24 @@
 package com.hairapy.controllers.admin;
 
 import com.hairapy.dto.admin.AdminSubscriptionResponse;
+import com.hairapy.dto.admin.GrantSubscriptionRequest;
 import com.hairapy.exceptions.ResourceNotFoundException;
 import com.hairapy.models.Subscription;
+import com.hairapy.models.SubscriptionPlan;
 import com.hairapy.models.SubscriptionStatus;
+import com.hairapy.models.User;
 import com.hairapy.repositories.SubscriptionRepository;
+import com.hairapy.repositories.UserRepository;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
 
 /**
  * Controller quản trị thực hiện các nghiệp vụ quản lý các gói đăng ký dịch vụ (Subscription).
@@ -22,6 +30,7 @@ import org.springframework.web.bind.annotation.*;
 public class AdminSubscriptionController {
 
     private final SubscriptionRepository subscriptionRepository;
+    private final UserRepository userRepository;
 
     /**
      * Lấy danh sách các gói dịch vụ có phân trang và tùy chọn lọc theo trạng thái.
@@ -63,6 +72,54 @@ public class AdminSubscriptionController {
         return ResponseEntity.ok(mapToSubscriptionResponse(saved));
     }
 
+    /**
+     * Admin cấp/gia hạn gói dịch vụ thủ công cho 1 user (tìm theo email).
+     * Dùng cho hỗ trợ khách hàng, tặng gói, khắc phục sự cố thanh toán... trong giai đoạn Beta ít user,
+     * chưa cần quy trình phức tạp hơn.
+     *
+     * Nếu user đang có subscription ACTIVE, subscription đó bị chuyển sang CANCELLED (admin ghi đè),
+     * rồi tạo 1 subscription ACTIVE mới. Không sửa trực tiếp bản ghi cũ để giữ lịch sử đầy đủ.
+     */
+    @Transactional
+    @PostMapping("/grant")
+    public ResponseEntity<AdminSubscriptionResponse> grantSubscription(@Valid @RequestBody GrantSubscriptionRequest request) {
+        User user = userRepository.findByEmail(request.email().trim())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với email: " + request.email()));
+
+        SubscriptionPlan plan;
+        try {
+            plan = SubscriptionPlan.valueOf(request.plan().toUpperCase().trim());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+        if (!plan.isPaid()) {
+            // Không cho "cấp" gói FREE qua endpoint này — FREE là mặc định, không cần bản ghi Subscription riêng.
+            return ResponseEntity.badRequest().build();
+        }
+
+        // Nếu đang có gói ACTIVE, huỷ để tạo gói mới đè lên (giữ lại lịch sử, không sửa bản ghi cũ).
+        Optional<Subscription> currentActive =
+                subscriptionRepository.findByUserIdAndStatus(user.getId(), SubscriptionStatus.ACTIVE);
+        currentActive.ifPresent(sub -> {
+            sub.setStatus(SubscriptionStatus.CANCELLED);
+            subscriptionRepository.save(sub);
+        });
+
+        int days = request.days() != null ? request.days() : (plan == SubscriptionPlan.PREMIUM ? 30 : 7);
+        LocalDateTime now = LocalDateTime.now();
+
+        Subscription newSub = Subscription.builder()
+                .user(user)
+                .plan(plan)
+                .status(SubscriptionStatus.ACTIVE)
+                .startDate(now)
+                .endDate(now.plusDays(days))
+                .build();
+
+        Subscription saved = subscriptionRepository.save(newSub);
+        return ResponseEntity.ok(mapToSubscriptionResponse(saved));
+    }
+
     private AdminSubscriptionResponse mapToSubscriptionResponse(Subscription subscription) {
         String email = "";
         String fullName = "";
@@ -87,3 +144,4 @@ public class AdminSubscriptionController {
         );
     }
 }
+

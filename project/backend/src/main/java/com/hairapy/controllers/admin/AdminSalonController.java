@@ -49,6 +49,8 @@ public class AdminSalonController {
             @RequestParam(value = "rating", required = false, defaultValue = "0") Double rating,
             @RequestParam(value = "verified", required = false, defaultValue = "false") boolean verified,
             @RequestParam(value = "phone", required = false) String phone,
+            @RequestParam(value = "latitude", required = false) Double latitude,
+            @RequestParam(value = "longitude", required = false) Double longitude,
             @RequestParam(value = "image", required = false) MultipartFile image,
             @RequestParam(value = "imageUrl", required = false) String imageUrl
     ) {
@@ -72,6 +74,8 @@ public class AdminSalonController {
                 .verified(verified)
                 .imageUrl(finalImageUrl)
                 .phone(phone)
+                .latitude(latitude)
+                .longitude(longitude)
                 .build();
 
         Salon saved = salonRepository.save(salon);
@@ -92,6 +96,8 @@ public class AdminSalonController {
             @RequestParam(value = "rating", required = false) Double rating,
             @RequestParam(value = "verified", required = false) Boolean verified,
             @RequestParam(value = "phone", required = false) String phone,
+            @RequestParam(value = "latitude", required = false) Double latitude,
+            @RequestParam(value = "longitude", required = false) Double longitude,
             @RequestParam(value = "image", required = false) MultipartFile image,
             @RequestParam(value = "imageUrl", required = false) String imageUrl
     ) {
@@ -106,6 +112,8 @@ public class AdminSalonController {
         if (rating != null) salon.setRating(rating);
         if (verified != null) salon.setVerified(verified);
         if (phone != null) salon.setPhone(phone);
+        if (latitude != null) salon.setLatitude(latitude);
+        if (longitude != null) salon.setLongitude(longitude);
 
         if (image != null && !image.isEmpty()) {
             String newUrl = cloudinaryService.uploadFile(image, "salons");

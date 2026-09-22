@@ -27,6 +27,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final SubscriptionService subscriptionService;
     private final GoogleAuthService googleAuthService;
+    private final FacebookAuthService facebookAuthService;
 
     /**
      * Đăng ký tài khoản người dùng mới.
@@ -143,6 +144,37 @@ public class AuthService {
 
         if (user.getProviderId() == null) {
             user.setProviderId(profile.sub());
+            userRepository.save(user);
+        }
+
+        String token = jwtService.generateToken(user);
+        String effectiveRole = resolveEffectiveRole(user);
+
+        return new AuthResponse(token, user.getEmail(), effectiveRole, user.getFullName());
+    }
+
+    /**
+     * Đăng nhập/đăng ký qua Facebook. Nếu email đã tồn tại (kể cả tài khoản LOCAL trước đó),
+     * đăng nhập luôn vào tài khoản đó.
+     */
+    @Transactional
+    public AuthResponse loginWithFacebook(String accessToken) {
+        FacebookAuthService.FacebookProfile profile = facebookAuthService.verifyAndFetchProfile(accessToken);
+
+        User user = userRepository.findByEmail(profile.email()).orElseGet(() -> {
+            User newUser = User.builder()
+                    .email(profile.email())
+                    .passwordHash(null)
+                    .fullName(profile.name())
+                    .role(Role.USER)
+                    .provider(com.hairapy.models.AuthProvider.FACEBOOK)
+                    .providerId(profile.id())
+                    .build();
+            return userRepository.save(newUser);
+        });
+
+        if (user.getProviderId() == null) {
+            user.setProviderId(profile.id());
             userRepository.save(user);
         }
 

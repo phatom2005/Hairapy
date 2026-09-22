@@ -58,6 +58,21 @@ export const useScanStore = create((set, get) => ({
     set({ gender });
   },
 
+  // Khôi phục trạng thái ảnh quét từ lịch sử quét lưu trên server
+  hydrateFromHistory: async (scan) => {
+    const res = await fetch(scan.imageUrl);
+    const blob = await res.blob();
+    const file = new File([blob], "scan-history.jpg", { type: blob.type || "image/jpeg" });
+    const currentPreviewUrl = get().previewUrl;
+    if (currentPreviewUrl) URL.revokeObjectURL(currentPreviewUrl);
+    set({
+      imageFile: file,
+      previewUrl: URL.createObjectURL(file),
+      analysisResult: { faceShape: scan.faceShape, hairType: scan.hairType },
+      error: null,
+    });
+  },
+
   // Reset toàn bộ state về mặc định (ví dụ khi người dùng muốn quét lại)
   reset: () => {
     const currentPreviewUrl = get().previewUrl;

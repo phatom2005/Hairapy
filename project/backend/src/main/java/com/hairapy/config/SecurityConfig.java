@@ -26,6 +26,11 @@ public class SecurityConfig {
     private final JwtFilter jwtFilter;
     private final RateLimitFilter rateLimitFilter;
 
+    /**
+     * CSRF được tắt có chủ đích: API này là REST API stateless dùng JWT Bearer token
+     * trong header Authorization, KHÔNG dùng cookie/session để xác thực, nên CSRF token
+     * không áp dụng được (CSRF chỉ tấn công được các cơ chế auth dựa trên cookie tự động gửi kèm).
+     */
     @Bean
     @SuppressWarnings("lgtm[java/spring-disabled-csrf-protection]") // Intentional: REST API stateless (JWT), không dùng session/cookie → CSRF không áp dụng
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -37,7 +42,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers(
                                 "/api/auth/register", "/api/auth/login",
-                                "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/google"
+                                "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/google", "/api/auth/facebook"
                         ).permitAll()
                         .requestMatchers("/api/payments/webhook").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

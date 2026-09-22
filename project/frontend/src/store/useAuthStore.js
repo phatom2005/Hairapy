@@ -82,6 +82,25 @@ const useAuthStore = create((set, get) => ({
   },
 
   /**
+   * Đăng nhập qua Facebook — nhận access_token từ Facebook SDK trả về từ frontend,
+   * backend tự xác minh qua Graph API debug_token + tạo/đăng nhập user.
+   */
+  loginWithFacebook: async (facebookAccessToken) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await api.post("/auth/facebook", { accessToken: facebookAccessToken });
+      const { token, email: userEmail, role, fullName } = res.data;
+      localStorage.setItem("token", token);
+      set({ token, user: { email: userEmail, role, fullName }, loading: false });
+      return true;
+    } catch (err) {
+      const errMsg = err.response?.data?.message || "Đăng nhập Facebook thất bại. Vui lòng thử lại.";
+      set({ error: errMsg, loading: false });
+      throw new Error(errMsg, { cause: err });
+    }
+  },
+
+  /**
    * Đăng xuất, xóa toàn bộ thông tin xác thực khỏi store và localStorage.
    */
   logout: () => {

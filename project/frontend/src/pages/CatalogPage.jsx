@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatedContent } from "../components/animated";
 import Footer from "../components/layout/Footer";
@@ -45,11 +45,11 @@ function useHairstyles({ faceShape, search, gender, hairLength, tag }) {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function FilterSelect({ label, options, value, onChange }) {
   return (
-    <div className="relative">
+    <div className="relative w-full">
       <select
         value={value}
         onChange={(e) => onChange(e.target.value || null)}
-        className={`h-9 cursor-pointer appearance-none rounded-full border pl-3 pr-8 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-primary/40 ${
+        className={`h-10 w-full cursor-pointer appearance-none rounded-2xl border pl-3.5 pr-8 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-primary/40 ${
           value
             ? "border-primary bg-primary text-white"
             : "border-line bg-white text-ink hover:border-primary/50"
@@ -70,7 +70,7 @@ function FilterSelect({ label, options, value, onChange }) {
         strokeWidth={2.5}
         strokeLinecap="round"
         strokeLinejoin="round"
-        className={`pointer-events-none absolute right-2.5 top-1/2 size-3 -translate-y-1/2 ${value ? "text-white" : "text-mauve"}`}
+        className={`pointer-events-none absolute right-3 top-1/2 size-3.5 -translate-y-1/2 ${value ? "text-white" : "text-mauve"}`}
       >
         <path d="m6 9 6 6 6-6" />
       </svg>
@@ -245,8 +245,10 @@ export default function CatalogPage() {
 
   const setSelectedHairstyle = useScanStore((state) => state.setSelectedHairstyle);
   const previewUrl = useScanStore((state) => state.previewUrl);
+  const hydrateFromHistory = useScanStore((state) => state.hydrateFromHistory);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const handleDetail = (hairstyle) => {
+  const handleDetail = async (hairstyle) => {
     const token = localStorage.getItem("token");
     if (!token) {
       navigate("/login", { state: { from: "/catalog" } });
@@ -259,7 +261,21 @@ export default function CatalogPage() {
       ailabHairType: hairstyle.ailabHairType,
       ailabProStyle: hairstyle.ailabProStyle,
     });
-    if (previewUrl) {
+
+    let hasPhoto = !!previewUrl;
+    if (!hasPhoto) {
+      try {
+        const { data } = await api.get("/profile/scans");
+        if (data?.scans?.length > 0) {
+          await hydrateFromHistory(data.scans[0]);
+          hasPhoto = true;
+        }
+      } catch {
+        // Fallback êm về luồng /scan nếu người dùng chưa có ảnh quét hoặc lỗi mạng
+      }
+    }
+
+    if (hasPhoto) {
       navigate(`/results?hairstyleId=${hairstyle.id}`);
     } else {
       navigate(`/scan?hairstyleId=${hairstyle.id}`);
@@ -302,18 +318,53 @@ export default function CatalogPage() {
         </div>
       </section>
 
-      {/* Sticky Filter Bar */}
-      <div className="sticky top-16 z-40 border-b border-line/40 bg-canvas/80 backdrop-blur-md">
-        <div className="mx-auto max-w-[1200px] px-6 py-3 sm:px-16">
-          <div className="flex flex-wrap items-center gap-2.5">
+      {/* Main Container: Sidebar + Results Grid */}
+      <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-8 px-6 py-10 sm:px-16 lg:grid-cols-[260px_1fr]">
+        {/* Sidebar filter */}
+        <aside className="lg:sticky lg:top-24 lg:self-start">
+          {/* Nút toggle mobile (< lg) */}
+          <div className="mb-4 flex items-center justify-between lg:hidden">
+            <button
+              onClick={() => setFiltersOpen((prev) => !prev)}
+              className="flex items-center gap-2 rounded-2xl border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink shadow-sm transition hover:border-primary/50"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="size-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              {filtersOpen ? "Thu gọn bộ lọc" : "Bộ lọc & Tìm kiếm"}
+            </button>
+            {hasFilters && (
+              <button
+                onClick={clearFilters}
+                className="text-xs font-semibold text-primary hover:underline"
+              >
+                Xóa tất cả
+              </button>
+            )}
+          </div>
+
+          {/* Form lọc xếp dọc */}
+          <div className={`space-y-4 rounded-3xl border border-line/60 bg-white/80 p-5 shadow-sm backdrop-blur-md ${filtersOpen ? "block" : "hidden lg:block"}`}>
+            <div className="flex items-center justify-between border-b border-line/40 pb-3">
+              <h3 className="font-display text-base font-bold text-ink">Bộ lọc kiểu tóc</h3>
+              {hasFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="text-xs font-semibold text-primary transition hover:underline"
+                >
+                  Xóa lọc
+                </button>
+              )}
+            </div>
+
             {/* Search */}
-            <div className="relative flex-1 min-w-[160px] max-w-xs">
+            <div className="relative">
               <input
                 type="text"
                 placeholder="Tìm kiểu tóc..."
                 value={q}
                 onChange={(e) => setParam("q", e.target.value)}
-                className="h-9 w-full rounded-full border border-ink/30 bg-white pl-4 pr-8 text-sm text-ink placeholder-mauve transition hover:border-ink/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="h-10 w-full rounded-2xl border border-line bg-canvas pl-3.5 pr-8 text-sm text-ink placeholder-mauve transition hover:border-primary/50 focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
               {q && (
                 <button
@@ -325,41 +376,48 @@ export default function CatalogPage() {
               )}
             </div>
 
-            <FilterSelect label="Giới tính" options={GENDER_OPTS} value={genderFilter} onChange={(v) => setParam("gender", v)} />
-            <FilterSelect label="Khuôn mặt" options={FACE_OPTS} value={face} onChange={(v) => setParam("face", v)} />
-            <FilterSelect label="Độ dài" options={LENGTH_OPTS} value={lengthFilter} onChange={(v) => setParam("length", v)} />
-            <FilterSelect
-              label="Xu hướng"
-              options={TREND_OPTS.map((t) => ({ value: t.value, label: t.label }))}
-              value={tagFilter}
-              onChange={(v) => setParam("trend", v)}
-            />
+            <div className="space-y-3 pt-1">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-mauve">Giới tính</label>
+                <FilterSelect label="Tất cả giới tính" options={GENDER_OPTS} value={genderFilter} onChange={(v) => setParam("gender", v)} />
+              </div>
 
-            <div className="hidden h-6 w-px bg-line sm:block" />
-            <FilterSelect
-              label="Sắp xếp"
-              options={SORT_OPTS}
-              value={sortBy}
-              onChange={(v) => setParam("sort", v, false)}
-            />
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-mauve">Khuôn mặt</label>
+                <FilterSelect label="Tất cả khuôn mặt" options={FACE_OPTS} value={face} onChange={(v) => setParam("face", v)} />
+              </div>
 
-            {hasFilters && (
-              <button
-                onClick={clearFilters}
-                className="flex h-9 items-center gap-1.5 rounded-full border border-primary/50 px-3 text-sm font-medium text-primary transition hover:bg-primary/5"
-              >
-                Xóa lọc
-              </button>
-            )}
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-mauve">Độ dài</label>
+                <FilterSelect label="Tất cả độ dài" options={LENGTH_OPTS} value={lengthFilter} onChange={(v) => setParam("length", v)} />
+              </div>
 
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-mauve">Xu hướng</label>
+                <FilterSelect
+                  label="Tất cả xu hướng"
+                  options={TREND_OPTS.map((t) => ({ value: t.value, label: t.label }))}
+                  value={tagFilter}
+                  onChange={(v) => setParam("trend", v)}
+                />
+              </div>
 
+              <div className="border-t border-line/40 pt-3">
+                <label className="mb-1 block text-xs font-semibold text-mauve">Sắp xếp theo</label>
+                <FilterSelect
+                  label="Mặc định"
+                  options={SORT_OPTS}
+                  value={sortBy}
+                  onChange={(v) => setParam("sort", v, false)}
+                />
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </aside>
 
-      {/* Main Grid */}
-      <div className="mx-auto max-w-[1200px] px-6 py-10 sm:px-16">
-        {isLoading && (
+        {/* Results Area */}
+        <div>
+          {isLoading && (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {Array.from({ length: pageSize }).map((_, i) => (
               <SkeletonCard key={i} />
@@ -485,6 +543,7 @@ export default function CatalogPage() {
             )}
           </>
         )}
+        </div>
       </div>
 
       <Footer />

@@ -122,4 +122,10 @@ public class AuthController {
         AuthResponse response = authService.loginWithGoogle(request.accessToken());
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/facebook")
+    public ResponseEntity<AuthResponse> loginWithFacebook(@Valid @RequestBody com.hairapy.dto.auth.FacebookLoginRequest request) {
+        AuthResponse response = authService.loginWithFacebook(request.accessToken());
+        return ResponseEntity.ok(response);
+    }
 }

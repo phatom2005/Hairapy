@@ -26,8 +26,18 @@ export default function AdminSalonsPage() {
     rating: "",
     verified: false,
     phone: "",
+    latitude: "",
+    longitude: "",
   };
   const [formData, setFormData] = useState(emptyForm);
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview && imagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
 
   const fetchSalons = useCallback(() => {
     setLoading(true);
@@ -55,6 +65,9 @@ export default function AdminSalonsPage() {
   }, [fetchSalons]);
 
   const handleOpenAdd = () => {
+    if (imagePreview && imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
     setEditingItem(null);
     setImageFile(null);
     setImagePreview(null);
@@ -63,6 +76,9 @@ export default function AdminSalonsPage() {
   };
 
   const handleOpenEdit = (item) => {
+    if (imagePreview && imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
     setEditingItem(item);
     setImageFile(null);
     setImagePreview(item.imageUrl);
@@ -75,6 +91,8 @@ export default function AdminSalonsPage() {
       rating: item.rating ?? "",
       verified: !!item.verified,
       phone: item.phone || "",
+      latitude: item.latitude ?? "",
+      longitude: item.longitude ?? "",
     });
     setIsOpen(true);
   };
@@ -82,8 +100,16 @@ export default function AdminSalonsPage() {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (!file.type.startsWith("image/")) {
+        alert("Vui lòng chọn file ảnh hợp lệ (jpg, png, webp...)");
+        e.target.value = "";
+        return;
+      }
       setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+      setImagePreview((prev) => {
+        if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(file);
+      });
     }
   };
 
@@ -119,6 +145,8 @@ export default function AdminSalonsPage() {
       if (formData.rating !== "") fd.append("rating", formData.rating);
       fd.append("verified", formData.verified);
       if (formData.phone) fd.append("phone", formData.phone);
+      if (formData.latitude !== "" && formData.latitude !== null) fd.append("latitude", formData.latitude);
+      if (formData.longitude !== "" && formData.longitude !== null) fd.append("longitude", formData.longitude);
       if (imageFile) fd.append("image", imageFile);
 
       const apiCall = editingItem
@@ -126,6 +154,9 @@ export default function AdminSalonsPage() {
         : api.post("/admin/salons", fd);
 
       await apiCall;
+      if (imagePreview && imagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreview);
+      }
       setIsOpen(false);
       setImageFile(null);
       setImagePreview(null);
@@ -354,6 +385,25 @@ export default function AdminSalonsPage() {
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               />
+
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Vĩ độ (Latitude, tùy chọn)"
+                  type="number"
+                  step="any"
+                  placeholder="Ví dụ: 10.7721"
+                  value={formData.latitude}
+                  onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
+                />
+                <Input
+                  label="Kinh độ (Longitude, tùy chọn)"
+                  type="number"
+                  step="any"
+                  placeholder="Ví dụ: 106.6980"
+                  value={formData.longitude}
+                  onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
+                />
+              </div>
 
               <label className="flex items-center gap-2.5 px-1">
                 <input

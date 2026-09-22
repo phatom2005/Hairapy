@@ -68,10 +68,43 @@ function loadGoogleScript() {
   return googleScriptPromise;
 }
 
+// Lazy-load script Facebook SDK 1 lần duy nhất
+let facebookScriptPromise = null;
+function loadFacebookScript() {
+  if (facebookScriptPromise) return facebookScriptPromise;
+  facebookScriptPromise = new Promise((resolve, reject) => {
+    if (window.FB) {
+      resolve();
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://connect.facebook.net/en_US/sdk.js";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      const appId = import.meta.env.VITE_FACEBOOK_APP_ID;
+      if (window.FB && appId) {
+        window.FB.init({
+          appId,
+          cookie: true,
+          xfbml: false,
+          version: "v21.0",
+        });
+      }
+      resolve();
+    };
+    script.onerror = () => reject(new Error("Không tải được Facebook SDK"));
+    document.head.appendChild(script);
+  });
+  return facebookScriptPromise;
+}
+
 export function SocialButtons({ redirectTo = "/profile" }) {
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [facebookLoading, setFacebookLoading] = useState(false);
   const navigate = useNavigate();
   const loginWithGoogle = useAuthStore((s) => s.loginWithGoogle);
+  const loginWithFacebook = useAuthStore((s) => s.loginWithFacebook);
 
   const base =
     "flex items-center justify-center gap-3 rounded-3xl border-2 border-line bg-white py-[14px] " +
@@ -110,13 +143,47 @@ export function SocialButtons({ redirectTo = "/profile" }) {
     }
   };
 
+  const handleFacebookClick = async () => {
+    const appId = import.meta.env.VITE_FACEBOOK_APP_ID;
+    if (!appId) {
+      alert("Đăng nhập Facebook chưa được cấu hình.");
+      return;
+    }
+    setFacebookLoading(true);
+    try {
+      await loadFacebookScript();
+      if (!window.FB) {
+        throw new Error("Facebook SDK không khả dụng.");
+      }
+      window.FB.login(
+        async (response) => {
+          try {
+            if (response.authResponse?.accessToken) {
+              await loginWithFacebook(response.authResponse.accessToken);
+              navigate(redirectTo);
+            } else {
+              setFacebookLoading(false);
+            }
+          } catch (err) {
+            setFacebookLoading(false);
+            alert(err.message || "Đăng nhập Facebook thất bại.");
+          }
+        },
+        { scope: "email,public_profile" }
+      );
+    } catch (err) {
+      setFacebookLoading(false);
+      alert(err.message || "Không thể kết nối tới Facebook. Vui lòng thử lại.");
+    }
+  };
+
   return (
     <div className="grid w-full grid-cols-2 gap-4">
-      <button type="button" className={base} onClick={handleGoogleClick} disabled={googleLoading}>
+      <button type="button" className={base} onClick={handleGoogleClick} disabled={googleLoading || facebookLoading}>
         <GoogleIcon /> {googleLoading ? "Đang kết nối..." : "Google"}
       </button>
-      <button type="button" className={base} disabled title="Đăng nhập Facebook sắp ra mắt">
-        <FacebookIcon /> Facebook
+      <button type="button" className={base} onClick={handleFacebookClick} disabled={googleLoading || facebookLoading}>
+        <FacebookIcon /> {facebookLoading ? "Đang kết nối..." : "Facebook"}
       </button>
     </div>
   );

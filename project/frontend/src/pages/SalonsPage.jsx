@@ -1,6 +1,20 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { SALON_MAP } from "../lib/figmaAssets";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
+
+// Khắc phục lỗi bundler Vite không tải được default marker icons của Leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
+});
+
 import { Button, Card, Badge, Input } from "../components/ui";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
@@ -183,9 +197,32 @@ export default function SalonsPage() {
           )}
         </div>
 
-        {/* Bản đồ */}
-        <div className="relative hidden overflow-hidden rounded-3xl shadow-lg lg:block">
-          <img src={SALON_MAP} alt="Bản đồ salon" className="sticky top-24 h-[600px] w-full object-cover" />
+        {/* Bản đồ Leaflet thật */}
+        <div className="sticky top-24 hidden h-[600px] w-full overflow-hidden rounded-3xl border border-line shadow-lg lg:block">
+          <MapContainer
+            center={[10.7769, 106.7009]}
+            zoom={12}
+            scrollWheelZoom={false}
+            className="h-full w-full"
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            {list
+              .filter((sl) => sl.latitude != null && sl.longitude != null)
+              .map((sl) => (
+                <Marker key={sl.id} position={[sl.latitude, sl.longitude]}>
+                  <Popup>
+                    <div className="p-1">
+                      <p className="text-sm font-bold text-ink">{sl.name}</p>
+                      <p className="mt-1 text-xs text-mauve">{sl.address}</p>
+                      <p className="mt-1 text-xs font-semibold text-primary">{formatPrice(sl.priceFrom)}</p>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+          </MapContainer>
         </div>
       </div>
 

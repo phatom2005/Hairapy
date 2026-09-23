@@ -186,8 +186,8 @@ export default function ResultsPage() {
           <p className="text-base text-mauve">Dựa trên trí tuệ nhân tạo, chúng tôi đã tạo ra hồ sơ tóc cá nhân hóa cho bạn.</p>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_1.4fr]">
-          <Card className="flex flex-col gap-6">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_1.4fr] lg:items-start">
+          <Card className="flex flex-col gap-6 lg:sticky lg:top-24">
             <h3 className="text-xl font-bold text-ink">Hồ sơ khuôn mặt</h3>
             <img
               src={previewUrl}

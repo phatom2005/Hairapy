@@ -161,17 +161,18 @@ public class AuthService {
     public AuthResponse loginWithFacebook(String accessToken) {
         FacebookAuthService.FacebookProfile profile = facebookAuthService.verifyAndFetchProfile(accessToken);
 
-        User user = userRepository.findByEmail(profile.email()).orElseGet(() -> {
-            User newUser = User.builder()
-                    .email(profile.email())
-                    .passwordHash(null)
-                    .fullName(profile.name())
-                    .role(Role.USER)
-                    .provider(com.hairapy.models.AuthProvider.FACEBOOK)
-                    .providerId(profile.id())
-                    .build();
-            return userRepository.save(newUser);
-        });
+        User user = userRepository.findByProviderAndProviderId(com.hairapy.models.AuthProvider.FACEBOOK, profile.id())
+                .orElseGet(() -> userRepository.findByEmail(profile.email()).orElseGet(() -> {
+                    User newUser = User.builder()
+                            .email(profile.email())
+                            .passwordHash(null)
+                            .fullName(profile.name())
+                            .role(Role.USER)
+                            .provider(com.hairapy.models.AuthProvider.FACEBOOK)
+                            .providerId(profile.id())
+                            .build();
+                    return userRepository.save(newUser);
+                }));
 
         if (user.getProviderId() == null) {
             user.setProviderId(profile.id());

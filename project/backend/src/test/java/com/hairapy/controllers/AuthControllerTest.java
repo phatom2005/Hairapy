@@ -42,6 +42,9 @@ class AuthControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.hairapy.services.FacebookAuthService facebookAuthService;
+
     @BeforeEach
     void setUp() {
         // Dọn dẹp database trước mỗi test case
@@ -213,5 +216,54 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void loginWithFacebook_NewUser_Success() throws Exception {
+        org.mockito.Mockito.when(facebookAuthService.verifyAndFetchProfile("mock_token"))
+                .thenReturn(new com.hairapy.services.FacebookAuthService.FacebookProfile("fbuser@example.com", "fb_12345", "Facebook User"));
+
+        com.hairapy.dto.auth.FacebookLoginRequest request = new com.hairapy.dto.auth.FacebookLoginRequest("mock_token");
+
+        mockMvc.perform(post("/api/auth/facebook")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").isNotEmpty())
+                .andExpect(jsonPath("$.email").value("fbuser@example.com"))
+                .andExpect(jsonPath("$.role").value("USER"))
+                .andExpect(jsonPath("$.fullName").value("Facebook User"));
+
+        User savedUser = userRepository.findByEmail("fbuser@example.com").orElse(null);
+        org.junit.jupiter.api.Assertions.assertNotNull(savedUser);
+        org.junit.jupiter.api.Assertions.assertEquals(com.hairapy.models.AuthProvider.FACEBOOK, savedUser.getProvider());
+        org.junit.jupiter.api.Assertions.assertEquals("fb_12345", savedUser.getProviderId());
+    }
+
+    @Test
+    void loginWithFacebook_ExistingUser_AccountLinking() throws Exception {
+        User existing = User.builder()
+                .email("existing@example.com")
+                .fullName("Existing User")
+                .passwordHash("somehash")
+                .role(Role.USER)
+                .build();
+        userRepository.save(existing);
+
+        org.mockito.Mockito.when(facebookAuthService.verifyAndFetchProfile("mock_token"))
+                .thenReturn(new com.hairapy.services.FacebookAuthService.FacebookProfile("existing@example.com", "fb_99999", "Facebook User"));
+
+        com.hairapy.dto.auth.FacebookLoginRequest request = new com.hairapy.dto.auth.FacebookLoginRequest("mock_token");
+
+        mockMvc.perform(post("/api/auth/facebook")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").isNotEmpty())
+                .andExpect(jsonPath("$.email").value("existing@example.com"));
+
+        User updatedUser = userRepository.findByEmail("existing@example.com").orElse(null);
+        org.junit.jupiter.api.Assertions.assertNotNull(updatedUser);
+        org.junit.jupiter.api.Assertions.assertEquals("fb_99999", updatedUser.getProviderId());
     }
 }

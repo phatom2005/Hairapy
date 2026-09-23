@@ -5,7 +5,7 @@ import { AnimatedContent, BorderGlow, GlareHover, SpotlightCard } from "../compo
 import { ArrowRight, CheckIcon, StarIcon } from "../components/icons";
 import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/Navbar";
-import { Badge, Button, Card, Section, SectionHeading } from "../components/ui";
+import { Badge, Button, Card, DragScroll, Section, SectionHeading } from "../components/ui";
 import api from "../lib/api";
 import { useScanStore } from "../store/useScanStore";
 import useAuthStore from "../store/useAuthStore";
@@ -186,8 +186,8 @@ export default function ResultsPage() {
           <p className="text-base text-mauve">Dựa trên trí tuệ nhân tạo, chúng tôi đã tạo ra hồ sơ tóc cá nhân hóa cho bạn.</p>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_1.4fr] lg:items-start">
-          <Card className="flex flex-col gap-6 lg:sticky lg:top-24">
+        <div className={`grid grid-cols-1 gap-8 ${chosenHairstyle ? "lg:grid-cols-[1fr_1.4fr] lg:items-start" : "lg:justify-items-center"}`}>
+          <Card className={`flex flex-col gap-6 lg:sticky lg:top-24 ${chosenHairstyle ? "" : "w-full lg:max-w-md"}`}>
             <h3 className="text-xl font-bold text-ink">Hồ sơ khuôn mặt</h3>
             <img
               src={previewUrl}
@@ -215,10 +215,10 @@ export default function ResultsPage() {
             </p>
           </Card>
 
-          <div className="flex flex-col gap-6">
-            {chosenHairstyle && (
+          {chosenHairstyle && (
+            <div className="flex flex-col gap-6">
               <AnimatedContent delay={0}>
-                <div className="mb-6 rounded-2xl bg-canvas p-4 border border-primary/20 shadow-sm">
+                <div className="rounded-2xl bg-canvas p-4 border border-primary/20 shadow-sm">
                   <p className="mb-3 text-sm font-bold text-mauve">Kiểu tóc bạn chọn từ bộ sưu tập:</p>
                   <SpotlightCard className="rounded-2xl">
                     <Card padded={false} className="overflow-hidden">
@@ -253,86 +253,90 @@ export default function ResultsPage() {
                   </SpotlightCard>
                 </div>
               </AnimatedContent>
-            )}
+            </div>
+          )}
+        </div>
 
-            <SectionHeading
-              center={false}
-              title={`Kiểu tóc dành cho gương mặt ${(FACE_SHAPE_TRANSLATION[faceShape] || "").split(" (")[0]}`}
-              subtitle="Đề xuất hàng đầu phù hợp nhất với cấu trúc xương của bạn."
-              action={<a href="/catalog" className="flex shrink-0 items-center gap-2 font-bold text-primary">Xem tất cả <ArrowRight /></a>}
-            />
+        {/* Kiểu tóc đề xuất: cuộn ngang giống Trends ở trang chủ, tránh chiếm quá nhiều chiều cao */}
+        <div className="mt-12 flex flex-col gap-6">
+          <SectionHeading
+            center={false}
+            title={`Kiểu tóc dành cho gương mặt ${(FACE_SHAPE_TRANSLATION[faceShape] || "").split(" (")[0]}`}
+            subtitle="Đề xuất hàng đầu phù hợp nhất với cấu trúc xương của bạn."
+            action={<a href="/catalog" className="flex shrink-0 items-center gap-2 font-bold text-primary">Xem tất cả <ArrowRight /></a>}
+          />
 
-            {recsLoading ? (
-              <div className="grid grid-cols-2 gap-6">
-                {Array.from({ length: 4 }).map((_, idx) => (
-                  <Card key={idx} padded={false} className="animate-pulse overflow-hidden">
-                    <div className="h-56 w-full bg-line" />
-                    <div className="flex items-center justify-between p-4">
-                      <div className="h-4 w-1/2 rounded bg-line" />
-                      <div className="h-8 w-20 rounded bg-line animate-pulse" />
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            ) : recommendations.length === 0 ? (
-              <Card className="flex flex-col items-center justify-center py-16 text-center">
-                <p className="text-lg font-semibold text-ink">Không tìm thấy kiểu tóc phù hợp trong danh mục.</p>
-                <p className="mt-1 text-sm text-mauve">Vui lòng quay lại hoặc khám phá tất cả kiểu tóc.</p>
-                <Button to="/catalog" className="mt-4">Khám phá Catalog</Button>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-2 gap-6">
-                {recommendations.map((r, idx) => {
-                  const match = Math.max(80, 98 - idx * 3);
-                  return (
-                    <AnimatedContent key={r.id || r.name} delay={idx * 0.1}>
-                      <SpotlightCard className="rounded-2xl">
-                        <Card padded={false} className="overflow-hidden">
-                          <div className="relative">
-                            <img
-                              src={r.imageUrl}
-                              alt={r.name}
-                              className="h-56 w-full object-cover"
-                              onError={(e) => { e.target.src = `https://placehold.co/600x400?text=${encodeURIComponent(r.name)}`; }}
-                            />
-                            <Badge variant="new" className="absolute left-3 top-3 shadow">{match}% phù hợp</Badge>
-                            {r.premiumOnly && (
-                              <Badge variant="premium" className="absolute right-3 top-3 shadow">PRO</Badge>
-                            )}
+          {recsLoading ? (
+            <DragScroll>
+              {Array.from({ length: 4 }).map((_, idx) => (
+                <Card key={idx} padded={false} className="w-[280px] shrink-0 animate-pulse overflow-hidden">
+                  <div className="h-56 w-full bg-line" />
+                  <div className="flex items-center justify-between p-4">
+                    <div className="h-4 w-1/2 rounded bg-line" />
+                    <div className="h-8 w-20 rounded bg-line animate-pulse" />
+                  </div>
+                </Card>
+              ))}
+            </DragScroll>
+          ) : recommendations.length === 0 ? (
+            <Card className="flex flex-col items-center justify-center py-16 text-center">
+              <p className="text-lg font-semibold text-ink">Không tìm thấy kiểu tóc phù hợp trong danh mục.</p>
+              <p className="mt-1 text-sm text-mauve">Vui lòng quay lại hoặc khám phá tất cả kiểu tóc.</p>
+              <Button to="/catalog" className="mt-4">Khám phá Catalog</Button>
+            </Card>
+          ) : (
+            <DragScroll>
+              {recommendations.map((r, idx) => {
+                const match = Math.max(80, 98 - idx * 3);
+                return (
+                  <AnimatedContent key={r.id || r.name} delay={idx * 0.1}>
+                    <SpotlightCard className="rounded-2xl">
+                      <Card padded={false} className="w-[280px] shrink-0 overflow-hidden">
+                        <div className="relative">
+                          <img
+                            src={r.imageUrl}
+                            alt={r.name}
+                            draggable={false}
+                            className="pointer-events-none h-56 w-full object-cover"
+                            onError={(e) => { e.target.src = `https://placehold.co/600x400?text=${encodeURIComponent(r.name)}`; }}
+                          />
+                          <Badge variant="new" className="absolute left-3 top-3 shadow">{match}% phù hợp</Badge>
+                          {r.premiumOnly && (
+                            <Badge variant="premium" className="absolute right-3 top-3 shadow">PRO</Badge>
+                          )}
 
-                            {/* Nút lưu yêu thích */}
-                            <button
-                              onClick={(e) => handleToggleSave(e, r.id)}
-                              className="absolute left-3 bottom-3 flex size-8 items-center justify-center rounded-full bg-white/90 text-ink shadow-md hover:bg-white hover:text-primary transition"
-                              title={savedIds.has(r.id) ? "Bỏ lưu" : "Lưu kiểu tóc"}
+                          {/* Nút lưu yêu thích */}
+                          <button
+                            onClick={(e) => handleToggleSave(e, r.id)}
+                            className="absolute left-3 bottom-3 flex size-8 items-center justify-center rounded-full bg-white/90 text-ink shadow-md hover:bg-white hover:text-primary transition"
+                            title={savedIds.has(r.id) ? "Bỏ lưu" : "Lưu kiểu tóc"}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill={savedIds.has(r.id) ? "#FF57CF" : "none"}
+                              viewBox="0 0 24 24"
+                              strokeWidth={2}
+                              stroke="#FF57CF"
+                              className="size-4"
                             >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill={savedIds.has(r.id) ? "#FF57CF" : "none"}
-                                viewBox="0 0 24 24"
-                                strokeWidth={2}
-                                stroke="#FF57CF"
-                                className="size-4"
-                              >
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
-                              </svg>
-                            </button>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+                            </svg>
+                          </button>
+                        </div>
+                        <div className="p-4 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-bold text-ink truncate mr-2" title={r.name}>{r.name}</h4>
+                            <Button onClick={() => handleTryStyle(r)} size="sm" className="px-4 py-2 text-xs shrink-0">Thử ngay</Button>
                           </div>
-                          <div className="p-4 space-y-1">
-                            <div className="flex items-center justify-between">
-                              <h4 className="font-bold text-ink truncate mr-2" title={r.name}>{r.name}</h4>
-                              <Button onClick={() => handleTryStyle(r)} size="sm" className="px-4 py-2 text-xs shrink-0">Thử ngay</Button>
-                            </div>
-                            <p className="text-xs font-semibold text-muted">Phù hợp: {r.gender || "Unisex"}</p>
-                          </div>
-                        </Card>
-                      </SpotlightCard>
-                    </AnimatedContent>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                          <p className="text-xs font-semibold text-muted">Phù hợp: {r.gender || "Unisex"}</p>
+                        </div>
+                      </Card>
+                    </SpotlightCard>
+                  </AnimatedContent>
+                );
+              })}
+            </DragScroll>
+          )}
         </div>
       </Section>
 

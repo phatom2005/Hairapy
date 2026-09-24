@@ -228,6 +228,7 @@ function Features() {
 function Trends() {
   const navigate = useNavigate();
   const setSelectedHairstyle = useScanStore((state) => state.setSelectedHairstyle);
+  const user = useAuthStore((state) => state.user);
 
   // Lấy catalog kiểu tóc thật từ backend — thay cho mảng TRENDS hardcode cũ (7 ảnh Figma giả,
   // không liên quan gì catalog thật). Chỉ lấy những kiểu admin đã gắn tag (Thịnh hành/Mới/Bán
@@ -246,6 +247,10 @@ function Trends() {
     const token = localStorage.getItem("token");
     if (!token) {
       navigate("/login", { state: { from: "/" } });
+      return;
+    }
+    if (hairstyle.premiumOnly && (!user || (user.role !== "PREMIUM" && user.role !== "ADMIN" && user.role !== "TESTER"))) {
+      navigate("/pricing");
       return;
     }
     setSelectedHairstyle({

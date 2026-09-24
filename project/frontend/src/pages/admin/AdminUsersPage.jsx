@@ -1,8 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
 import api from "../../lib/api";
 import { Card, Badge, Button, Input } from "../../components/ui";
+import useAuthStore from "../../store/useAuthStore";
 
 export default function AdminUsersPage() {
+  const currentUser = useAuthStore((s) => s.user);
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -56,6 +58,12 @@ export default function AdminUsersPage() {
 
   // Toggle role người dùng
   const handleToggleRole = (user) => {
+    const isSelf = currentUser?.email && user.email?.toLowerCase() === currentUser.email.toLowerCase();
+    if (user.role === "ADMIN" && isSelf) {
+      alert("Bạn không thể tự hạ vai trò quản trị viên của chính mình.");
+      return;
+    }
+
     const newRole = user.role === "ADMIN" ? "USER" : "ADMIN";
     const confirmMessage = `Bạn có chắc chắn muốn chuyển vai trò của ${user.fullName || user.email} từ ${user.role} thành ${newRole}?`;
 
@@ -121,30 +129,35 @@ export default function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {users.map((u) => (
-                  <tr key={u.id} className="hover:bg-canvas/50 transition-colors">
-                    <td className="px-6 py-4 font-bold text-ink">{u.id}</td>
-                    <td className="px-6 py-4 font-semibold text-ink">{u.fullName || "-"}</td>
-                    <td className="px-6 py-4 text-mauve">{u.email}</td>
-                    <td className="px-6 py-4">
-                      <Badge variant={u.role === "ADMIN" ? "hot" : "neutral"}>
-                        {u.role === "ADMIN" ? "ADMIN" : "USER"}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 text-muted">{formatDate(u.createdAt)}</td>
-                    <td className="px-6 py-4 text-center">
-                      <Button
-                        size="sm"
-                        variant={u.role === "ADMIN" ? "outline" : "dark"}
-                        className="px-4 py-1.5 text-xs rounded-xl"
-                        disabled={actionLoading}
-                        onClick={() => handleToggleRole(u)}
-                      >
-                        {u.role === "ADMIN" ? "Hạ quyền USER" : "Thăng quyền ADMIN"}
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                {users.map((u) => {
+                  const isSelf = !!(currentUser?.email && u.email?.toLowerCase() === currentUser.email.toLowerCase());
+                  const isSelfAdmin = isSelf && u.role === "ADMIN";
+                  return (
+                    <tr key={u.id} className="hover:bg-canvas/50 transition-colors">
+                      <td className="px-6 py-4 font-bold text-ink">{u.id}</td>
+                      <td className="px-6 py-4 font-semibold text-ink">{u.fullName || "-"}</td>
+                      <td className="px-6 py-4 text-mauve">{u.email}</td>
+                      <td className="px-6 py-4">
+                        <Badge variant={u.role === "ADMIN" ? "hot" : "neutral"}>
+                          {u.role === "ADMIN" ? "ADMIN" : "USER"}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4 text-muted">{formatDate(u.createdAt)}</td>
+                      <td className="px-6 py-4 text-center">
+                        <Button
+                          size="sm"
+                          variant={u.role === "ADMIN" ? "outline" : "dark"}
+                          className="px-4 py-1.5 text-xs rounded-xl"
+                          disabled={actionLoading || isSelfAdmin}
+                          title={isSelfAdmin ? "Bạn không thể tự hạ vai trò quản trị viên của chính mình" : undefined}
+                          onClick={() => handleToggleRole(u)}
+                        >
+                          {u.role === "ADMIN" ? "Hạ quyền USER" : "Thăng quyền ADMIN"}
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

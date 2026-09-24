@@ -289,8 +289,20 @@ export default function CatalogPage() {
       navigate("/login", { state: { from: "/catalog" } });
       return;
     }
+    const previousSaved = queryClient.getQueryData(["profile-saved-styles"]) || [];
+    const isSaved = savedIds.has(hairstyleId);
+
+    const styleToSave =
+      items.find((h) => h.id === hairstyleId) || { id: hairstyleId };
+
+    const nextSaved = isSaved
+      ? previousSaved.filter((s) => s.id !== hairstyleId)
+      : [...previousSaved, styleToSave];
+
+    // Cập nhật tức thời trên UI (Optimistic update)
+    queryClient.setQueryData(["profile-saved-styles"], nextSaved);
+
     try {
-      const isSaved = savedIds.has(hairstyleId);
       if (isSaved) {
         await api.delete("/profile/saved-styles", { params: { hairstyleId } });
       } else {
@@ -298,7 +310,9 @@ export default function CatalogPage() {
       }
       queryClient.invalidateQueries({ queryKey: ["profile-saved-styles"] });
     } catch (err) {
-      console.error("Loi khi thay doi trang thai yeu thich:", err);
+      console.error("Lỗi khi thay đổi trạng thái yêu thích:", err);
+      // Hoàn tác nếu API lỗi
+      queryClient.setQueryData(["profile-saved-styles"], previousSaved);
     }
   };
 

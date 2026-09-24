@@ -134,7 +134,8 @@ export function SocialButtons({ redirectTo = "/profile" }) {
       `?client_id=${encodeURIComponent(appId)}` +
       `&redirect_uri=${encodeURIComponent(redirectUri)}` +
       `&response_type=token` +
-      `&scope=${encodeURIComponent("email,public_profile")}`;
+      `&scope=${encodeURIComponent("email,public_profile")}` +
+      `&auth_type=rerequest`;
     window.location.href = oauthUrl;
   };
 

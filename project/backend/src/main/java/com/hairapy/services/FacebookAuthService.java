@@ -71,14 +71,15 @@ public class FacebookAuthService {
             throw new IllegalArgumentException("Không lấy được hồ sơ Facebook.");
         }
 
-        Object emailObj = profile.get("email");
-        if (emailObj == null || String.valueOf(emailObj).isBlank()) {
-            throw new IllegalArgumentException("Không lấy được email từ tài khoản Facebook. Vui lòng đăng nhập bằng phương thức khác.");
-        }
-
-        String email = String.valueOf(emailObj);
         String id = String.valueOf(profile.get("id"));
-        String name = profile.get("name") != null ? String.valueOf(profile.get("name")) : email;
+        Object emailObj = profile.get("email");
+        String email = (emailObj != null && !String.valueOf(emailObj).isBlank())
+                ? String.valueOf(emailObj)
+                : id + "@facebook.hairapy.vn";
+
+        String name = (profile.get("name") != null && !String.valueOf(profile.get("name")).isBlank())
+                ? String.valueOf(profile.get("name"))
+                : "Người dùng Facebook";
 
         return new FacebookProfile(email, id, name);
     }

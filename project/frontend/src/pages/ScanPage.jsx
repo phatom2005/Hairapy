@@ -9,6 +9,8 @@ import { CameraIcon, UploadIcon } from "../components/icons";
 import { AnimatedContent, BorderGlow } from "../components/animated";
 import { useScanStore } from "../store/useScanStore";
 import { analyzeFace, initFaceAnalyzer } from "../lib/faceAnalysis";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import useAuthStore from "../store/useAuthStore";
 import api from "../lib/api";
 
 const STATS = [
@@ -38,6 +40,27 @@ export default function ScanPage() {
     setGender,
   } = useScanStore();
 
+  const queryClient = useQueryClient();
+  const token = useAuthStore((s) => s.token);
+
+  const { data: usageData } = useQuery({
+    queryKey: ["usage-summary"],
+    queryFn: async () => {
+      const { data } = await api.get("/usage/me");
+      return data;
+    },
+    enabled: !!token,
+    staleTime: 30_000,
+  });
+
+  const faceScanQuota = usageData?.faceScan;
+  const isFaceScanOut = !!(
+    token &&
+    faceScanQuota &&
+    !faceScanQuota.unlimited &&
+    faceScanQuota.used >= faceScanQuota.limit
+  );
+
   const [showDisclosure, setShowDisclosure] = useState(false);
   const [pendingFile, setPendingFile] = useState(null);
 
@@ -52,6 +75,11 @@ export default function ScanPage() {
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (isFaceScanOut) {
+      setError("Bạn đã hết lượt quét khuôn mặt hôm nay.");
+      return;
+    }
 
     // Kiểm tra kích thước file (tối đa 5MB)
     if (file.size > 5 * 1024 * 1024) {
@@ -96,8 +124,16 @@ export default function ScanPage() {
                 "Content-Type": "multipart/form-data",
               }
             });
+            queryClient.invalidateQueries({ queryKey: ["usage-summary"] });
           } catch (backendErr) {
             console.error("Lỗi khi lưu lịch sử quét lên backend:", backendErr);
+            if (backendErr.response?.status === 429) {
+              const msg = backendErr.response?.data?.error || "Bạn đã hết lượt quét khuôn mặt hôm nay.";
+              setError(msg);
+              setAnalyzing(false);
+              URL.revokeObjectURL(objectUrl);
+              return;
+            }
           }
         }
 
@@ -202,7 +238,7 @@ export default function ScanPage() {
                   <Button
                     onClick={() => cameraInputRef.current?.click()}
                     icon={<CameraIcon size={20} />}
-                    disabled={analyzing}
+                    disabled={analyzing || isFaceScanOut}
                   >
                     Chụp ảnh
                   </Button>
@@ -211,7 +247,7 @@ export default function ScanPage() {
                   onClick={() => fileInputRef.current?.click()}
                   variant="outline"
                   icon={<UploadIcon size={20} />}
-                  disabled={analyzing}
+                  disabled={analyzing || isFaceScanOut}
                 >
                   Tải ảnh lên
                 </Button>

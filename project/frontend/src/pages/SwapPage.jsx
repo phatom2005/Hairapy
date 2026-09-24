@@ -6,7 +6,7 @@ import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import { CheckIcon } from "../components/icons";
 import { useScanStore } from "../store/useScanStore";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../lib/api";
 import useAuthStore from "../store/useAuthStore";
 
@@ -27,6 +27,7 @@ const PALETTES = {
 
 export default function SwapPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const hairstyleId = searchParams.get("hairstyleId");
 
@@ -137,11 +138,13 @@ export default function SwapPage() {
       if (data.status === "DONE") {
         setResultImage(data.image);
         setLoading(false);
+        queryClient.invalidateQueries({ queryKey: ["usage-summary"] });
         return;
       }
 
       if (data.status === "ERROR") {
         handleSwapError(data.error || "AI xử lý quá lâu hoặc gặp sự cố, vui lòng thử lại.", "");
+        queryClient.invalidateQueries({ queryKey: ["usage-summary"] });
         return;
       }
 
@@ -149,6 +152,7 @@ export default function SwapPage() {
       if (attempt >= MAX_POLL_ATTEMPTS) {
         setError("AI xử lý quá lâu. Vui lòng thử lại.");
         setLoading(false);
+        queryClient.invalidateQueries({ queryKey: ["usage-summary"] });
         return;
       }
 
@@ -159,12 +163,14 @@ export default function SwapPage() {
       if (err.response?.status === 404) {
         setError("Tác vụ đã hết hạn. Vui lòng thử lại.");
         setLoading(false);
+        queryClient.invalidateQueries({ queryKey: ["usage-summary"] });
         return;
       }
       // Lỗi mạng thoáng qua khi poll — thử lại nếu còn lượt, không huỷ ngay
       if (attempt >= MAX_POLL_ATTEMPTS) {
         setError("Không thể kết nối tới máy chủ. Vui lòng thử lại.");
         setLoading(false);
+        queryClient.invalidateQueries({ queryKey: ["usage-summary"] });
         return;
       }
       pollTimeoutRef.current = setTimeout(() => pollTaskStatus(taskId, attempt + 1), POLL_INTERVAL_MS);
@@ -203,6 +209,7 @@ export default function SwapPage() {
       pollTimeoutRef.current = setTimeout(() => pollTaskStatus(taskId, 1), POLL_INTERVAL_MS);
     } catch (err) {
       console.error("Lỗi khi submit Hair Swap Pro API:", err);
+      queryClient.invalidateQueries({ queryKey: ["usage-summary"] });
       const errorData = err.response?.data;
 
       if (err.response?.status === 504 || errorData?.refunded) {
@@ -212,7 +219,7 @@ export default function SwapPage() {
       }
 
       if (err.response?.status === 429) {
-        setError(`Bạn đã hết lượt thử kiểu tóc hôm nay (${errorData.limit} lượt/ngày). Nâng cấp Premium để có thêm lượt!`);
+        setError(`Bạn đã hết lượt thử kiểu tóc hôm nay (${errorData?.limit || 1} lượt/ngày). Nâng cấp Premium để có thêm lượt!`);
         setLoading(false);
         return;
       }

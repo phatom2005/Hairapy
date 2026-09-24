@@ -226,7 +226,7 @@ export default function SettingsPage() {
                       <p className="text-xs text-mauve">{user?.email}</p>
                     </div>
                   </div>
-                  <Badge variant="success">Đã kích hoạt</Badge>
+                  <Badge variant="new">Đã kích hoạt</Badge>
                 </div>
 
                 <div className="my-2 h-px bg-divider/20" />

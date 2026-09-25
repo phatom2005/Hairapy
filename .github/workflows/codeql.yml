@@ -1,0 +1,63 @@
+name: "CodeQL Analysis"
+
+# Advanced setup — thay cho Default setup của GitHub.
+# Ly do: Default setup tu auto-detect ngon ngu trong repo, thay project/mobile/ios
+# va project/mobile/macos (Xcode project do `flutter create` tu sinh, khong phai
+# code Swift do team viet) nen tu them "Swift" vao job quet. CI chua tung chay
+# `flutter pub get`/`pod install` nen thieu file Flutter/ephemeral/... khien
+# xcodebuild khong resolve duoc package -> job Swift luon fail.
+# O day khai bao thang chi 2 ngon ngu team thuc su maintain: Java (backend) va
+# JavaScript/TypeScript (frontend). Swift khong co trong matrix nen khong bi quet.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: java-kotlin
+            build-mode: autobuild
+          - language: javascript-typescript
+            build-mode: none
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21 (cho job java-kotlin)
+        if: matrix.language == 'java-kotlin'
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: maven
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      - name: Autobuild
+        if: matrix.build-mode == 'autobuild'
+        uses: github/codeql-action/autobuild@v4
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"

@@ -21,7 +21,7 @@ export default function DragScroll({ children, className = "" }) {
     const s = st.current;
     if (!s.down) return;
     const dx = e.pageX - s.startX;
-    if (Math.abs(dx) > 4) s.moved = true;
+    if (Math.abs(dx) > 10) s.moved = true;
     ref.current.scrollLeft = s.scroll - dx;
     // vận tốc tức thời (px/ms)
     const now = performance.now();

@@ -1,13 +1,12 @@
 name: "CodeQL Analysis"
 
-# Advanced setup — thay cho Default setup của GitHub.
-# Ly do: Default setup tu auto-detect ngon ngu trong repo, thay project/mobile/ios
+# Advanced setup — thay cho Default setup cua GitHub.
+# Ly do 1: Default setup tu auto-detect ngon ngu trong repo, thay project/mobile/ios
 # va project/mobile/macos (Xcode project do `flutter create` tu sinh, khong phai
-# code Swift do team viet) nen tu them "Swift" vao job quet. CI chua tung chay
-# `flutter pub get`/`pod install` nen thieu file Flutter/ephemeral/... khien
-# xcodebuild khong resolve duoc package -> job Swift luon fail.
-# O day khai bao thang chi 2 ngon ngu team thuc su maintain: Java (backend) va
-# JavaScript/TypeScript (frontend). Swift khong co trong matrix nen khong bi quet.
+# code Swift do team viet) nen tu them "Swift" vao job quet -> luon fail.
+# Ly do 2: autobuild cua CodeQL cho Java khong tu tim ra pom.xml vi day la monorepo
+# (backend nam trong project/backend/, khong o root repo) -> phai build thu cong
+# bang Maven, giong het cach main.yml dang lam (working-directory: project/backend).
 on:
   push:
     branches: [main]
@@ -31,7 +30,7 @@ jobs:
       matrix:
         include:
           - language: java-kotlin
-            build-mode: autobuild
+            build-mode: manual
           - language: javascript-typescript
             build-mode: none
 
@@ -53,9 +52,10 @@ jobs:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
 
-      - name: Autobuild
-        if: matrix.build-mode == 'autobuild'
-        uses: github/codeql-action/autobuild@v4
+      - name: Build backend (Java) trong CodeQL trace
+        if: matrix.language == 'java-kotlin'
+        working-directory: project/backend
+        run: mvn -B clean install -DskipTests
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4

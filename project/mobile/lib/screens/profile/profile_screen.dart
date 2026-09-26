@@ -3,12 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../api/api_client.dart';
+import '../../models/hairstyle.dart';
 import '../../models/scan_record.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/saved_styles_provider.dart';
 import '../../screens/scan/scan_screen.dart' show usageSummaryProvider;
 import '../../theme.dart';
 import '../../widgets/app_bottom_nav.dart';
+
+/// So kieu toc yeu thich hien toi da theo chieu ngang trong Ca nhan -- uu
+/// tien cai moi nhat (backend da tra ve sap theo createdAt DESC san), xem het
+/// thi bung popup (bottom sheet) danh sach day du, khop dung y muon: "hien
+/// thi 4 5 theo chieu ngang ... nguoi dung mun xem day du thi pop up".
+const int _kSavedPreviewCount = 5;
 
 /// GET /profile/scans — khớp ProfilePage.jsx bên web.
 final scanHistoryProvider = FutureProvider.autoDispose<List<ScanRecord>>((ref) async {
@@ -93,7 +100,22 @@ class ProfileScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
 
-            const Text('Kiểu tóc đã lưu', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text('Kiểu tóc đã lưu', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
+                savedAsync.maybeWhen(
+                  data: (list) => list.length > _kSavedPreviewCount
+                      ? TextButton(
+                          onPressed: () => _showAllSavedStyles(context, ref, list),
+                          child: Text('Xem tất cả (${list.length})', style: const TextStyle(fontSize: 12.5)),
+                        )
+                      : const SizedBox.shrink(),
+                  orElse: () => const SizedBox.shrink(),
+                ),
+              ],
+            ),
             const SizedBox(height: 10),
             savedAsync.when(
               loading: () => const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Center(child: CircularProgressIndicator())),
@@ -103,19 +125,31 @@ class ProfileScreen extends ConsumerWidget {
                   return const Text('Chưa lưu kiểu tóc nào. Vào Kho tóc để lưu kiểu bạn thích.',
                       style: TextStyle(color: AppColors.muted, fontSize: 12.5));
                 }
+                final preview = list.take(_kSavedPreviewCount).toList();
                 return SizedBox(
-                  height: 100,
+                  height: 118,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
-                    itemCount: list.length,
+                    itemCount: preview.length,
                     separatorBuilder: (_, __) => const SizedBox(width: 10),
                     itemBuilder: (context, i) {
-                      final h = list[i];
+                      final h = preview[i];
                       return GestureDetector(
                         onTap: () => context.push('/swap', extra: h),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(14),
-                          child: CachedNetworkImage(imageUrl: h.imageUrl, width: 84, height: 100, fit: BoxFit.cover),
+                        child: SizedBox(
+                          width: 84,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: CachedNetworkImage(imageUrl: h.imageUrl, width: 84, height: 84, fit: BoxFit.cover),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(h.name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
                         ),
                       );
                     },
@@ -137,28 +171,37 @@ class ProfileScreen extends ConsumerWidget {
                 return Column(
                   children: scans.take(5).map((s) => Container(
                         margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: AppColors.line),
                         ),
                         child: Row(
                           children: [
                             ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: CachedNetworkImage(imageUrl: s.imageUrl, width: 44, height: 44, fit: BoxFit.cover),
+                              borderRadius: BorderRadius.circular(12),
+                              child: CachedNetworkImage(imageUrl: s.imageUrl, width: 46, height: 46, fit: BoxFit.cover),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Dáng ${s.faceShape}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                                  Text('${s.createdAt.day}/${s.createdAt.month}/${s.createdAt.year}',
-                                      style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+                                  const Text('Quét khuôn mặt', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
+                                  Text('${_formatScanDate(s.createdAt)} · Dáng ${s.faceShape}',
+                                      style: const TextStyle(fontSize: 11.5, color: AppColors.muted)),
                                 ],
                               ),
+                            ),
+                            // Backend hien chua tra ve trang thai that (thanh
+                            // cong/da hoan) cho tung lan quet -- 1 record duoc
+                            // luu la 1 lan phan tich thanh cong, nen gan nhan
+                            // co dinh "Thanh cong" khop ngu nghia du lieu that.
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                              decoration: BoxDecoration(color: AppColors.lime, borderRadius: BorderRadius.circular(999)),
+                              child: const Text('Thành công', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.ink)),
                             ),
                           ],
                         ),
@@ -183,9 +226,126 @@ class ProfileScreen extends ConsumerWidget {
           ],
         ),
       ),
-      bottomNavigationBar: const AppBottomNav(currentIndex: 2),
+      bottomNavigationBar: const AppBottomNav(currentIndex: 3),
     );
   }
+}
+
+/// Format ngay/gio 1 ban ghi lich su -- "Hom nay, HH:mm", "Hom qua, HH:mm",
+/// hoac "dd/mm/yyyy" neu qua 1 ngay, khop cach hien thi trong thiet ke goc
+/// (History.dc.html).
+String _formatScanDate(DateTime dt) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final target = DateTime(dt.year, dt.month, dt.day);
+  final diffDays = today.difference(target).inDays;
+  final hm = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+
+  if (diffDays == 0) return 'Hôm nay, $hm';
+  if (diffDays == 1) return 'Hôm qua, $hm';
+  return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}, $hm';
+}
+
+/// Bottom sheet hien toan bo kieu toc da luu -- khop thiet ke Favorites.dc.html
+/// cu (card anh + ten + nut tim de bo luu ngay tai day), thay vi bat nguoi
+/// dung phai qua lai Kho toc moi bo luu duoc.
+void _showAllSavedStyles(BuildContext context, WidgetRef ref, List<Hairstyle> list) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+    builder: (sheetContext) {
+      return DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.4,
+        maxChildSize: 0.92,
+        expand: false,
+        builder: (context, scrollController) {
+          return Consumer(
+            builder: (context, sheetRef, _) {
+              final savedAsync = sheetRef.watch(savedStylesProvider);
+              return Column(
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+                    child: Row(
+                      children: [
+                        Expanded(child: Text('Yêu thích', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700))),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  Expanded(
+                    child: savedAsync.when(
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (e, _) => const Center(child: Text('Không tải được danh sách đã lưu')),
+                      data: (fullList) {
+                        if (fullList.isEmpty) {
+                          return const Center(child: Text('Chưa lưu kiểu tóc nào.', style: TextStyle(color: AppColors.muted)));
+                        }
+                        return ListView.separated(
+                          controller: scrollController,
+                          padding: const EdgeInsets.all(16),
+                          itemCount: fullList.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          itemBuilder: (context, i) {
+                            final h = fullList[i];
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.of(sheetContext).pop();
+                                context.push('/swap', extra: h);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(18),
+                                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 12, offset: const Offset(0, 3))],
+                                ),
+                                child: Row(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: CachedNetworkImage(imageUrl: h.imageUrl, width: 60, height: 60, fit: BoxFit.cover),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(h.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                                          if (h.premiumOnly)
+                                            const Padding(
+                                              padding: EdgeInsets.only(top: 3),
+                                              child: Text('PREMIUM', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: AppColors.magenta)),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.favorite, color: AppColors.magenta),
+                                      onPressed: () async {
+                                        await sheetRef.read(savedStylesControllerProvider).toggle(h.id, true);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+    },
+  );
 }
 
 class _StatCard extends StatelessWidget {

@@ -26,7 +26,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final ok = await ref
         .read(authProvider.notifier)
         .login(_emailCtrl.text.trim(), _pwCtrl.text);
-    if (ok && mounted) context.go('/scan');
+    if (ok && mounted) context.go('/home');
   }
 
   @override

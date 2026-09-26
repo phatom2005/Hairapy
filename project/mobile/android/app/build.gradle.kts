@@ -34,6 +34,14 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+
+            // Tat R8 minify/shrink cho ban release: google_mlkit_face_mesh_detection
+            // dung reflection de load native model, R8 obfuscate class -> gay
+            // NullPointerException ("Object.getClass() on a null object reference")
+            // luc chay tren may that. MVP 2 dev, uu tien chay dung hon la toi uu
+            // dung luong APK, nen tat han o day.
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }

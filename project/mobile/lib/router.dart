@@ -7,6 +7,7 @@ import 'screens/auth/register_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
 import 'screens/landing/landing_screen.dart';
+import 'screens/home/home_screen.dart';
 import 'screens/scan/scan_screen.dart';
 import 'screens/results/results_screen.dart';
 import 'screens/swap/swap_screen.dart';
@@ -31,7 +32,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isPublic = publicRoutes.contains(loc);
 
       if (!loggedIn && !isPublic) return '/login';
-      if (loggedIn && isPublic) return '/scan';
+      if (loggedIn && isPublic) return '/home';
       return null;
     },
     routes: [
@@ -41,7 +42,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/forgot-password', builder: (context, state) => const ForgotPasswordScreen()),
       GoRoute(path: '/reset-password', builder: (context, state) => const ResetPasswordScreen()),
 
-      GoRoute(path: '/scan', builder: (context, state) => const ScanScreen()),
+      GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+      GoRoute(
+        path: '/scan',
+        // extra co the la Hairstyle da chon tu Catalog (khi bi day qua day de
+        // quet mat truoc khi vao Swap) -- phai mang theo de ScanScreen biet
+        // quay lai dung man Thu toc sau khi phan tich xong, khong roi mat
+        // lua chon cua nguoi dung.
+        builder: (context, state) => ScanScreen(pendingHairstyle: state.extra as Hairstyle?),
+      ),
       GoRoute(path: '/results', builder: (context, state) => const ResultsScreen()),
       GoRoute(
         path: '/swap',

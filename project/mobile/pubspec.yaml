@@ -49,6 +49,17 @@ dependencies:
   cached_network_image: ^3.4.1
   # Mở trang thanh toán PayOS/VietQR trong app, bắt điều hướng returnUrl/cancelUrl
   webview_flutter: ^4.10.0
+  # Phân tích dáng khuôn mặt on-device (478 điểm mesh, cùng topology voi
+  # MediaPipe FaceLandmarker ma web dang dung) -- de tinh faceShape that
+  # ngay tren dien thoai, khong can goi API rieng. LUU Y: chi ho tro Android,
+  # chua co iOS (Google ML Kit Face Mesh Detection con o dang beta).
+  google_mlkit_face_mesh_detection: ^0.4.0
+  # Chia se anh ket qua (before/after) ra Zalo/Instagram/Messenger... -- tao
+  # card anh roi goi share sheet cua he dieu hanh.
+  share_plus: ^10.1.4
+  # Lay thu muc tam de ghi file anh card truoc khi share (share_plus can
+  # duong dan file, khong nhan thang bytes voi ban dang dung).
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:

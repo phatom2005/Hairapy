@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -10,9 +11,20 @@ import '../../models/hairstyle.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/scan_state_provider.dart';
 import '../../screens/scan/scan_screen.dart' show usageSummaryProvider;
+import '../../services/share_card_generator.dart';
 import '../../theme.dart';
 
 enum _Phase { idle, submitting, polling, done, error }
+
+/// Cac dong text luan phien trong luc AI xu ly -- khop cam giac co tien do
+/// that (submit -> AI phan tich -> ghep tong) thay vi 1 dong tinh lap lai,
+/// giup thoi gian cho AI Pro (30-60s theo comment ben web) do nong ruot hon.
+const _kSwapLoadingMessages = [
+  'Đang gửi ảnh cho AI...',
+  'AI đang phân tích khuôn mặt...',
+  'Đang ghép kiểu tóc mới...',
+  'Sắp xong rồi, chờ chút nhé...',
+];
 
 /// Khớp HairSwapController.java: submit ảnh (multipart) -> nhận taskId ngay,
 /// rồi tự poll GET /swap/status/{taskId} mỗi ~3s cho tới khi DONE/ERROR —
@@ -32,10 +44,30 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
   bool _refunded = false;
   Timer? _pollTimer;
 
+  Timer? _loadingTextTimer;
+  int _loadingIndex = 0;
+
+  bool _sharing = false;
+
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _loadingTextTimer?.cancel();
     super.dispose();
+  }
+
+  void _startLoadingCycle() {
+    _loadingIndex = 0;
+    _loadingTextTimer?.cancel();
+    _loadingTextTimer = Timer.periodic(const Duration(milliseconds: 2200), (_) {
+      if (!mounted) return;
+      setState(() => _loadingIndex = (_loadingIndex + 1) % _kSwapLoadingMessages.length);
+    });
+  }
+
+  void _stopLoadingCycle() {
+    _loadingTextTimer?.cancel();
+    _loadingTextTimer = null;
   }
 
   Future<void> _submit() async {
@@ -55,6 +87,7 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
       _error = null;
       _refunded = false;
     });
+    _startLoadingCycle();
 
     try {
       final formData = FormData.fromMap({
@@ -67,6 +100,7 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
       setState(() => _phase = _Phase.polling);
       _poll(taskId);
     } on DioException catch (e) {
+      _stopLoadingCycle();
       final data = e.response?.data;
       String message = 'Không thể xử lý ảnh bằng AI. Vui lòng thử lại sau.';
       bool refunded = false;
@@ -89,7 +123,11 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
         final data = res.data as Map<String, dynamic>;
         final status = data['status'] as String?;
         if (status == 'DONE') {
+          _stopLoadingCycle();
           ref.invalidate(usageSummaryProvider);
+          // Rung nhe bao hieu ket qua da san sang -- diem nhan nho, khong can
+          // nguoi dung phai nhin man hinh cham cham cho biet xong chua.
+          HapticFeedback.mediumImpact();
           if (mounted) setState(() {
             _phase = _Phase.done;
             _resultImage = data['image'] as String?;
@@ -97,6 +135,7 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
           return;
         }
         if (status == 'ERROR') {
+          _stopLoadingCycle();
           ref.invalidate(usageSummaryProvider);
           if (mounted) setState(() {
             _phase = _Phase.error;
@@ -108,12 +147,34 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
         // PENDING -> tiếp tục poll
         _poll(taskId);
       } catch (_) {
+        _stopLoadingCycle();
         if (mounted) setState(() {
           _phase = _Phase.error;
           _error = 'Mất kết nối khi kiểm tra trạng thái xử lý. Vui lòng thử lại.';
         });
       }
     });
+  }
+
+  Future<void> _share(File beforeImage) async {
+    final resultUrl = _resultImage;
+    if (resultUrl == null || _sharing) return;
+    setState(() => _sharing = true);
+    try {
+      await ShareCardGenerator.shareBeforeAfter(
+        beforeImage: beforeImage,
+        afterImageUrl: resultUrl,
+        styleName: widget.hairstyle?.name ?? 'Kiểu tóc mới',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Không thể tạo ảnh để chia sẻ. Vui lòng thử lại.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
   }
 
   @override
@@ -153,7 +214,13 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
             const Text('Quét khuôn mặt trước để dùng ảnh đó thử kiểu tóc.',
                 textAlign: TextAlign.center, style: TextStyle(color: AppColors.muted, fontSize: 13)),
             const SizedBox(height: 20),
-            ElevatedButton(onPressed: () => context.go('/scan'), child: const Text('Đi tới Quét khuôn mặt')),
+            ElevatedButton(
+              // Mang theo kieu toc dang chon sang man Scan -- ScanScreen se tu
+              // quay lai day (thay vi di Results) sau khi phan tich xong, nen
+              // khong lam mat lua chon cua nguoi dung nua.
+              onPressed: () => context.push('/scan', extra: widget.hairstyle),
+              child: const Text('Đi tới Quét khuôn mặt'),
+            ),
           ],
         ),
       );
@@ -175,13 +242,20 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
                     Image.file(image, fit: BoxFit.cover),
                     Container(
                       color: Colors.black.withValues(alpha: 0.45),
-                      child: const Center(
+                      child: Center(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            CircularProgressIndicator(color: Colors.white),
-                            SizedBox(height: 14),
-                            Text('AI đang ghép kiểu tóc…', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                            const CircularProgressIndicator(color: Colors.white),
+                            const SizedBox(height: 14),
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 300),
+                              child: Text(
+                                _kSwapLoadingMessages[_loadingIndex],
+                                key: ValueKey(_loadingIndex),
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -208,11 +282,48 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
           ),
         if (_phase == _Phase.done)
           Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Ca 2 nut deu ep chieu cao 52 + font/padding giong nhau de
+              // can bang ti le voi nhau (truoc do OutlinedButton dung
+              // kich thuoc mac dinh nho hon ElevatedButton.icon gay lech).
               Expanded(
-                child: OutlinedButton(
-                  onPressed: () => context.pop(),
-                  child: const Text('Xem thêm kiểu khác'),
+                child: SizedBox(
+                  height: 52,
+                  child: OutlinedButton(
+                    onPressed: () => context.pop(),
+                    style: OutlinedButton.styleFrom(
+                      textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    child: const Text(
+                      'Xem thêm kiểu khác',
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: 52,
+                  child: ElevatedButton.icon(
+                    onPressed: _sharing ? null : () => _share(image),
+                    style: ElevatedButton.styleFrom(
+                      textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    icon: _sharing
+                        ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.ios_share, size: 18),
+                    label: Text(
+                      _sharing ? 'Đang tạo ảnh...' : 'Chia sẻ',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ),
               ),
             ],

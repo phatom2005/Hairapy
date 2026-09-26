@@ -43,7 +43,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           password: _pwCtrl.text,
           confirmPassword: _pw2Ctrl.text,
         );
-    if (ok && mounted) context.go('/scan');
+    if (ok && mounted) context.go('/home');
   }
 
   @override

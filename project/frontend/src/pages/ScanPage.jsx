@@ -5,7 +5,7 @@ import { SCAN_PORTRAIT } from "../lib/figmaAssets";
 import { Button, Badge, DisclosureModal } from "../components/ui";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
-import { CameraIcon, UploadIcon } from "../components/icons";
+import { UploadIcon } from "../components/icons";
 import { AnimatedContent, BorderGlow } from "../components/animated";
 import { useScanStore } from "../store/useScanStore";
 import { analyzeFace, initFaceAnalyzer } from "../lib/faceAnalysis";
@@ -24,7 +24,6 @@ export default function ScanPage() {
   const [searchParams] = useSearchParams();
   const hairstyleId = searchParams.get("hairstyleId");
   const fileInputRef = useRef(null);
-  const cameraInputRef = useRef(null);
 
   // Lấy dữ liệu và actions từ Zustand store
   const {
@@ -236,21 +235,13 @@ export default function ScanPage() {
               <div className="flex flex-wrap gap-4">
                 <BorderGlow rounded="rounded-full" thickness={2}>
                   <Button
-                    onClick={() => cameraInputRef.current?.click()}
-                    icon={<CameraIcon size={20} />}
+                    onClick={() => fileInputRef.current?.click()}
+                    icon={<UploadIcon size={20} />}
                     disabled={analyzing || isFaceScanOut}
                   >
-                    Chụp ảnh
+                    Tải ảnh
                   </Button>
                 </BorderGlow>
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  variant="outline"
-                  icon={<UploadIcon size={20} />}
-                  disabled={analyzing || isFaceScanOut}
-                >
-                  Tải ảnh lên
-                </Button>
               </div>
 
               {error && (
@@ -266,14 +257,6 @@ export default function ScanPage() {
             ref={fileInputRef}
             onChange={handleFileChange}
             accept="image/*"
-            className="hidden"
-          />
-          <input
-            type="file"
-            ref={cameraInputRef}
-            onChange={handleFileChange}
-            accept="image/*"
-            capture="user"
             className="hidden"
           />
 

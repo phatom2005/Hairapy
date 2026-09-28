@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import useAuthStore from "../store/useAuthStore";
 import {
   AnimatedContent,
   BorderGlow,
+  FaceMeshPattern,
   GlareHover,
   MarqueeText,
   ShuffleText,
@@ -17,7 +18,7 @@ import { useQuery } from "@tanstack/react-query";
 import api from "../lib/api";
 import { useScanStore } from "../store/useScanStore";
 import { Badge, Button, Card, DragScroll, Section, SectionHeading } from "../components/ui";
-import { LOGO_WHITE } from "../lib/figmaAssets";
+import HairapyLogoMark from "../components/animated/HairapyLogoMark";
 
 export default function LandingPage() {
   return (
@@ -72,26 +73,97 @@ function Hero() {
         </div>
 
         <AnimatedContent delay={0.3} y={50}>
-          <div className="relative">
-            <div className="absolute -inset-4 rounded-[40px] bg-pink/20 blur-[20px]" />
-            <div className="relative flex aspect-square w-full flex-col items-center justify-center gap-6 overflow-hidden rounded-[40px] bg-gradient-to-br from-pink to-brand shadow-2xl">
-              <div className="pointer-events-none absolute -left-10 -top-10 size-48 rounded-full bg-white/15" />
-              <div className="pointer-events-none absolute -bottom-12 -right-8 size-56 rounded-full bg-white/10" />
-              <img src={LOGO_WHITE} alt="Hairapy" className="relative w-4/5 max-w-[440px] drop-shadow-lg" />
-            </div>
-            <div className="absolute -bottom-6 -left-6 flex items-center gap-3 rounded-2xl bg-white p-4 shadow-xl">
-              <span className="flex size-10 items-center justify-center rounded-full bg-lime">
-                <StarIcon size={20} className="text-ink" />
-              </span>
-              <div>
-                <p className="text-xs font-bold tracking-wide text-mauve">Độ chính xác</p>
-                <p className="text-base font-bold text-primary">99.8% AI Scan</p>
-              </div>
-            </div>
-          </div>
+          <HeroLogoCard />
         </AnimatedContent>
       </div>
     </section>
+  );
+}
+
+/* ---------- Card logo Hero: tilt 3D theo chuột + float/wobble liên tục ---------- */
+// Tilt: dùng ref + mousemove chỉnh CSS var trực tiếp (giống pattern SpotlightCard.jsx
+// trong project — không setState nên không re-render mỗi lần rê chuột, mượt hơn).
+// Float/wobble: dùng motion (đã có sẵn framer-motion) animate lặp vô hạn, độc lập
+// với tilt — chạy được cả trên mobile (không hover được) nên logo luôn "sống".
+function HeroLogoCard() {
+  const cardRef = useRef(null);
+
+  const handleMouseMove = (e) => {
+    const card = cardRef.current;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    // Toạ độ chuột quy về [-0.5, 0.5] theo tâm card để tính góc nghiêng
+    const px = (e.clientX - rect.left) / rect.width - 0.5;
+    const py = (e.clientY - rect.top) / rect.height - 0.5;
+    const MAX_TILT = 16; // độ nghiêng tối đa (deg) — xiên rõ hơn nhưng vẫn tinh tế
+    card.style.setProperty("--tilt-x", `${(-py * MAX_TILT).toFixed(2)}deg`);
+    card.style.setProperty("--tilt-y", `${(px * MAX_TILT).toFixed(2)}deg`);
+    // Nhô nhẹ ra khi hover (translateZ) để tăng cảm giác nổi khối, không chỉ xoay phẳng
+    card.style.setProperty("--tilt-z", "24px");
+  };
+
+  const handleMouseLeave = () => {
+    const card = cardRef.current;
+    if (!card) return;
+    card.style.setProperty("--tilt-x", "0deg");
+    card.style.setProperty("--tilt-y", "0deg");
+    card.style.setProperty("--tilt-z", "0px");
+  };
+
+  return (
+    <div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className="relative [perspective:1000px]"
+    >
+      <div className="absolute -inset-4 rounded-[40px] bg-pink/20 blur-[20px]" />
+
+      <div
+        className="relative flex aspect-square w-full flex-col items-center justify-center gap-6 overflow-hidden rounded-[40px] bg-gradient-to-br from-pink to-brand shadow-2xl transition-transform duration-200 ease-out [transform-style:preserve-3d]"
+        style={{
+          transform:
+            "rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) translateZ(var(--tilt-z, 0px)) scale3d(1, 1, 1)",
+        }}
+      >
+        {/* Lưới Face Mesh động phía sau logo — gợi liên tưởng trực tiếp đến
+            tính năng phân tích khuôn mặt lõi của app (xem FaceMeshPattern.jsx) */}
+        <FaceMeshPattern className="opacity-70" />
+
+        {/* 2 vòng tròn trang trí trôi lệch pha nhau — cảm giác nền "sống", không đứng im */}
+        <motion.div
+          className="pointer-events-none absolute -left-10 -top-10 size-48 rounded-full bg-white/15"
+          animate={{ x: [0, 10, 0], y: [0, 14, 0] }}
+          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="pointer-events-none absolute -bottom-12 -right-8 size-56 rounded-full bg-white/10"
+          animate={{ x: [0, -12, 0], y: [0, -8, 0] }}
+          transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+        />
+
+        {/* Logo SVG động: icon + chữ tách lớp, tự animate độc lập (xem HairapyLogoMark.jsx) */}
+        <HairapyLogoMark
+          variant="white"
+          className="relative w-4/5 max-w-[440px] drop-shadow-lg"
+        />
+      </div>
+
+      {/* Badge nổi bồng bềnh lệch pha với logo để không bị "cứng"/đồng bộ máy móc */}
+      <motion.div
+        className="absolute -bottom-6 -left-6 flex items-center gap-3 rounded-2xl bg-white p-4 shadow-xl"
+        animate={{ y: [0, -6, 0] }}
+        transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: 0.6 }}
+      >
+        <span className="flex size-10 items-center justify-center rounded-full bg-lime">
+          <StarIcon size={20} className="text-ink" />
+        </span>
+        <div>
+          <p className="text-xs font-bold tracking-wide text-mauve">Độ chính xác</p>
+          <p className="text-base font-bold text-primary">99.8% AI Scan</p>
+        </div>
+      </motion.div>
+    </div>
   );
 }
 

@@ -8,3 +8,4 @@ export { default as SpotlightCard } from "./SpotlightCard";
 export { default as GlareHover } from "./GlareHover";
 export { default as BorderGlow } from "./BorderGlow";
 export { default as MarqueeText } from "./MarqueeText";
+export { default as FaceMeshPattern } from "./FaceMeshPattern";

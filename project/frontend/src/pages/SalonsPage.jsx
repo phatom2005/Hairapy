@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -81,6 +81,37 @@ export default function SalonsPage() {
     const handler = setTimeout(() => setDebouncedQ(q), 300);
     return () => clearTimeout(handler);
   }, [q]);
+
+  // Fix loi Leaflet tinh sai kich thuoc container luc khoi tao. Map nam
+  // trong div "sticky ... hidden lg:block" -- luc L.map() duoc goi, container
+  // co the dang display:none hoac chua co kich thuoc that, khien Leaflet
+  // tinh sai luoi tile (chi ve 1 vung nho, mau xam) trong khi marker van duoc
+  // dat theo toa do that -- gay lech giua vung co tile va vi tri marker.
+  // Goi invalidateSize() sau khi container co kich thuoc that (mount + moi
+  // lan resize) de Leaflet tinh lai dung.
+  const mapRef = useRef(null);
+  const mapWrapperRef = useRef(null);
+
+  useEffect(() => {
+    const wrapper = mapWrapperRef.current;
+    if (!wrapper) return;
+
+    const fixMapSize = () => mapRef.current?.invalidateSize();
+
+    // Goi ngay sau frame dau (truong hop container da co kich thuoc dung
+    // luc mount, van vo hai khi goi du thua).
+    const raf = requestAnimationFrame(fixMapSize);
+
+    // Theo doi container -- bat duoc ca truong hop breakpoint lg thay doi
+    // (hidden -> block) lan khi nguoi dung resize/xoay man hinh.
+    const observer = new ResizeObserver(fixMapSize);
+    observer.observe(wrapper);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      observer.disconnect();
+    };
+  }, []);
 
   const { data: list = [], isLoading, isError } = useSalons({
     district: district || null,
@@ -198,8 +229,9 @@ export default function SalonsPage() {
         </div>
 
         {/* Bản đồ Leaflet thật */}
-        <div className="sticky top-24 hidden h-[600px] w-full overflow-hidden rounded-3xl border border-line shadow-lg lg:block">
+        <div ref={mapWrapperRef} className="sticky top-24 hidden h-[600px] w-full overflow-hidden rounded-3xl border border-line shadow-lg lg:block">
           <MapContainer
+            ref={mapRef}
             center={[10.7769, 106.7009]}
             zoom={12}
             scrollWheelZoom={false}

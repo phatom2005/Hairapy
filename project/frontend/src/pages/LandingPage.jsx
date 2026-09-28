@@ -5,6 +5,7 @@ import useAuthStore from "../store/useAuthStore";
 import {
   AnimatedContent,
   BorderGlow,
+  DitherVeil,
   FaceMeshPattern,
   GlareHover,
   MarqueeText,
@@ -39,6 +40,15 @@ export default function LandingPage() {
 function Hero() {
   return (
     <section className="relative overflow-hidden bg-transparent px-6 py-24 sm:px-10 sm:py-32">
+      {/* DitherVeil làm nền cho cả Hero, đặt giữa (căn theo section, không lệch
+          trái/phải như mấy bản thử trước). Giờ phần "ink" trong chính component
+          đã tự trong suốt (xem DitherVeil.jsx: alpha dựa theo độ giống uInk) nên
+          không cần opacity/mask thủ công nữa — nó tự hoà vào nền SoftAurora phía
+          sau, chỉ có chấm sáng/rim/ảnh mặt là hiện rõ. */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <DitherVeil className="h-full w-full" wander />
+      </div>
+
       <div className="relative mx-auto grid max-w-[1200px] grid-cols-1 items-center gap-12 sm:px-16 lg:grid-cols-2">
         <div className="flex flex-col gap-6">
           <h1 className="font-display text-5xl font-extrabold leading-tight tracking-tight sm:text-6xl">
@@ -120,7 +130,7 @@ function HeroLogoCard() {
       <div className="absolute -inset-4 rounded-[40px] bg-pink/20 blur-[20px]" />
 
       <div
-        className="relative flex aspect-square w-full flex-col items-center justify-center gap-6 overflow-hidden rounded-[40px] bg-gradient-to-br from-pink to-brand shadow-2xl transition-transform duration-200 ease-out [transform-style:preserve-3d]"
+        className="relative flex aspect-square w-full flex-col items-center justify-center gap-6 overflow-hidden rounded-[40px] border border-white/25 bg-gradient-to-br from-pink to-brand shadow-2xl transition-transform duration-200 ease-out [transform-style:preserve-3d]"
         style={{
           transform:
             "rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) translateZ(var(--tilt-z, 0px)) scale3d(1, 1, 1)",
@@ -149,18 +159,21 @@ function HeroLogoCard() {
         />
       </div>
 
-      {/* Badge nổi bồng bềnh lệch pha với logo để không bị "cứng"/đồng bộ máy móc */}
+      {/* Badge nổi bồng bềnh lệch pha với logo, dạng glassmorphism (kính mờ):
+          nền trắng bán trong suốt + backdrop-blur để thấy mờ mờ gradient phía
+          sau, viền trắng mờ + shadow nhẹ tạo cảm giác "tấm kính nổi" thay vì
+          card đặc như trước. */}
       <motion.div
-        className="absolute -bottom-6 -left-6 flex items-center gap-3 rounded-2xl bg-white p-4 shadow-xl"
+        className="absolute -bottom-6 -left-6 flex items-center gap-3 rounded-2xl border border-white/50 bg-white/25 p-4 shadow-lg backdrop-blur-xl backdrop-saturate-150"
         animate={{ y: [0, -6, 0] }}
         transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: 0.6 }}
       >
-        <span className="flex size-10 items-center justify-center rounded-full bg-lime">
+        <span className="flex size-10 items-center justify-center rounded-full bg-lime/90">
           <StarIcon size={20} className="text-ink" />
         </span>
         <div>
-          <p className="text-xs font-bold tracking-wide text-mauve">Độ chính xác</p>
-          <p className="text-base font-bold text-primary">99.8% AI Scan</p>
+          <p className="text-xs font-bold tracking-wide text-white drop-shadow-sm">Độ chính xác</p>
+          <p className="text-base font-bold text-white drop-shadow-sm">99.8% AI Scan</p>
         </div>
       </motion.div>
     </div>

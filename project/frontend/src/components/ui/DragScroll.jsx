@@ -58,7 +58,9 @@ export default function DragScroll({ children, className = "" }) {
         try {
           ref.current.setPointerCapture(e.pointerId);
           s.captured = true;
-        } catch {}
+        } catch {
+          // Trình duyệt không hỗ trợ pointer capture — bỏ qua, không ảnh hưởng kéo scroll
+        }
       }
     }
 
@@ -82,7 +84,9 @@ export default function DragScroll({ children, className = "" }) {
     if (s.captured && ref.current?.releasePointerCapture && e?.pointerId) {
       try {
         ref.current.releasePointerCapture(e.pointerId);
-      } catch {}
+      } catch {
+        // Pointer capture có thể đã bị trình duyệt tự release trước đó — bỏ qua
+      }
     }
     s.captured = false;
 

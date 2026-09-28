@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { PROFILE_IMG } from "../lib/figmaAssets";
 import { Button, Card, Input, Badge } from "../components/ui";
@@ -50,15 +50,20 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState(null);
 
-  // Đồng bộ form khi user trong store hoặc profileData thay đổi
-  useEffect(() => {
-    const cur = profileData || user;
-    if (cur) {
-      setFullName(cur.fullName || "");
-      setPhone(cur.phone || "");
-      setDob(cur.dateOfBirth || "");
-    }
-  }, [profileData, user?.fullName, user?.phone, user?.dateOfBirth]);
+  // Đồng bộ form khi user trong store hoặc profileData thay đổi — làm ngay
+  // trong lúc render (không dùng useEffect) theo đúng khuyến nghị của React
+  // cho case "adjust state when a prop/value changes": tránh setState đồng bộ
+  // trong effect gây render lồng (lỗi react-hooks/set-state-in-effect).
+  const syncKey = currentUser
+    ? `${currentUser.fullName ?? ""}|${currentUser.phone ?? ""}|${currentUser.dateOfBirth ?? ""}`
+    : null;
+  const [syncedKey, setSyncedKey] = useState(syncKey);
+  if (syncKey !== null && syncKey !== syncedKey) {
+    setSyncedKey(syncKey);
+    setFullName(currentUser.fullName || "");
+    setPhone(currentUser.phone || "");
+    setDob(currentUser.dateOfBirth || "");
+  }
 
   // Lấy thông tin quota / subscription của user hiện tại
   const { data: usageData } = useQuery({

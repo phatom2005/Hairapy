@@ -216,12 +216,23 @@ public class PaymentService {
      */
     @Transactional
     public void grantSubscriptionIfNeeded(Payment payment) {
-        if (payment.isSubscriptionGranted()) {
-            log.info("Payment orderCode={} đã được cấp gói trước đó, bỏ qua.", payment.getOrderCode());
+        // Payment truyền vào có thể đã bị "detach" khỏi session cũ (vd: được lấy ở
+        // PaymentController.getPaymentStatus() - method đó không có @Transactional nên
+        // session đóng lại ngay sau khi query xong). Nếu dùng thẳng payment/proxy user
+        // của nó thì sẽ dính LazyInitializationException: "no session" khi lazy-load
+        // payment.getUser(). Nên fetch lại payment mới từ DB, gắn với session hiện tại
+        // của chính method @Transactional này, để mọi lazy-load phía sau đều an toàn.
+        Payment currentPayment = paymentRepository.findById(payment.getId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy giao dịch thanh toán với id: " + payment.getId()));
+
+        if (currentPayment.isSubscriptionGranted()) {
+            log.info("Payment orderCode={} đã được cấp gói trước đó, bỏ qua.", currentPayment.getOrderCode());
             return;
         }
 
-        User user = payment.getUser();
+        Payment paymentToGrant = currentPayment;
+        User user = paymentToGrant.getUser();
 
         subscriptionRepository.findByUserIdAndStatus(user.getId(), SubscriptionStatus.ACTIVE)
                 .ifPresent(oldSub -> {
@@ -231,24 +242,24 @@ public class PaymentService {
                 });
 
         LocalDateTime startDate = LocalDateTime.now();
-        LocalDateTime endDate = (payment.getPlan() == SubscriptionPlan.PRO)
+        LocalDateTime endDate = (paymentToGrant.getPlan() == SubscriptionPlan.PRO)
                 ? startDate.plusDays(7)
                 : startDate.plusDays(30);
 
         Subscription newSub = Subscription.builder()
                 .user(user)
-                .plan(payment.getPlan())
+                .plan(paymentToGrant.getPlan())
                 .status(SubscriptionStatus.ACTIVE)
                 .startDate(startDate)
                 .endDate(endDate)
                 .build();
         subscriptionRepository.save(newSub);
 
-        payment.setSubscriptionGranted(true);
-        paymentRepository.save(payment);
+        paymentToGrant.setSubscriptionGranted(true);
+        paymentRepository.save(paymentToGrant);
 
         log.info("Nâng cấp gói thành công: user={}, plan={}, hết hạn={}",
-                user.getEmail(), payment.getPlan(), endDate);
+                user.getEmail(), paymentToGrant.getPlan(), endDate);
     }
 
     /**

@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { CheckIcon } from "../components/icons";
+import { CheckIcon, DownloadIcon } from "../components/icons";
 import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/Navbar";
 import QuotaBadge from "../components/QuotaBadge";
@@ -58,6 +58,7 @@ export default function SwapPage() {
   const [loading, setLoading] = useState(false);
   const [resultImage, setResultImage] = useState(null);
   const [error, setError] = useState(null);
+  const [downloading, setDownloading] = useState(false);
 
   // Ref giữ id của setTimeout đang chạy để clear khi cần (đổi kiểu tóc mới / unmount / có kết quả)
   const pollTimeoutRef = useRef(null);
@@ -206,6 +207,31 @@ export default function SwapPage() {
         () => pollTaskStatus(taskId, attempt + 1),
         POLL_INTERVAL_MS,
       );
+    }
+  };
+
+  // Tải ảnh kết quả về máy — fetch thành blob rồi tự tạo link tải, thay vì <a href download>
+  // trực tiếp trỏ tới URL Cloudinary (cross-origin nên trình duyệt hay mở tab ảnh thay vì tải).
+  const handleDownload = async () => {
+    if (!resultImage || downloading) return;
+    setDownloading(true);
+    try {
+      const response = await fetch(resultImage);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `hairapy-ket-qua-${Date.now()}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error("Lỗi khi tải ảnh kết quả:", err);
+      // Fallback: mở ảnh ở tab mới để người dùng tự lưu thủ công nếu fetch bị chặn (CORS,...)
+      window.open(resultImage, "_blank", "noopener,noreferrer");
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -416,12 +442,21 @@ export default function SwapPage() {
           </div>
 
           {resultImage && (
-            <Button
-              variant="outline"
-              onClick={() => setResultImage(null)}
-              className="w-full">
-              Khôi phục ảnh gốc
-            </Button>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button
+                onClick={handleDownload}
+                disabled={downloading}
+                className="flex w-full items-center justify-center gap-2 sm:flex-1">
+                <DownloadIcon size={18} />
+                {downloading ? "Đang tải..." : "Tải ảnh về"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setResultImage(null)}
+                className="w-full sm:flex-1">
+                Khôi phục ảnh gốc
+              </Button>
+            </div>
           )}
         </Card>
 

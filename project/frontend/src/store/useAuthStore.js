@@ -21,7 +21,14 @@ const useAuthStore = create((set, get) => ({
       const res = await api.post("/auth/login", { email, password });
       const { token, email: userEmail, role, fullName } = res.data;
       localStorage.setItem("token", token);
-      set({ token, user: { email: userEmail, role, fullName }, loading: false });
+      set({ token, user: { email: userEmail, role, fullName }, loading: false, hydrated: true });
+      // Tải đầy đủ thông tin chi tiết (phone, dateOfBirth, v.v.) từ /auth/me
+      try {
+        const meRes = await api.get("/auth/me");
+        set({ user: meRes.data });
+      } catch {
+        // Giữ thông tin user cơ bản nếu endpoint me gặp lỗi tạm thời
+      }
       return true;
     } catch (err) {
       let errMsg = "Đăng nhập thất bại. Vui lòng kiểm tra lại.";
@@ -46,7 +53,14 @@ const useAuthStore = create((set, get) => ({
       const res = await api.post("/auth/register", { email, password, confirmPassword, fullName });
       const { token, email: userEmail, role, fullName: userFullName } = res.data;
       localStorage.setItem("token", token);
-      set({ token, user: { email: userEmail, role, fullName: userFullName }, loading: false });
+      set({ token, user: { email: userEmail, role, fullName: userFullName }, loading: false, hydrated: true });
+      // Tải đầy đủ thông tin chi tiết từ /auth/me
+      try {
+        const meRes = await api.get("/auth/me");
+        set({ user: meRes.data });
+      } catch {
+        // Giữ thông tin user cơ bản nếu endpoint me gặp lỗi tạm thời
+      }
       return true;
     } catch (err) {
       let errMsg = "Đăng ký thất bại. Vui lòng thử lại.";
@@ -72,7 +86,14 @@ const useAuthStore = create((set, get) => ({
       const res = await api.post("/auth/google", { accessToken: googleAccessToken });
       const { token, email: userEmail, role, fullName } = res.data;
       localStorage.setItem("token", token);
-      set({ token, user: { email: userEmail, role, fullName }, loading: false });
+      set({ token, user: { email: userEmail, role, fullName }, loading: false, hydrated: true });
+      // Tải đầy đủ thông tin chi tiết từ /auth/me
+      try {
+        const meRes = await api.get("/auth/me");
+        set({ user: meRes.data });
+      } catch {
+        // Giữ thông tin user cơ bản nếu endpoint me gặp lỗi tạm thời
+      }
       return true;
     } catch (err) {
       const errMsg = err.response?.data?.message || "Đăng nhập Google thất bại. Vui lòng thử lại.";
@@ -91,7 +112,14 @@ const useAuthStore = create((set, get) => ({
       const res = await api.post("/auth/facebook", { accessToken: facebookAccessToken });
       const { token, email: userEmail, role, fullName } = res.data;
       localStorage.setItem("token", token);
-      set({ token, user: { email: userEmail, role, fullName }, loading: false });
+      set({ token, user: { email: userEmail, role, fullName }, loading: false, hydrated: true });
+      // Tải đầy đủ thông tin chi tiết từ /auth/me
+      try {
+        const meRes = await api.get("/auth/me");
+        set({ user: meRes.data });
+      } catch {
+        // Giữ thông tin user cơ bản nếu endpoint me gặp lỗi tạm thời
+      }
       return true;
     } catch (err) {
       const errMsg = err.response?.data?.message || "Đăng nhập Facebook thất bại. Vui lòng thử lại.";

@@ -15,7 +15,7 @@ import {
   ArrowRight,
 } from "../components/icons";
 import useAuthStore from "../store/useAuthStore";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../lib/api";
 
 const NAV_ITEMS = [
@@ -28,21 +28,37 @@ const NAV_ITEMS = [
 export default function SettingsPage() {
   const [active, setActive] = useState(NAV_ITEMS[0].id);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user, token, logout, updateUser } = useAuthStore();
 
-  const [fullName, setFullName] = useState(user?.fullName || "");
-  const [phone, setPhone] = useState(user?.phone || "");
-  const [dob, setDob] = useState(user?.dateOfBirth || "");
+  // Luôn nạp thông tin cá nhân mới nhất từ server khi mở Settings
+  const { data: profileData } = useQuery({
+    queryKey: ["auth-me"],
+    queryFn: async () => {
+      const { data } = await api.get("/auth/me");
+      updateUser(data);
+      return data;
+    },
+    enabled: !!token,
+    staleTime: 30_000,
+  });
+
+  const currentUser = profileData || user;
+  const [fullName, setFullName] = useState(currentUser?.fullName || "");
+  const [phone, setPhone] = useState(currentUser?.phone || "");
+  const [dob, setDob] = useState(currentUser?.dateOfBirth || "");
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState(null);
 
-  // Đồng bộ form khi user trong store thay đổi
+  // Đồng bộ form khi user trong store hoặc profileData thay đổi
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setFullName(user?.fullName || "");
-    setPhone(user?.phone || "");
-    setDob(user?.dateOfBirth || "");
-  }, [user?.fullName, user?.phone, user?.dateOfBirth]);
+    const cur = profileData || user;
+    if (cur) {
+      setFullName(cur.fullName || "");
+      setPhone(cur.phone || "");
+      setDob(cur.dateOfBirth || "");
+    }
+  }, [profileData, user?.fullName, user?.phone, user?.dateOfBirth]);
 
   // Lấy thông tin quota / subscription của user hiện tại
   const { data: usageData } = useQuery({
@@ -66,6 +82,8 @@ export default function SettingsPage() {
         dateOfBirth: dob || null,
       });
       updateUser(data);
+      queryClient.setQueryData(["auth-me"], data);
+      queryClient.invalidateQueries({ queryKey: ["auth-me"] });
       setSaveMessage({ type: "success", text: "Đã lưu thay đổi thông tin cá nhân." });
     } catch (err) {
       const msg =
@@ -78,7 +96,8 @@ export default function SettingsPage() {
     }
   };
 
-  const isPaid = user?.role === "PREMIUM" || user?.role === "ADMIN" || user?.role === "TESTER";
+  const effectiveRole = profileData?.role || user?.role || "USER";
+  const isPaid = effectiveRole === "PREMIUM" || effectiveRole === "ADMIN" || effectiveRole === "TESTER";
 
   return (
     <div className="min-h-screen">
@@ -145,7 +164,7 @@ export default function SettingsPage() {
               <form className="flex flex-col gap-8" onSubmit={handleSaveProfile}>
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                   <Input label="Họ và tên" value={fullName} onChange={(e) => setFullName(e.target.value)} />
-                  <Input label="Email" type="email" defaultValue={user?.email || ""} readOnly />
+                  <Input label="Email" type="email" value={profileData?.email || user?.email || ""} readOnly />
                   <Input label="Số điện thoại" value={phone} onChange={(e) => setPhone(e.target.value)} />
                   <Input label="Ngày sinh" type="date" value={dob || ""} onChange={(e) => setDob(e.target.value)} />
                 </div>
@@ -251,78 +270,134 @@ export default function SettingsPage() {
           )}
 
           {/* TAB 4: GÓI DỊCH VỤ */}
-          {active === "Gói dịch vụ" && (
-            <div className="flex flex-col gap-6">
-              <div>
-                <h2 className="text-3xl font-bold tracking-tight text-ink">Gói dịch vụ & Hạn mức</h2>
-                <p className="text-mauve mt-1">Chi tiết gói thành viên và số lượt sử dụng AI còn lại hôm nay.</p>
-              </div>
+          {active === "Gói dịch vụ" && (() => {
+            const faceScanRemaining = usageData?.faceScan
+              ? Math.max(usageData.faceScan.limit - usageData.faceScan.used, 0)
+              : 1;
+            const hairSwapRemaining = usageData?.hairSwap
+              ? Math.max(usageData.hairSwap.limit - usageData.hairSwap.used, 0)
+              : 5;
 
-              {/* Gói hiện tại */}
-              <div className="rounded-2xl border border-divider/10 bg-gradient-to-br from-canvas/80 to-canvas/30 p-6">
-                <div className="flex flex-wrap items-center justify-between gap-4">
+            return (
+              <div className="flex flex-col gap-6">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-wider text-mauve">Gói tài khoản hiện tại</p>
-                    <h3 className="font-display text-2xl font-extrabold text-ink mt-1">
-                      {user?.role === "ADMIN"
-                        ? "Quản trị viên (ADMIN)"
-                        : user?.role === "PREMIUM"
-                        ? "Thành viên PREMIUM"
-                        : user?.role === "TESTER"
-                        ? "Tài khoản TESTER"
-                        : "Thành viên MIỄN PHÍ (FREE)"}
-                    </h3>
+                    <h2 className="text-3xl font-bold tracking-tight text-ink">Gói dịch vụ & Hạn mức</h2>
+                    <p className="text-mauve mt-1">Chi tiết gói thành viên và số lượt sử dụng AI còn lại hôm nay.</p>
                   </div>
-                  <Badge variant={isPaid ? "premium" : "neutral"}>
-                    {user?.role || "FREE"}
-                  </Badge>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      queryClient.invalidateQueries({ queryKey: ["usage-summary"] });
+                      queryClient.invalidateQueries({ queryKey: ["auth-me"] });
+                    }}
+                    className="flex items-center gap-1.5 rounded-xl border border-line bg-white px-3.5 py-2 text-xs font-semibold text-mauve hover:text-ink hover:bg-canvas transition shadow-sm cursor-pointer"
+                    title="Tải lại số lượt sử dụng mới nhất từ máy chủ"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="size-3.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                    </svg>
+                    Làm mới hạn mức
+                  </button>
                 </div>
 
-                <div className="my-6 h-px bg-divider/20" />
-
-                {/* Hạn mức sử dụng */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="rounded-xl border border-line bg-white/70 p-4">
-                    <p className="text-xs font-semibold text-mauve">Phân tích khuôn mặt AI</p>
-                    <p className="text-lg font-bold text-ink mt-1">
-                      {usageData?.faceScan?.unlimited
-                        ? "Không giới hạn"
-                        : `${usageData?.faceScan?.used ?? 0} / ${usageData?.faceScan?.limit ?? 1} lượt hôm nay`}
-                    </p>
-                  </div>
-                  <div className="rounded-xl border border-line bg-white/70 p-4">
-                    <p className="text-xs font-semibold text-mauve">Thử kiểu tóc AI (Hair Swap)</p>
-                    <p className="text-lg font-bold text-ink mt-1">
-                      {usageData?.hairSwap?.unlimited
-                        ? "Không giới hạn"
-                        : `${usageData?.hairSwap?.used ?? 0} / ${usageData?.hairSwap?.limit ?? 1} lượt hôm nay`}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Quyền lợi kiểu tóc */}
-                <div className="mt-4 flex items-center gap-2 text-xs font-semibold text-mauve">
-                  <CheckIcon size={16} className={isPaid ? "text-primary" : "text-muted"} />
-                  {isPaid
-                    ? "Mở khóa toàn bộ kho kiểu tóc VIP / PRO và kiểu màu nhuộm cao cấp."
-                    : "Đang sử dụng các kiểu tóc miễn phí cơ bản trong catalog."}
-                </div>
-
-                {/* Nút nâng cấp nếu là tài khoản FREE */}
-                {!isPaid && (
-                  <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-primary/5 p-4">
+                {/* Gói hiện tại */}
+                <div className="rounded-2xl border border-divider/10 bg-gradient-to-br from-canvas/80 to-canvas/30 p-6">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
-                      <p className="text-sm font-bold text-ink">Trải nghiệm không giới hạn với Premium</p>
-                      <p className="text-xs text-mauve">Nâng cấp để nhận 5 lượt quét và 5 lượt thử tóc AI mỗi ngày.</p>
+                      <p className="text-xs font-bold uppercase tracking-wider text-mauve">Gói tài khoản hiện tại</p>
+                      <h3 className="font-display text-2xl font-extrabold text-ink mt-1">
+                        {effectiveRole === "ADMIN"
+                          ? "Quản trị viên (ADMIN)"
+                          : effectiveRole === "PREMIUM"
+                          ? "Thành viên PREMIUM"
+                          : effectiveRole === "TESTER"
+                          ? "Tài khoản TESTER"
+                          : "Thành viên MIỄN PHÍ (FREE)"}
+                      </h3>
                     </div>
-                    <Button to="/pricing" variant="brand" className="px-6 py-2.5 text-xs">
-                      Nâng cấp ngay
-                    </Button>
+                    <Badge variant={isPaid ? "premium" : "neutral"}>
+                      {effectiveRole}
+                    </Badge>
                   </div>
-                )}
+
+                  <div className="my-6 h-px bg-divider/20" />
+
+                  {/* Hạn mức sử dụng */}
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="rounded-xl border border-line bg-white/70 p-4">
+                      <p className="text-xs font-semibold text-mauve">Phân tích khuôn mặt AI</p>
+                      {usageData?.faceScan?.unlimited ? (
+                        <p className="text-lg font-bold text-primary mt-1">Không giới hạn</p>
+                      ) : (
+                        <>
+                          <div className="flex items-baseline justify-between mt-1">
+                            <p className={`text-lg font-bold ${faceScanRemaining === 0 ? "text-red-500" : "text-ink"}`}>
+                              Còn lại: {faceScanRemaining} lượt
+                            </p>
+                            <span className="text-xs text-mauve font-medium">
+                              Đã dùng {usageData?.faceScan?.used ?? 0}/{usageData?.faceScan?.limit ?? 1}
+                            </span>
+                          </div>
+                          <div className="w-full bg-line rounded-full h-1.5 mt-2.5 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${faceScanRemaining === 0 ? "bg-red-500" : "bg-primary"}`}
+                              style={{ width: `${Math.min(100, ((usageData?.faceScan?.used ?? 0) / (usageData?.faceScan?.limit ?? 1)) * 100)}%` }}
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="rounded-xl border border-line bg-white/70 p-4">
+                      <p className="text-xs font-semibold text-mauve">Thử kiểu tóc AI (Hair Swap)</p>
+                      {usageData?.hairSwap?.unlimited ? (
+                        <p className="text-lg font-bold text-primary mt-1">Không giới hạn</p>
+                      ) : (
+                        <>
+                          <div className="flex items-baseline justify-between mt-1">
+                            <p className={`text-lg font-bold ${hairSwapRemaining === 0 ? "text-red-500" : "text-ink"}`}>
+                              Còn lại: {hairSwapRemaining} lượt
+                            </p>
+                            <span className="text-xs text-mauve font-medium">
+                              Đã dùng {usageData?.hairSwap?.used ?? 0}/{usageData?.hairSwap?.limit ?? 1}
+                            </span>
+                          </div>
+                          <div className="w-full bg-line rounded-full h-1.5 mt-2.5 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${hairSwapRemaining === 0 ? "bg-red-500" : "bg-primary"}`}
+                              style={{ width: `${Math.min(100, ((usageData?.hairSwap?.used ?? 0) / (usageData?.hairSwap?.limit ?? 1)) * 100)}%` }}
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Quyền lợi kiểu tóc */}
+                  <div className="mt-4 flex items-center gap-2 text-xs font-semibold text-mauve">
+                    <CheckIcon size={16} className={isPaid ? "text-primary" : "text-muted"} />
+                    {isPaid
+                      ? "Mở khóa toàn bộ kho kiểu tóc VIP / PRO và kiểu màu nhuộm cao cấp."
+                      : "Đang sử dụng các kiểu tóc miễn phí cơ bản trong catalog."}
+                  </div>
+
+                  {/* Nút nâng cấp nếu là tài khoản FREE */}
+                  {!isPaid && (
+                    <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-primary/5 p-4">
+                      <div>
+                        <p className="text-sm font-bold text-ink">Trải nghiệm không giới hạn với Premium</p>
+                        <p className="text-xs text-mauve">Nâng cấp để nhận 5 lượt quét và 20 lượt thử tóc AI mỗi ngày.</p>
+                      </div>
+                      <Button to="/pricing" variant="brand" className="px-6 py-2.5 text-xs">
+                        Nâng cấp ngay
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </Card>
       </div>
 

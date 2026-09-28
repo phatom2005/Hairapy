@@ -101,6 +101,9 @@ public class AuthService {
         if (user.getRole() == Role.ADMIN) {
             return "ADMIN";
         }
+        if (user.getRole() == Role.TESTER) {
+            return "TESTER";
+        }
         if (subscriptionService.isPaidUser(user.getId())) {
             return "PREMIUM";
         }

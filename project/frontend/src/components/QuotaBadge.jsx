@@ -26,7 +26,10 @@ export default function QuotaBadge({ feature }) {
   if (!token || isLoading || !data) return null;
 
   const key = feature === "HAIR_SWAP" ? "hairSwap" : "faceScan";
-  const { used, limit, unlimited } = data[key];
+  const quota = data[key];
+  if (!quota) return null;
+
+  const { used = 0, limit = 1, unlimited = false } = quota;
 
   if (unlimited) {
     return (

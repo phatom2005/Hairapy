@@ -102,7 +102,7 @@ function buildFaceMesh() {
 }
 
 export default function FaceMeshPattern({ className = "" }) {
-  const { points, edges } = useMemo(buildFaceMesh, []);
+  const { points, edges } = useMemo(() => buildFaceMesh(), []);
 
   return (
     <div

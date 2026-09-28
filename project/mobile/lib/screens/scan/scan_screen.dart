@@ -159,7 +159,12 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
           // Results nhu luong quet thuong.
           context.pushReplacement('/swap', extra: pending);
         } else {
-          context.go('/results');
+          // Dung pushReplacement (khong dung go) de giu lai man truoc do
+          // (Home) trong stack -- go() xoa sach stack khien AppBar cua
+          // Results khong co nut back (canPop() = false). pushReplacement
+          // chi thay the ScanScreen bang ResultsScreen, nen back van quay
+          // ve Home duoc, dong thoi khong the back nguoc lai vao man Scan cu.
+          context.pushReplacement('/results');
         }
       }
     } on FaceAnalysisException catch (e) {

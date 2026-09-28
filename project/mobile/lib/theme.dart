@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// Design tokens lấy đúng từ project/frontend/src/index.css để 2 bản
 /// web + mobile đồng bộ màu/thương hiệu.
@@ -26,7 +27,11 @@ ThemeData buildAppTheme() {
       secondary: AppColors.magenta,
       surface: Colors.white,
     ),
-    fontFamily: 'BeVietnamPro',
+    // Dung Google Fonts thay vi khai bao fontFamily suong -- truoc do
+    // 'BeVietnamPro' khong co file font that nen Flutter am tham fallback
+    // ve font he thong (Roboto), khac voi web (dung Be Vietnam Pro that).
+    fontFamily: GoogleFonts.beVietnamPro().fontFamily,
+    textTheme: GoogleFonts.beVietnamProTextTheme(ThemeData.light().textTheme),
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.canvas,
       foregroundColor: AppColors.ink,
@@ -59,4 +64,18 @@ ThemeData buildAppTheme() {
       ),
     ),
   );
+}
+
+
+/// Font hien thi (Unbounded) cho cac tieu de lon -- tuong duong class
+/// "h-display" ben web (vd: "Chao, Nguyen", "Quet khuon mat ngay").
+/// Dung AppFonts.display(...) thay vi TextStyle thuong cho nhung cho nay.
+class AppFonts {
+  static TextStyle display({
+    double fontSize = 19,
+    FontWeight fontWeight = FontWeight.w700,
+    Color? color,
+  }) {
+    return GoogleFonts.unbounded(fontSize: fontSize, fontWeight: fontWeight, color: color);
+  }
 }

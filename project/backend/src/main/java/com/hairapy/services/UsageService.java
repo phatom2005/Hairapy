@@ -52,6 +52,11 @@ public class UsageService {
             return isPaid ? 20 : 5;
         } else if ("FACE_SCAN".equals(feature)) {
             return isPaid ? 5 : 1;
+        } else if ("AI_STYLIST".equals(feature)) {
+            // AI Stylist chi danh Premium (xem PremiumRequiredException o
+            // AiStylistController) -- Free luon bi chan truoc khi toi day,
+            // nhung van tra ve 0 cho ro rang neu co goi nham.
+            return isPaid ? 5 : 0;
         }
         return Integer.MAX_VALUE;
     }

@@ -282,7 +282,12 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
           ),
         if (_phase == _Phase.done)
           Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            // KHONG dung crossAxisAlignment: stretch o day -- Row nay nam
+            // trong 1 Column duoc Padding/SafeArea cap chieu cao khong gioi
+            // han (h<=Infinity) trong 1 so truong hop, stretch + unbounded
+            // height gay loi "RenderBox was not laid out" (crash that su
+            // gay man trang/treo may bao cao truoc). Da co SizedBox(height:52)
+            // rieng cho tung nut nen khong can stretch nua.
             children: [
               // Ca 2 nut deu ep chieu cao 52 + font/padding giong nhau de
               // can bang ti le voi nhau (truoc do OutlinedButton dung

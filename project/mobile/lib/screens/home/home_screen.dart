@@ -46,7 +46,7 @@ class HomeScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Chào, $userName', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                        Text('Chào, $userName', style: AppFonts.display(fontSize: 15)),
                         Text(isPremium ? 'Tài khoản Premium' : 'Tài khoản Free',
                             style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.muted)),
                       ],
@@ -78,8 +78,8 @@ class HomeScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Quét khuôn mặt ngay',
-                          style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w700)),
+                      Text('Quét khuôn mặt ngay',
+                          style: AppFonts.display(fontSize: 19, color: Colors.white)),
                       const SizedBox(height: 4),
                       Text(
                         usageAsync.maybeWhen(

@@ -26,11 +26,17 @@ class FaceMeshOverlay extends StatefulWidget {
 
 class _FaceMeshOverlayState extends State<FaceMeshOverlay> with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  // Tinh thu tu xao tron 1 LAN DUY NHAT khi tao overlay -- truoc do
+  // List.generate + shuffle bi lam lai trong paint() moi frame (~60-70
+  // lan/giay), gay tut frame nang tren may yeu (vd Samsung A51) va rat co
+  // the la nguyen nhan gay "treo" + spam assertion semantics khi drop frame.
+  late final List<int> _pointOrder;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: widget.duration)..forward();
+    _pointOrder = List<int>.generate(widget.normalizedPoints.length, (i) => i)..shuffle(Random(42));
   }
 
   @override
@@ -47,10 +53,12 @@ class _FaceMeshOverlayState extends State<FaceMeshOverlay> with SingleTickerProv
         fit: StackFit.expand,
         children: [
           Image.file(widget.image, fit: BoxFit.cover),
-          AnimatedBuilder(
-            animation: _controller,
-            builder: (context, _) => CustomPaint(
-              painter: _MeshPainter(points: widget.normalizedPoints, progress: _controller.value),
+          RepaintBoundary(
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, _) => CustomPaint(
+                painter: _MeshPainter(points: widget.normalizedPoints, order: _pointOrder, progress: _controller.value),
+              ),
             ),
           ),
         ],
@@ -61,9 +69,10 @@ class _FaceMeshOverlayState extends State<FaceMeshOverlay> with SingleTickerProv
 
 class _MeshPainter extends CustomPainter {
   final List<Offset> points;
+  final List<int> order; // thu tu xao tron, tinh san tu ben ngoai (khong tinh lai moi frame)
   final double progress; // 0..1
 
-  _MeshPainter({required this.points, required this.progress});
+  _MeshPainter({required this.points, required this.order, required this.progress});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -89,9 +98,8 @@ class _MeshPainter extends CustomPainter {
     // Chi hien cac diem nam phia tren duong quet (theo % progress), tao cam
     // giac cac diem "xuat hien dan" theo thu tu thay vi bung het cung luc.
     final visibleCount = (points.length * progress.clamp(0.0, 1.0)).round();
-    // Dung random co seed co dinh de thu tu xuat hien on dinh giua cac frame
-    // (khong nhap nhay lai moi lan build).
-    final order = List<int>.generate(points.length, (i) => i)..shuffle(Random(42));
+    // Dung thu tu da tinh san (order) tu ben ngoai -- KHONG tao/shuffle lai
+    // o day, vi paint() chay moi frame.
     final visibleIdx = order.take(visibleCount).toSet();
 
     for (final i in visibleIdx) {

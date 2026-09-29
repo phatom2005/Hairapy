@@ -392,7 +392,7 @@ export default function SettingsPage() {
                     <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-primary/5 p-4">
                       <div>
                         <p className="text-sm font-bold text-ink">Trải nghiệm không giới hạn với Premium</p>
-                        <p className="text-xs text-mauve">Nâng cấp để nhận 5 lượt quét và 20 lượt thử tóc AI mỗi ngày.</p>
+                        <p className="text-xs text-mauve">Nâng cấp để nhận thêm lượt quét và thử tóc AI mỗi ngày.</p>
                       </div>
                       <Button to="/pricing" variant="brand" className="px-6 py-2.5 text-xs">
                         Nâng cấp ngay

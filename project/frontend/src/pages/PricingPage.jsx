@@ -23,7 +23,7 @@ const PLANS = [
     cta: "Mua gói Tuần", to: "/checkout?plan=PRO", variant: "outline",
     features: [
       { text: "5 lần quét AI mỗi ngày", on: true },
-      { text: "20 lần thử kiểu tóc mỗi ngày", on: true },
+      { text: "5 lần thử kiểu tóc mỗi ngày", on: true },
       { text: "Ảnh HD không watermark", on: true },
       { text: "Tư vấn 1:1 cùng Stylist", on: false },
     ],
@@ -34,7 +34,7 @@ const PLANS = [
     cta: "Nâng cấp ngay", to: "/checkout?plan=PREMIUM", variant: "pink",
     features: [
       { text: "5 lần quét AI mỗi ngày", on: true },
-      { text: "20 lần thử kiểu tóc mỗi ngày", on: true },
+      { text: "8 lần thử kiểu tóc mỗi ngày", on: true },
       { text: "Ảnh HD không watermark", on: true },
       { text: "Tư vấn 1:1 cùng Stylist", on: true },
     ],

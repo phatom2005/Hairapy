@@ -31,7 +31,7 @@ export default function CheckoutPage() {
       ]
     : [
         "5 lần quét AI phân tích khuôn mặt mỗi ngày",
-        "20 lần thử kiểu tóc mới mỗi ngày",
+        "5 lần thử kiểu tóc mới mỗi ngày",
         "Ưu đãi giảm giá 10% tại Salon liên kết",
         "Không chèn watermark, xuất ảnh chất lượng HD",
       ];

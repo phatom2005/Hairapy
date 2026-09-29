@@ -11,8 +11,8 @@ const PLANS = [
     price: "0đ", period: "/ vĩnh viễn", highlight: false,
     cta: "Dùng bản miễn phí", to: "/register", variant: "outline",
     features: [
-      { text: "1 lần quét AI mỗi ngày", on: true },
-      { text: "5 lần thử kiểu tóc mỗi ngày", on: true },
+      { text: "5 lần quét AI mỗi ngày", on: true },
+      { text: "1 lần thử kiểu tóc mỗi ngày", on: true },
       { text: "Phân tích chuyên sâu", on: false },
       { text: "Ưu đãi Salon", on: false },
     ],

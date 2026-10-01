@@ -1,6 +1,8 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../config/app_links.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme.dart';
 
@@ -16,6 +18,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailCtrl = TextEditingController();
   final _pwCtrl = TextEditingController();
   final _pw2Ctrl = TextEditingController();
+  bool _agreedToTerms = false;
   String? _localError;
 
   @override
@@ -35,6 +38,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     }
     if (_pwCtrl.text != _pw2Ctrl.text) {
       setState(() => _localError = 'Mật khẩu xác nhận không khớp');
+      return;
+    }
+    if (!_agreedToTerms) {
+      setState(() => _localError = 'Vui lòng đồng ý Điều khoản và Chính sách bảo mật');
       return;
     }
     final ok = await ref.read(authProvider.notifier).register(
@@ -89,9 +96,62 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 const SizedBox(height: 12),
                 Text(error, style: const TextStyle(color: Colors.red, fontSize: 13)),
               ],
-              const SizedBox(height: 22),
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: Checkbox(
+                      value: _agreedToTerms,
+                      activeColor: AppColors.primary,
+                      onChanged: (val) => setState(() => _agreedToTerms = val ?? false),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        text: 'Tôi đồng ý với ',
+                        style: const TextStyle(fontSize: 12.5, color: AppColors.mauve),
+                        children: [
+                          TextSpan(
+                            text: 'Điều khoản sử dụng',
+                            style: const TextStyle(
+                              color: AppColors.magenta,
+                              fontWeight: FontWeight.w700,
+                              decoration: TextDecoration.underline,
+                            ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () => context.push('/legal', extra: {
+                                    'title': 'Điều khoản sử dụng',
+                                    'url': kTermsUrl,
+                                  }),
+                          ),
+                          const TextSpan(text: ' và '),
+                          TextSpan(
+                            text: 'Chính sách bảo mật',
+                            style: const TextStyle(
+                              color: AppColors.magenta,
+                              fontWeight: FontWeight.w700,
+                              decoration: TextDecoration.underline,
+                            ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () => context.push('/legal', extra: {
+                                    'title': 'Chính sách bảo mật',
+                                    'url': kPrivacyUrl,
+                                  }),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: auth.isLoading ? null : _submit,
+                onPressed: (auth.isLoading || !_agreedToTerms) ? null : _submit,
                 child: auth.isLoading
                     ? const SizedBox(
                         height: 20, width: 20,

@@ -16,6 +16,7 @@ import 'screens/pricing/pricing_screen.dart';
 import 'screens/catalog/catalog_screen.dart';
 import 'screens/checkout/checkout_screen.dart';
 import 'screens/checkout/payment_result_screen.dart';
+import 'screens/legal/legal_webview_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/profile/settings_screen.dart';
 import 'screens/salons/salons_screen.dart';
@@ -29,11 +30,12 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final loggedIn = ref.read(authProvider).isLoggedIn;
       final loc = state.matchedLocation;
-      const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/reset-password'];
-      final isPublic = publicRoutes.contains(loc);
+      const authRoutes = ['/', '/login', '/register', '/forgot-password', '/reset-password'];
+      final isAuthRoute = authRoutes.contains(loc);
+      final isLegalRoute = loc == '/legal';
 
-      if (!loggedIn && !isPublic) return '/login';
-      if (loggedIn && isPublic) return '/home';
+      if (!loggedIn && !isAuthRoute && !isLegalRoute) return '/login';
+      if (loggedIn && isAuthRoute) return '/home';
 
       // Chặn và chuyển hướng nếu truy cập luồng mua gói khi cờ kEnableExternalPayment đang tắt
       if (!kEnableExternalPayment && (loc == '/pricing' || loc == '/checkout' || loc == '/payment-result')) {
@@ -84,6 +86,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/profile', builder: (context, state) => const ProfileScreen()),
       GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
       GoRoute(path: '/salons', builder: (context, state) => const SalonsScreen()),
+      GoRoute(
+        path: '/legal',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return LegalWebViewScreen(
+            title: extra?['title'] as String? ?? 'Điều khoản & Pháp lý',
+            url: extra?['url'] as String? ?? 'https://hairapy.id.vn',
+          );
+        },
+      ),
     ],
   );
 });

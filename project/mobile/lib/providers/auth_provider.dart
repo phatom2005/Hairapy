@@ -183,6 +183,25 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// DELETE /auth/me — Xoá tài khoản người dùng theo yêu cầu Google Play.
+  Future<bool> deleteAccount(String password) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      await ApiClient.instance.dio.delete('/auth/me', data: {
+        'password': password,
+      });
+      await TokenStorage.instance.clear();
+      state = const AuthState();
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: _extractError(e, 'Không thể xoá tài khoản.'),
+      );
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     try {
       await ApiClient.instance.dio.post('/auth/logout');

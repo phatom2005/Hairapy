@@ -1,0 +1,4 @@
+storePassword=<mật khẩu keystore>
+keyPassword=<mật khẩu key>
+keyAlias=upload
+storeFile=../upload-keystore.jks

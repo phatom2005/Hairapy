@@ -32,9 +32,10 @@ export default function Footer() {
       </div>
       <div className="mx-auto flex max-w-[1200px] flex-col items-center justify-between gap-4 border-t border-divider/10 py-8 sm:flex-row sm:px-16">
         <p className="text-sm font-semibold text-mauve">© 2026 Hairapy AI. Scan. Style. Smile.</p>
-        <div className="flex gap-6 text-sm font-semibold text-mauve">
-          <a href="#">Bảo mật</a>
-          <a href="#">Điều khoản</a>
+        <div className="flex flex-wrap gap-6 text-sm font-semibold text-mauve">
+          <Link to="/privacy" className="hover:text-ink transition-colors">Bảo mật</Link>
+          <Link to="/terms" className="hover:text-ink transition-colors">Điều khoản</Link>
+          <Link to="/delete-account" className="hover:text-ink transition-colors">Xoá tài khoản</Link>
         </div>
       </div>
     </footer>

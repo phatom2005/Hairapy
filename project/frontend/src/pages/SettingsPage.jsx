@@ -50,6 +50,32 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState(null);
 
+  // Xoá tài khoản state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await api.delete("/auth/me", {
+        data: { password: deletePassword || null },
+      });
+      logout();
+      navigate("/");
+    } catch (err) {
+      const msg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        "Không thể xoá tài khoản. Vui lòng kiểm tra lại mật khẩu hoặc thử lại sau.";
+      setDeleteError(msg);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   // Đồng bộ form khi user trong store hoặc profileData thay đổi — làm ngay
   // trong lúc render (không dùng useEffect) theo đúng khuyến nghị của React
   // cho case "adjust state when a prop/value changes": tránh setState đồng bộ
@@ -271,6 +297,30 @@ export default function SettingsPage() {
                   </Link>
                 </div>
               </div>
+
+              {/* Vùng nguy hiểm: Xoá tài khoản */}
+              <div className="rounded-2xl border border-red-200 bg-red-50/40 p-6 space-y-4">
+                <div>
+                  <h4 className="font-semibold text-red-700">Vùng nguy hiểm: Xoá tài khoản</h4>
+                  <p className="text-xs text-red-600/80 mt-1 leading-relaxed">
+                    Hành động này không thể hoàn tác. Toàn bộ lịch sử quét, ảnh tải lên và thông tin tài khoản của bạn sẽ bị xoá vĩnh viễn khỏi hệ thống Hairapy.
+                  </p>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDeleteModal(true);
+                      setDeletePassword("");
+                      setDeleteError(null);
+                    }}
+                    className="inline-flex items-center justify-center rounded-xl border border-red-500 bg-white px-5 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 transition shadow-sm cursor-pointer"
+                  >
+                    Xoá tài khoản vĩnh viễn
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -405,6 +455,70 @@ export default function SettingsPage() {
           })()}
         </Card>
       </div>
+
+      {/* Modal xác nhận xoá tài khoản */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-ink/40 backdrop-blur-md transition-opacity"
+            onClick={() => !deleting && setShowDeleteModal(false)}
+          />
+          <div className="relative w-full max-w-md transform overflow-hidden rounded-[28px] border border-red-100 bg-white p-7 shadow-2xl transition-all z-10">
+            <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-red-100 text-red-600">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="size-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+              </svg>
+            </div>
+
+            <h3 className="text-xl font-bold text-ink">Xác nhận xoá tài khoản</h3>
+            <p className="mt-2 text-sm text-mauve leading-relaxed">
+              Bạn có chắc chắn muốn xoá tài khoản? Toàn bộ ảnh phân tích, lịch sử thử tóc và thông tin tài khoản sẽ bị xoá vĩnh viễn. Hành động này không thể hoàn tác.
+            </p>
+
+            <div className="mt-5 space-y-2">
+              <label className="text-xs font-semibold text-ink block">
+                Mật khẩu xác nhận
+              </label>
+              <input
+                type="password"
+                placeholder="Nhập mật khẩu của bạn"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                disabled={deleting}
+                className="w-full rounded-xl border border-line bg-canvas/30 px-3.5 py-2.5 text-sm text-ink placeholder:text-muted focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+              />
+              <p className="text-xs text-mauve">
+                Bỏ trống nếu bạn đăng nhập bằng Google/Facebook
+              </p>
+            </div>
+
+            {deleteError && (
+              <div className="mt-4 rounded-xl bg-red-50 border border-red-200 p-3 text-xs font-medium text-red-600">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => setShowDeleteModal(false)}
+                className="rounded-xl border border-line px-4 py-2.5 text-sm font-semibold text-mauve hover:bg-canvas transition disabled:opacity-50 cursor-pointer"
+              >
+                Huỷ
+              </button>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={handleDeleteAccount}
+                className="rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition shadow-sm disabled:opacity-50 cursor-pointer"
+              >
+                {deleting ? "Đang xử lý..." : "Xác nhận xoá"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

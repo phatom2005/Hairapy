@@ -3,7 +3,7 @@ import Footer from "../components/layout/Footer";
 import { Card } from "../components/ui";
 
 // TODO: người dùng xác nhận email hỗ trợ thật khi phát hành chính thức
-export const SUPPORT_EMAIL = "support@hairapy.id.vn";
+export const SUPPORT_EMAIL = "hairapy.exe@gmail.com";
 
 export default function PrivacyPage() {
   const effectiveDate = "01/10/2026";

@@ -92,7 +92,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           final extra = state.extra as Map<String, dynamic>?;
           return LegalWebViewScreen(
             title: extra?['title'] as String? ?? 'Điều khoản & Pháp lý',
-            url: extra?['url'] as String? ?? 'https://hairapy.id.vn',
+            url: extra?['url'] as String? ?? 'https://hairapy.io.vn',
           );
         },
       ),

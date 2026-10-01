@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../api/api_client.dart';
+import '../../config/feature_flags.dart';
 import '../../models/hairstyle.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/scan_state_provider.dart';
@@ -101,6 +102,12 @@ class ResultsScreen extends ConsumerWidget {
   void _handleTryStyle(BuildContext context, WidgetRef ref, Hairstyle h) {
     final user = ref.read(authProvider).user;
     if (h.premiumOnly && (user == null || !user.isPremium)) {
+      if (!kEnableExternalPayment) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tính năng này dành cho thành viên Premium.')),
+        );
+        return;
+      }
       context.push('/pricing');
       return;
     }

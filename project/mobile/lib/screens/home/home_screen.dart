@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../config/feature_flags.dart';
 import '../../providers/auth_provider.dart';
 import '../../screens/scan/scan_screen.dart' show usageSummaryProvider;
 import '../../theme.dart';
@@ -135,55 +136,57 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
 
-              // AI Stylist -- tinh nang trong thiet ke goc nhung chua duoc
-              // xay dung that (can them backend goi LLM). Hien thi dung UI
-              // nhung gan nhan "Sap ra mat" va khong dieu huong di dau, tranh
-              // hua hen 1 tinh nang chua ton tai.
-              InkWell(
-                borderRadius: BorderRadius.circular(18),
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('AI Stylist đang được phát triển, sẽ sớm ra mắt!')),
-                ),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: AppColors.ink, borderRadius: BorderRadius.circular(18)),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(color: AppColors.lime.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(14)),
-                        child: const Icon(Icons.auto_awesome, color: AppColors.lime),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Text('AI Stylist', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                  decoration: BoxDecoration(color: AppColors.lime, borderRadius: BorderRadius.circular(999)),
-                                  child: const Text('SẮP RA MẮT',
-                                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.ink)),
-                                ),
-                              ],
-                            ),
-                            const Text('Tư vấn kiểu tóc cá nhân hoá cùng AI',
-                                style: TextStyle(color: Colors.white60, fontSize: 11.5)),
-                          ],
+              if (kShowAiStylistPlaceholder) ...[
+                // AI Stylist -- tinh nang trong thiet ke goc nhung chua duoc
+                // xay dung that (can them backend goi LLM). Hien thi dung UI
+                // nhung gan nhan "Sap ra mat" va khong dieu huong di dau, tranh
+                // hua hen 1 tinh nang chua ton tai.
+                InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('AI Stylist đang được phát triển, sẽ sớm ra mắt!')),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(color: AppColors.ink, borderRadius: BorderRadius.circular(18)),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(color: AppColors.lime.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(14)),
+                          child: const Icon(Icons.auto_awesome, color: AppColors.lime),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Text('AI Stylist', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                    decoration: BoxDecoration(color: AppColors.lime, borderRadius: BorderRadius.circular(999)),
+                                    child: const Text('SẮP RA MẮT',
+                                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.ink)),
+                                  ),
+                                ],
+                              ),
+                              const Text('Tư vấn kiểu tóc cá nhân hoá cùng AI',
+                                  style: TextStyle(color: Colors.white60, fontSize: 11.5)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 14),
+                const SizedBox(height: 14),
+              ],
 
-              if (!isPremium)
+              if (!isPremium && kEnableExternalPayment)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(

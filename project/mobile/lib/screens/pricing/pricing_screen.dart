@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../config/feature_flags.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme.dart';
 
@@ -104,16 +105,17 @@ class _PricingScreenState extends ConsumerState<PricingScreen> {
                                     ],
                                   ),
                                 ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(_plans[i].price,
-                                        style: TextStyle(
-                                            fontSize: 18, fontWeight: FontWeight.w700,
-                                            color: _selected == i ? AppColors.lime : Colors.white)),
-                                    Text('/ ${_plans[i].period}', style: const TextStyle(fontSize: 10.5, color: Colors.white38)),
-                                  ],
-                                ),
+                                if (kEnableExternalPayment)
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(_plans[i].price,
+                                          style: TextStyle(
+                                              fontSize: 18, fontWeight: FontWeight.w700,
+                                              color: _selected == i ? AppColors.lime : Colors.white)),
+                                      Text('/ ${_plans[i].period}', style: const TextStyle(fontSize: 10.5, color: Colors.white38)),
+                                    ],
+                                  ),
                               ],
                             ),
                           ),
@@ -144,30 +146,40 @@ class _PricingScreenState extends ConsumerState<PricingScreen> {
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
-              child: Column(
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.lime, foregroundColor: AppColors.ink),
-                      onPressed: () {
-                        if (user == null) {
-                          context.push('/login');
-                          return;
-                        }
-                        context.push('/checkout', extra: plan.code);
-                      },
-                      child: const Text('Đăng ký ngay'),
+            if (!kEnableExternalPayment)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(24, 8, 24, 20),
+                child: Text(
+                  'Tính năng nâng cấp gói đang được đồng bộ qua hệ thống Google Play Billing.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: Colors.white54),
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.lime, foregroundColor: AppColors.ink),
+                        onPressed: () {
+                          if (user == null) {
+                            context.push('/login');
+                            return;
+                          }
+                          context.push('/checkout', extra: plan.code);
+                        },
+                        child: const Text('Đăng ký ngay'),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text('Thanh toán qua PayOS / VietQR · Huỷ bất kỳ lúc nào',
-                      style: TextStyle(fontSize: 11, color: Colors.white38)),
-                ],
+                    const SizedBox(height: 10),
+                    const Text('Thanh toán qua PayOS / VietQR · Huỷ bất kỳ lúc nào',
+                        style: TextStyle(fontSize: 11, color: Colors.white38)),
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),

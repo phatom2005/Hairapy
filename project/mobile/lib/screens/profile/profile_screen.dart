@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../api/api_client.dart';
+import '../../config/feature_flags.dart';
 import '../../models/hairstyle.dart';
 import '../../models/scan_record.dart';
 import '../../providers/auth_provider.dart';
@@ -212,7 +213,10 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: 24),
 
             _MenuTile(icon: Icons.settings_outlined, label: 'Cài đặt tài khoản', onTap: () => context.push('/settings')),
-            _MenuTile(icon: Icons.workspace_premium_outlined, label: user.isPremium ? 'Quản lý gói Premium' : 'Nâng cấp Premium', onTap: () => context.push('/pricing')),
+            if (kEnableExternalPayment)
+              _MenuTile(icon: Icons.workspace_premium_outlined, label: user.isPremium ? 'Quản lý gói Premium' : 'Nâng cấp Premium', onTap: () => context.push('/pricing'))
+            else if (user.isPremium)
+              const _MenuTile(icon: Icons.workspace_premium_outlined, label: 'Gói hiện tại: Premium'),
             _MenuTile(icon: Icons.storefront_outlined, label: 'Salon đối tác', onTap: () => context.push('/salons')),
             const SizedBox(height: 8),
             OutlinedButton(
@@ -372,8 +376,8 @@ class _StatCard extends StatelessWidget {
 class _MenuTile extends StatelessWidget {
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
-  const _MenuTile({required this.icon, required this.label, required this.onTap});
+  final VoidCallback? onTap;
+  const _MenuTile({required this.icon, required this.label, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -383,7 +387,7 @@ class _MenuTile extends StatelessWidget {
       child: ListTile(
         leading: Icon(icon, color: AppColors.mauve),
         title: Text(label, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
-        trailing: const Icon(Icons.chevron_right, size: 20, color: AppColors.muted),
+        trailing: onTap != null ? const Icon(Icons.chevron_right, size: 20, color: AppColors.muted) : null,
         onTap: onTap,
       ),
     );

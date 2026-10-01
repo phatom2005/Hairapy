@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'config/feature_flags.dart';
 import 'models/hairstyle.dart';
 import 'providers/auth_provider.dart';
 import 'screens/auth/login_screen.dart';
@@ -33,6 +34,12 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (!loggedIn && !isPublic) return '/login';
       if (loggedIn && isPublic) return '/home';
+
+      // Chặn và chuyển hướng nếu truy cập luồng mua gói khi cờ kEnableExternalPayment đang tắt
+      if (!kEnableExternalPayment && (loc == '/pricing' || loc == '/checkout' || loc == '/payment-result')) {
+        return '/home';
+      }
+
       return null;
     },
     routes: [

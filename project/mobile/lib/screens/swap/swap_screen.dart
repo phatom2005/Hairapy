@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../api/api_client.dart';
+import '../../config/feature_flags.dart';
 import '../../models/hairstyle.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/scan_state_provider.dart';
@@ -186,7 +187,19 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
     if (hairstyle != null && hairstyle.premiumOnly && (user == null || !user.isPremium)) {
       // Phòng hờ vào thẳng route (deep link) mà chưa qua chốt chặn ở Catalog/Results.
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) context.pushReplacement('/pricing');
+        if (!mounted) return;
+        if (!kEnableExternalPayment) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Tính năng này dành cho thành viên Premium.')),
+          );
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/catalog');
+          }
+          return;
+        }
+        context.pushReplacement('/pricing');
       });
     }
 

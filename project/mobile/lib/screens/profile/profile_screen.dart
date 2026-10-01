@@ -132,7 +132,7 @@ class ProfileScreen extends ConsumerWidget {
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: preview.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 10),
+                    separatorBuilder: (context, index) => const SizedBox(width: 10),
                     itemBuilder: (context, i) {
                       final h = preview[i];
                       return GestureDetector(
@@ -292,7 +292,7 @@ void _showAllSavedStyles(BuildContext context, WidgetRef ref, List<Hairstyle> li
                           controller: scrollController,
                           padding: const EdgeInsets.all(16),
                           itemCount: fullList.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          separatorBuilder: (context, index) => const SizedBox(height: 12),
                           itemBuilder: (context, i) {
                             final h = fullList[i];
                             return GestureDetector(

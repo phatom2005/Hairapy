@@ -129,30 +129,36 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
           // Rung nhe bao hieu ket qua da san sang -- diem nhan nho, khong can
           // nguoi dung phai nhin man hinh cham cham cho biet xong chua.
           HapticFeedback.mediumImpact();
-          if (mounted) setState(() {
-            _phase = _Phase.done;
-            _resultImage = data['image'] as String?;
-          });
+          if (mounted) {
+            setState(() {
+              _phase = _Phase.done;
+              _resultImage = data['image'] as String?;
+            });
+          }
           return;
         }
         if (status == 'ERROR') {
           _stopLoadingCycle();
           ref.invalidate(usageSummaryProvider);
-          if (mounted) setState(() {
-            _phase = _Phase.error;
-            _error = data['error'] as String? ?? 'AI xử lý quá lâu, lượt của bạn đã được hoàn lại.';
-            _refunded = data['refunded'] == true;
-          });
+          if (mounted) {
+            setState(() {
+              _phase = _Phase.error;
+              _error = data['error'] as String? ?? 'AI xử lý quá lâu, lượt của bạn đã được hoàn lại.';
+              _refunded = data['refunded'] == true;
+            });
+          }
           return;
         }
         // PENDING -> tiếp tục poll
         _poll(taskId);
       } catch (_) {
         _stopLoadingCycle();
-        if (mounted) setState(() {
-          _phase = _Phase.error;
-          _error = 'Mất kết nối khi kiểm tra trạng thái xử lý. Vui lòng thử lại.';
-        });
+        if (mounted) {
+          setState(() {
+            _phase = _Phase.error;
+            _error = 'Mất kết nối khi kiểm tra trạng thái xử lý. Vui lòng thử lại.';
+          });
+        }
       }
     });
   }

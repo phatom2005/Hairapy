@@ -30,7 +30,7 @@ final catalogProvider = FutureProvider.autoDispose<List<Hairstyle>>((ref) async 
   final faceShape = ref.watch(_faceShapeProvider);
   final res = await ApiClient.instance.dio.get('/hairstyles', queryParameters: {
     if (search.trim().isNotEmpty) 'search': search.trim(),
-    if (faceShape != null) 'faceShape': faceShape,
+    'faceShape': ?faceShape,
   });
   return (res.data as List).map((e) => Hairstyle.fromJson(e as Map<String, dynamic>)).toList();
 });
@@ -80,7 +80,7 @@ class CatalogScreen extends ConsumerWidget {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: _faceShapeFilters.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (context, index) => const SizedBox(width: 8),
               itemBuilder: (context, i) {
                 final f = _faceShapeFilters[i];
                 final selected = activeShape == f.key;

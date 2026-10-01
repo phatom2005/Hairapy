@@ -34,4 +34,6 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
 
     // Tìm các subscription active có ngày hết hạn trước mốc thời gian truyền vào
     List<Subscription> findByStatusAndEndDateBefore(SubscriptionStatus status, LocalDateTime dateTime);
+
+    void deleteByUserId(Long userId);
 }

@@ -110,6 +110,45 @@ public class CloudinaryService {
     }
 
     /**
+     * Trích xuất public_id từ URL Cloudinary.
+     * Ví dụ:
+     * "https://res.cloudinary.com/cloud/image/upload/v1234567/hairapy/scans/sample.jpg" -> "hairapy/scans/sample"
+     * "https://res.cloudinary.com/cloud/image/upload/hairapy/scans/sample.png" -> "hairapy/scans/sample"
+     *
+     * @param url URL ảnh Cloudinary đầy đủ.
+     * @return public_id của ảnh, hoặc null nếu URL không hợp lệ.
+     */
+    public String extractPublicId(String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+        int uploadIdx = url.indexOf("/upload/");
+        if (uploadIdx == -1) {
+            return null;
+        }
+        String path = url.substring(uploadIdx + "/upload/".length());
+        int queryIdx = path.indexOf('?');
+        if (queryIdx != -1) {
+            path = path.substring(0, queryIdx);
+        }
+
+        // Ưu tiên nhận diện cấu trúc folder hairapy/ của dự án
+        int hairapyIdx = path.indexOf("hairapy/");
+        if (hairapyIdx != -1) {
+            path = path.substring(hairapyIdx);
+        } else {
+            // Trường hợp không có prefix hairapy/, lược bỏ version v12345/ và transformation nếu có
+            path = path.replaceFirst("^(?:[a-zA-Z0-9_,]+(?:/[a-zA-Z0-9_,]+)*/)?(?:v\\d+/)?", "");
+        }
+
+        int dotIdx = path.lastIndexOf('.');
+        if (dotIdx != -1) {
+            path = path.substring(0, dotIdx);
+        }
+        return path.isEmpty() ? null : path;
+    }
+
+    /**
      * Lọc ra danh sách public_id của ảnh đã hết hạn (created_at trước cutoff).
      * Tách riêng thành pure function để unit test không cần mock Cloudinary SDK.
      *

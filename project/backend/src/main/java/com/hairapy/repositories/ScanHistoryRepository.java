@@ -15,5 +15,9 @@ public interface ScanHistoryRepository extends JpaRepository<ScanHistory, Long> 
 
     List<ScanHistory> findByUserOrderByCreatedAtDesc(User user);
 
+    List<ScanHistory> findByUserId(Long userId);
+
     long countByUser(User user);
+
+    void deleteByUserId(Long userId);
 }

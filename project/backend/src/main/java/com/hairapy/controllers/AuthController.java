@@ -8,17 +8,25 @@ import com.hairapy.models.User;
 import com.hairapy.repositories.UserRepository;
 import com.hairapy.services.AuthService;
 import com.hairapy.security.TokenBlacklistService;
+import com.hairapy.services.AccountDeletionService;
+import com.hairapy.services.CloudinaryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * Controller chịu trách nhiệm định tuyến các yêu cầu xác thực API hệ thống.
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -28,6 +36,9 @@ public class AuthController {
     private final UserRepository userRepository;
     private final TokenBlacklistService tokenBlacklistService;
     private final com.hairapy.services.PasswordResetService passwordResetService;
+    private final AccountDeletionService accountDeletionService;
+    private final PasswordEncoder passwordEncoder;
+    private final CloudinaryService cloudinaryService;
 
     /**
      * Endpoint đăng ký tài khoản mới.
@@ -127,5 +138,57 @@ public class AuthController {
     public ResponseEntity<AuthResponse> loginWithFacebook(@Valid @RequestBody com.hairapy.dto.auth.FacebookLoginRequest request) {
         AuthResponse response = authService.loginWithFacebook(request.accessToken());
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Endpoint xoá tài khoản người dùng theo yêu cầu Google Play và bảo vệ dữ liệu cá nhân.
+     * Cần đăng nhập để gọi. Giữ lại bản ghi payments phục vụ kế toán.
+     */
+    @DeleteMapping("/me")
+    public ResponseEntity<?> deleteMyAccount(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody(required = false) com.hairapy.dto.auth.DeleteAccountRequest request
+    ) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Chưa xác thực."));
+        }
+
+        User user = userRepository.findByEmail(userDetails.getUsername()).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Người dùng không tồn tại."));
+        }
+
+        // Không cho phép tài khoản ADMIN tự xoá
+        if (user.getRole() == com.hairapy.models.Role.ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Không thể xoá tài khoản quản trị."));
+        }
+
+        // Nếu tài khoản đăng ký LOCAL (email/mật khẩu), bắt buộc mật khẩu phải khớp
+        if (user.getProvider() == com.hairapy.models.AuthProvider.LOCAL) {
+            if (request == null || request.password() == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Mật khẩu không đúng."));
+            }
+        }
+
+        // Thực hiện ẩn danh hoá và xoá các bản ghi phụ thuộc trong CSDL
+        List<String> publicIds = accountDeletionService.deleteAccount(user);
+
+        // Vô hiệu hoá token JWT hiện tại
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            tokenBlacklistService.blacklist(token);
+        }
+
+        // Xoá ảnh scans trên Cloudinary (best-effort sau khi transaction đã commit)
+        for (String pid : publicIds) {
+            try {
+                cloudinaryService.delete(pid);
+            } catch (Exception e) {
+                log.warn("Không thể xóa ảnh scan Cloudinary publicId {}: {}", pid, e.getMessage());
+            }
+        }
+
+        return ResponseEntity.ok(Map.of("message", "Đã xoá tài khoản."));
     }
 }

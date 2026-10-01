@@ -20,4 +20,6 @@ public interface SavedHairstyleRepository extends JpaRepository<SavedHairstyle, 
     Optional<SavedHairstyle> findByUserAndHairstyle(User user, HairstyleCatalog hairstyle);
 
     boolean existsByUserAndHairstyle(User user, HairstyleCatalog hairstyle);
+
+    void deleteByUserId(Long userId);
 }

@@ -35,4 +35,6 @@ public interface UsageHistoryRepository extends JpaRepository<UsageHistory, Long
     // Thống kê theo tháng (dùng khi range > 90 ngày)
     @Query("SELECT FUNCTION('to_char', u.usedAt, 'YYYY-MM') as month, COUNT(u) as count FROM UsageHistory u WHERE u.usedAt >= :since GROUP BY FUNCTION('to_char', u.usedAt, 'YYYY-MM') ORDER BY month")
     List<Object[]> countMonthlyUsageSince(@Param("since") LocalDateTime since);
+
+    void deleteByUserId(Long userId);
 }

@@ -62,6 +62,12 @@ class AdminFeedbackControllerTest {
                 .build());
     }
 
+    @org.junit.jupiter.api.AfterEach
+    void tearDown() {
+        feedbackRepository.deleteAll();
+        userRepository.deleteAll();
+    }
+
     @Test
     @WithMockUser(roles = "ADMIN")
     void getFeedbackList_Admin_Success() throws Exception {

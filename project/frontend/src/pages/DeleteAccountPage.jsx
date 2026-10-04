@@ -35,6 +35,7 @@ export default function DeleteAccountPage() {
                     <li>Lịch sử quét và kết quả phân tích dáng khuôn mặt.</li>
                     <li>Bộ sưu tập các kiểu tóc đã lưu trong mục Yêu thích.</li>
                     <li>Nhật ký số lượt sử dụng tính năng AI.</li>
+                    <li>Nội dung nhận xét trong các đánh giá bạn đã gửi.</li>
                     <li>Mọi token đặt lại mật khẩu và phiên đăng nhập.</li>
                   </ul>
                 </div>
@@ -42,6 +43,7 @@ export default function DeleteAccountPage() {
                   <p className="font-bold text-amber-700 text-sm mb-2">Dữ liệu được giữ lại (Ẩn danh hoá):</p>
                   <ul className="list-disc list-inside space-y-1 text-xs text-amber-900">
                     <li>Bản ghi hóa đơn / giao dịch thanh toán được lưu trữ theo quy định kế toán và thuế.</li>
+                    <li>Số sao đánh giá dịch vụ ở dạng ẩn danh hoàn toàn (phục vụ thống kê chất lượng).</li>
                     <li>Toàn bộ thông tin định danh (tên, email, số điện thoại) của bạn sẽ được ẩn danh hoá thành tài khoản không thể nhận diện (ví dụ: <code className="bg-amber-100 px-1 py-0.5 rounded">deleted-xxx@deleted.hairapy.invalid</code>).</li>
                   </ul>
                 </div>

@@ -51,6 +51,7 @@ export default function PrivacyPage() {
                 <li><strong className="text-ink">Thông tin tài khoản:</strong> Địa chỉ email, họ và tên, số điện thoại (tùy chọn), ngày sinh (tùy chọn) và mật khẩu được lưu trữ dưới dạng băm mã hóa một chiều (BCrypt).</li>
                 <li><strong className="text-ink">Hình ảnh khuôn mặt & Trắc học:</strong> Ảnh chân dung selfie do bạn trực tiếp chụp hoặc tải lên từ thư viện thiết bị, tọa độ các điểm mốc khuôn mặt (face mesh landmarks) được trích xuất trên thiết bị.</li>
                 <li><strong className="text-ink">Dữ liệu sử dụng tính năng:</strong> Kết quả xác định dáng khuôn mặt (Oval, Tròn, Vuông...), danh sách lịch sử các lần quét mặt, kiểu tóc yêu thích đã lưu và số lượt dùng quota hàng ngày.</li>
+                <li><strong className="text-ink">Đánh giá & Nhận xét:</strong> Số sao đánh giá và ý kiến nhận xét bạn chủ động gửi trong ứng dụng để góp ý nâng cao chất lượng dịch vụ. Khi xoá tài khoản, nội dung nhận xét sẽ bị xoá và số sao được giữ lại ở dạng ẩn danh.</li>
                 <li><strong className="text-ink">Dữ liệu giao dịch:</strong> Mã đơn hàng, số tiền, ngày giờ giao dịch và trạng thái thanh toán từ PayOS. <span className="text-ink font-semibold">Hairapy tuyệt đối KHÔNG lưu trữ số thẻ ngân hàng, số CVV hay mật khẩu tài khoản ngân hàng của bạn.</span></li>
               </ul>
             </section>

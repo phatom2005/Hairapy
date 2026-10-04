@@ -32,6 +32,8 @@ class AccountDeletionServiceTest {
     @Mock
     private PasswordResetTokenRepository passwordResetTokenRepository;
     @Mock
+    private FeedbackRepository feedbackRepository;
+    @Mock
     private CloudinaryService cloudinaryService;
 
     private AccountDeletionService accountDeletionService;
@@ -45,6 +47,7 @@ class AccountDeletionServiceTest {
                 usageHistoryRepository,
                 subscriptionRepository,
                 passwordResetTokenRepository,
+                feedbackRepository,
                 cloudinaryService
         );
     }
@@ -77,6 +80,7 @@ class AccountDeletionServiceTest {
         verify(scanHistoryRepository).deleteByUserId(42L);
         verify(usageHistoryRepository).deleteByUserId(42L);
         verify(subscriptionRepository).deleteByUserId(42L);
+        verify(feedbackRepository).clearCommentsByUserId(42L);
 
         // Verify user anonymized
         assertEquals("deleted-42@deleted.hairapy.invalid", user.getEmail());

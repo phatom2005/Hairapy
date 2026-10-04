@@ -27,6 +27,7 @@ public class AccountDeletionService {
     private final UsageHistoryRepository usageHistoryRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final FeedbackRepository feedbackRepository;
     private final CloudinaryService cloudinaryService;
 
     /**
@@ -56,6 +57,7 @@ public class AccountDeletionService {
         scanHistoryRepository.deleteByUserId(userId);
         usageHistoryRepository.deleteByUserId(userId);
         subscriptionRepository.deleteByUserId(userId);
+        feedbackRepository.clearCommentsByUserId(userId);
 
         log.info("Đã xóa dữ liệu liên quan của user ID {}. Nếu user có subscription ACTIVE, gói đã bị hủy và không hoàn tiền.", userId);
 

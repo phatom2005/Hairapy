@@ -43,10 +43,15 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage, (a, b) -> a));
         log.warn("Validation failed: {}", fieldErrors);
 
+        String firstMessage = ex.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(FieldError::getDefaultMessage)
+                .orElse("Validation Failed");
+
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.BAD_REQUEST.value());
-        body.put("error", "Validation Failed");
+        body.put("error", firstMessage);
         body.put("errors", fieldErrors);
         body.put("path", extractPath(request));
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);

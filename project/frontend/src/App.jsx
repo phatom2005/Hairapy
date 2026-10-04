@@ -27,8 +27,10 @@ import AdminLayout from "./components/admin/AdminLayout";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminCatalogPage from "./pages/admin/AdminCatalogPage";
-import AdminSubscriptionsPage from "./pages/admin/AdminSubscriptionsPage";
 import AdminSalonsPage from "./pages/admin/AdminSalonsPage";
+import AdminSubscriptionsPage from "./pages/admin/AdminSubscriptionsPage";
+import AdminPaymentsPage from "./pages/admin/AdminPaymentsPage";
+import AdminFeedbackPage from "./pages/admin/AdminFeedbackPage";
 import AdminUsagePage from "./pages/admin/AdminUsagePage";
 
 // Luồng chính: / -> /scan -> /results -> /swap
@@ -129,6 +131,8 @@ export default function App() {
             <Route path="/admin/users" element={<AdminUsersPage />} />
             <Route path="/admin/catalog" element={<AdminCatalogPage />} />
             <Route path="/admin/subscriptions" element={<AdminSubscriptionsPage />} />
+            <Route path="/admin/payments" element={<AdminPaymentsPage />} />
+            <Route path="/admin/feedback" element={<AdminFeedbackPage />} />
             <Route path="/admin/salons" element={<AdminSalonsPage />} />
             <Route path="/admin/usage" element={<AdminUsagePage />} />
           </Route>

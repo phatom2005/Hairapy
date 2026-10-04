@@ -26,6 +26,8 @@ export default function AdminLayout() {
     { to: "/admin/catalog", label: "Kho kiểu tóc", icon: <ScissorsIcon /> },
     { to: "/admin/salons", label: "Salon đối tác", icon: <StarIcon size={18} /> },
     { to: "/admin/subscriptions", label: "Gói đăng ký", icon: <CrownIcon /> },
+    { to: "/admin/payments", label: "Lịch sử thanh toán", icon: <CrownIcon size={18} /> },
+    { to: "/admin/feedback", label: "Đánh giá", icon: <StarIcon size={18} /> },
     { to: "/admin/usage", label: "Nhật ký sử dụng", icon: <ActivityIcon /> },
   ];
 

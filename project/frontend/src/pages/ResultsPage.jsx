@@ -9,6 +9,7 @@ import { Badge, Button, Card, DragScroll, Section, SectionHeading } from "../com
 import api from "../lib/api";
 import { useScanStore } from "../store/useScanStore";
 import useAuthStore from "../store/useAuthStore";
+import FeedbackWidget from "../components/FeedbackWidget";
 
 // Bản đồ dịch dáng mặt sang tiếng Việt
 const FACE_SHAPE_TRANSLATION = {
@@ -374,6 +375,10 @@ export default function ResultsPage() {
           ))}
         </div>
       </Section>
+
+      <section className="mx-auto max-w-[1200px] px-4 py-6 sm:px-16">
+        <FeedbackWidget feature="FACE_SCAN" />
+      </section>
 
       <section className="bg-transparent px-4 py-16 sm:px-16">
         <AnimatedContent y={60}>

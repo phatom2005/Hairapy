@@ -9,6 +9,7 @@ import { Button, Card } from "../components/ui";
 import api from "../lib/api";
 import useAuthStore from "../store/useAuthStore";
 import { useScanStore } from "../store/useScanStore";
+import FeedbackWidget from "../components/FeedbackWidget";
 
 // Bản đồ dịch dáng mặt sang tiếng Việt (khớp với ResultsPage)
 const FACE_SHAPE_MAP = {
@@ -457,6 +458,10 @@ export default function SwapPage() {
                 Khôi phục ảnh gốc
               </Button>
             </div>
+          )}
+
+          {resultImage && (
+            <FeedbackWidget feature="HAIR_SWAP" />
           )}
         </Card>
 

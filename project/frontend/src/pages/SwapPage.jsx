@@ -460,7 +460,7 @@ export default function SwapPage() {
             </div>
           )}
 
-          {resultImage && (
+          {resultImage && !error && (
             <FeedbackWidget feature="HAIR_SWAP" />
           )}
         </Card>

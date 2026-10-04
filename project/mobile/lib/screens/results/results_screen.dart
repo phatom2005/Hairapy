@@ -8,6 +8,7 @@ import '../../models/hairstyle.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/scan_state_provider.dart';
 import '../../theme.dart';
+import '../../widgets/feedback_sheet.dart';
 
 // Bản đồ dịch dáng mặt sang tiếng Việt — copy nguyên từ ResultsPage.jsx để
 // hiển thị đúng như bên web (faceShape lưu backend vẫn là tiếng Anh gốc).
@@ -96,10 +97,15 @@ final _hairstylesByFaceShapeProvider =
   return (res.data as List).map((e) => Hairstyle.fromJson(e as Map<String, dynamic>)).toList();
 });
 
-class ResultsScreen extends ConsumerWidget {
+class ResultsScreen extends ConsumerStatefulWidget {
   const ResultsScreen({super.key});
 
-  void _handleTryStyle(BuildContext context, WidgetRef ref, Hairstyle h) {
+  @override
+  ConsumerState<ResultsScreen> createState() => _ResultsScreenState();
+}
+
+class _ResultsScreenState extends ConsumerState<ResultsScreen> {
+  void _handleTryStyle(BuildContext context, Hairstyle h) {
     final user = ref.read(authProvider).user;
     if (h.premiumOnly && (user == null || !user.isPremium)) {
       if (!kEnableExternalPayment) {
@@ -115,7 +121,7 @@ class ResultsScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final scanState = ref.watch(scanStateProvider);
     final faceShape = scanState.faceShape;
 
@@ -135,13 +141,26 @@ class ResultsScreen extends ConsumerWidget {
     final metrics = scanState.metrics;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Kết quả phân tích')),
+      appBar: AppBar(
+        title: const Text('Kết quả phân tích'),
+        actions: [
+          TextButton.icon(
+            onPressed: () => showFeedbackSheet(context, ref, 'FACE_SCAN'),
+            icon: const Icon(Icons.star_outline_rounded, size: 18, color: AppColors.primary),
+            label: const Text(
+              'Đánh giá',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary),
+            ),
+          ),
+        ],
+      ),
       body: stylesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Không tải được danh sách: $e')),
-        data: (styles) => ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
+        data: (styles) {
+          return ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
             // ── Hồ sơ khuôn mặt ─────────────────────────────────────────
             Container(
               padding: const EdgeInsets.all(16),
@@ -249,7 +268,7 @@ class ResultsScreen extends ConsumerWidget {
                   final h = styles[i];
                   return HairstyleCard(
                     hairstyle: h,
-                    onTryNow: () => _handleTryStyle(context, ref, h),
+                    onTryNow: () => _handleTryStyle(context, h),
                   );
                 },
               ),
@@ -258,9 +277,21 @@ class ResultsScreen extends ConsumerWidget {
               onPressed: () => context.push('/catalog'),
               child: const Text('Xem toàn bộ kho kiểu tóc'),
             ),
+            const SizedBox(height: 14),
+            Center(
+              child: TextButton.icon(
+                onPressed: () => showFeedbackSheet(context, ref, 'FACE_SCAN'),
+                icon: const Icon(Icons.star_rate_rounded, color: Colors.amber, size: 20),
+                label: const Text(
+                  'Đánh giá trải nghiệm quét khuôn mặt',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink),
+                ),
+              ),
+            ),
           ],
-        ),
-      ),
+        );
+      },
+    ),
     );
   }
 }

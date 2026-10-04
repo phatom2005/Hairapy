@@ -14,6 +14,7 @@ import '../../providers/scan_state_provider.dart';
 import '../../screens/scan/scan_screen.dart' show usageSummaryProvider;
 import '../../services/share_card_generator.dart';
 import '../../theme.dart';
+import '../../widgets/feedback_sheet.dart';
 
 enum _Phase { idle, submitting, polling, done, error }
 
@@ -49,6 +50,18 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
   int _loadingIndex = 0;
 
   bool _sharing = false;
+  bool _feedbackShown = false;
+
+  void _triggerFeedbackOnce() {
+    if (_feedbackShown) return;
+    _feedbackShown = true;
+    // Trễ 2 giây để người dùng kịp nhìn kết quả rồi mới hỏi đánh giá
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        showFeedbackSheet(context, ref, 'HAIR_SWAP');
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -134,6 +147,7 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
               _phase = _Phase.done;
               _resultImage = data['image'] as String?;
             });
+            _triggerFeedbackOnce();
           }
           return;
         }
@@ -299,7 +313,7 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
               ],
             ),
           ),
-        if (_phase == _Phase.done)
+        if (_phase == _Phase.done) ...[
           Row(
             // KHONG dung crossAxisAlignment: stretch o day -- Row nay nam
             // trong 1 Column duoc Padding/SafeArea cap chieu cao khong gioi
@@ -351,7 +365,19 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
                 ),
               ),
             ],
-          )
+          ),
+          const SizedBox(height: 12),
+          Center(
+            child: TextButton.icon(
+              onPressed: () => showFeedbackSheet(context, ref, 'HAIR_SWAP'),
+              icon: const Icon(Icons.star_rate_rounded, color: Colors.amber, size: 18),
+              label: const Text(
+                'Đánh giá trải nghiệm thử kiểu tóc',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.mauve),
+              ),
+            ),
+          ),
+        ]
         else
           ElevatedButton(
             onPressed: (_phase == _Phase.submitting || _phase == _Phase.polling) ? null : _submit,

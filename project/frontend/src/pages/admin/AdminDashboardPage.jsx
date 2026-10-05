@@ -1,437 +1,488 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import {
+  Money,
+  People,
+  Crown1,
+  Scan,
+  Gallery,
+  Star1,
+  TrendUp,
+  ReceiptText,
+} from "iconsax-reactjs";
 import api from "../../lib/api";
-import { Card, Badge } from "../../components/ui";
-import { CameraIcon, ScanIcon, UserIcon, CrownIcon, StarIcon } from "../../components/icons";
+
+// Màu dùng cho chart — hardcode hex vì Tailwind 4 có thể bỏ CSS var không dùng
+const C = {
+  brand: "#1039da",
+  primary: "#2a4ae8",
+  magenta: "#b1008d",
+  pink: "#ff57cf",
+  lime: "#d0ee88",
+  ink: "#1a1a1a",
+  muted: "#89707d",
+  line: "#e8e8e8",
+  amber: "#f5a524",
+  red: "#e5484d",
+};
+
+const PERIODS = [
+  { label: "7 ngày", value: "7d" },
+  { label: "30 ngày", value: "30d" },
+  { label: "3 tháng", value: "90d" },
+  { label: "1 năm", value: "1y" },
+];
+
+const nf = new Intl.NumberFormat("vi-VN");
+const formatVND = (n) => `${nf.format(n ?? 0)} ₫`;
+// Rút gọn số tiền cho trục Y (1,2tr / 350k)
+const compactVND = (n) =>
+  n >= 1_000_000 ? `${+(n / 1_000_000).toFixed(1)}tr` : n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`;
+
+// "2026-03-15" → 15/03, "2026-03" → 03/2026
+function formatDateLabel(date, granularity) {
+  if (!date) return "";
+  const [y, m, d] = String(date).slice(0, 10).split("-");
+  if (granularity === "month") return `${m}/${y}`;
+  return d ? `${d}/${m}` : `${m}/${y}`;
+}
+
+const STATUS_LABEL = { PAID: "Đã thanh toán", PENDING: "Chờ", CANCELLED: "Đã huỷ" };
+const STATUS_STYLE = {
+  PAID: "bg-emerald-50 text-emerald-700",
+  PENDING: "bg-amber-50 text-amber-700",
+  CANCELLED: "bg-red-50 text-red-600",
+};
+
+/* ---------- Thành phần nhỏ ---------- */
+
+function Panel({ title, subtitle, right, children, className = "" }) {
+  return (
+    <section className={`rounded-3xl border border-line bg-white p-5 shadow-sm ${className}`}>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-bold text-ink">{title}</h3>
+          {subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}
+        </div>
+        {right}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Kpi({ label, value, hint, Icon, tone }) {
+  return (
+    <div className="rounded-3xl border border-line bg-white p-5 shadow-sm">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-muted">{label}</p>
+        <span
+          className="flex size-9 items-center justify-center rounded-xl"
+          style={{ backgroundColor: `${tone}1a`, color: tone }}
+        >
+          <Icon size={18} variant="Bulk" />
+        </span>
+      </div>
+      <p className="mt-3 text-2xl font-bold tracking-tight text-ink">{value}</p>
+      {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
+    </div>
+  );
+}
+
+function ChartTooltip({ active, payload, label, formatter, granularity }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-xl border border-line bg-white px-3 py-2 text-xs shadow-lg">
+      <p className="mb-1 font-semibold text-ink">{formatDateLabel(label, granularity)}</p>
+      {payload.map((p) => (
+        <p key={p.dataKey} className="flex items-center gap-1.5 text-mauve">
+          <span className="size-2 rounded-full" style={{ backgroundColor: p.color || p.stroke }} />
+          {p.name}: <b className="text-ink">{formatter ? formatter(p.value) : nf.format(p.value)}</b>
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function Empty({ text = "Chưa có dữ liệu trong khoảng thời gian này" }) {
+  return (
+    <div className="flex h-56 items-center justify-center rounded-2xl bg-canvas text-xs text-muted">
+      {text}
+    </div>
+  );
+}
+
+function Skeleton() {
+  return (
+    <div className="animate-pulse space-y-4">
+      <div className="h-10 w-64 rounded-xl bg-line" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="h-32 rounded-3xl bg-line" />
+        ))}
+      </div>
+      <div className="grid gap-4 xl:grid-cols-3">
+        <div className="h-80 rounded-3xl bg-line xl:col-span-2" />
+        <div className="h-80 rounded-3xl bg-line" />
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Trang chính ---------- */
 
 export default function AdminDashboardPage() {
   const [period, setPeriod] = useState("30d");
 
-  // Fetch dữ liệu thống kê từ API sử dụng useQuery để tự động quản lý loading state
-  const { data: stats, isLoading: loading, error: queryError } = useQuery({
+  const {
+    data: stats,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["admin-stats", period],
-    queryFn: async () => {
-      const { data } = await api.get(`/admin/dashboard/stats`, { params: { period } });
-      return data;
-    },
+    queryFn: async () => (await api.get("/admin/dashboard/stats", { params: { period } })).data,
+    placeholderData: (prev) => prev, // giữ dữ liệu cũ khi đổi kỳ, tránh nháy skeleton
   });
 
-  const error = queryError ? "Không thể tải thông tin thống kê." : null;
+  // Giao dịch gần đây (5 dòng) — lỗi thì chỉ ẩn widget, không chặn cả trang
+  const { data: recent } = useQuery({
+    queryKey: ["admin-recent-payments"],
+    queryFn: async () => (await api.get("/admin/payments", { params: { size: 5, page: 0 } })).data,
+    staleTime: 30_000,
+  });
+  const recentPayments = recent?.content ?? (Array.isArray(recent) ? recent : []);
 
-  if (loading) {
+  if (isLoading) return <Skeleton />;
+
+  if (error || !stats) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <div className="size-10 animate-spin rounded-full border-4 border-brand border-t-transparent" />
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center font-semibold text-red-600">
+        Không thể tải thông tin thống kê.
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="p-6 bg-red-50 text-red-600 rounded-2xl border border-red-200 text-center font-semibold">
-        {error}
-      </div>
-    );
-  }
+  const g = stats.granularity;
+  const revenue = stats.revenueTrend ?? [];
+  const usage = stats.dailyUsage ?? [];
+  const regs = stats.registrationTrend ?? [];
+  const dist = stats.ratingDistribution ?? [0, 0, 0, 0, 0];
+  const ratingMax = Math.max(1, ...dist);
 
-  const PERIODS = [
-    { label: "7 ngày", value: "7d" },
-    { label: "30 ngày", value: "30d" },
-    { label: "3 tháng", value: "90d" },
-    { label: "1 năm", value: "1y" },
+  const txData = [
+    { name: "Đã thanh toán", value: stats.paidTransactions ?? 0, color: C.brand },
+    { name: "Chờ", value: stats.pendingTransactions ?? 0, color: C.amber },
+    { name: "Đã huỷ", value: stats.cancelledTransactions ?? 0, color: C.red },
   ];
+  const txTotal = txData.reduce((s, x) => s + x.value, 0);
 
-  // Định dạng tiền tệ VND
-  const formatVND = (val) => new Intl.NumberFormat("vi-VN").format(val ?? 0) + " ₫";
-
-  // Chuẩn bị dữ liệu cho biểu đồ sử dụng hệ thống
-  const dailyData = stats?.dailyUsage || [];
-  const maxCount = Math.max(...dailyData.map((d) => d.count), 5);
-
-  // Chuẩn bị dữ liệu cho biểu đồ đăng ký mới
-  const regData = stats?.registrationTrend || [];
-  const maxRegCount = Math.max(...regData.map((d) => d.count), 5);
-
-  // Chuẩn bị dữ liệu cho biểu đồ doanh thu
-  const revData = stats?.revenueTrend || [];
-  const maxRevCount = Math.max(...revData.map((d) => d.count), 100000);
-
-  // Phân bố đánh giá (mảng 5 phần tử: [1★, 2★, 3★, 4★, 5★])
-  const ratingDist = stats?.ratingDistribution && stats.ratingDistribution.length === 5
-    ? stats.ratingDistribution
-    : [0, 0, 0, 0, 0];
-  const ratingCount = stats?.ratingCount ?? 0;
-  const ratingAverage = stats?.ratingAverage ?? 0;
-  const ratingTotalStars = stats?.ratingTotalStars ?? 0;
-
-  // Hàm định dạng ngày/tháng dựa trên độ chi tiết granularity
-  const formatDateLabel = (dateStr) => {
-    if (!dateStr) return "";
-    const granularity = stats?.granularity || "day";
-    if (granularity === "day") {
-      const parts = dateStr.split("-");
-      if (parts.length >= 3) {
-        return `${parts[2]}/${parts[1]}`; // dd/MM
-      }
-    } else if (granularity === "month") {
-      const parts = dateStr.split("-");
-      if (parts.length >= 2) {
-        return `${parts[1]}/${parts[0]}`; // MM/YYYY
-      }
-    }
-    return dateStr;
+  const xAxisProps = {
+    dataKey: "date",
+    tickFormatter: (d) => formatDateLabel(d, g),
+    tick: { fontSize: 11, fill: C.muted },
+    axisLine: false,
+    tickLine: false,
+    minTickGap: 24,
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h2 className="font-display text-3xl font-bold text-ink">Tổng quan hệ thống</h2>
-        <p className="text-sm text-mauve">Cập nhật lúc: {new Date().toLocaleDateString("vi-VN")}</p>
-      </div>
-
-      {/* Grid 4 Cards: Doanh thu, Giao dịch, Đánh giá, Tổng sao */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Total Revenue */}
-        <Card className="flex flex-col justify-between border border-divider/10 p-5">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted">Tổng doanh thu</p>
-            <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-              <CrownIcon size={20} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-black text-ink">{formatVND(stats?.totalRevenue ?? 0)}</h3>
-            <p className="text-xs font-semibold text-muted mt-1">
-              Trong kỳ: <span className="text-emerald-700 font-bold">{formatVND(stats?.revenueInPeriod ?? 0)}</span>
-            </p>
-          </div>
-        </Card>
-
-        {/* Transactions */}
-        <Card className="flex flex-col justify-between border border-divider/10 p-5">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted">Số giao dịch</p>
-            <div className="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-              <CrownIcon size={20} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-black text-ink">{stats?.paidTransactions ?? 0} thành công</h3>
-            <p className="text-xs font-semibold text-muted mt-1">
-              Tổng: {stats?.totalTransactions ?? 0} · Chờ: {stats?.pendingTransactions ?? 0} · Huỷ: {stats?.cancelledTransactions ?? 0}
-            </p>
-          </div>
-        </Card>
-
-        {/* Rating Average */}
-        <Card className="flex flex-col justify-between border border-divider/10 p-5">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted">Đánh giá trung bình</p>
-            <div className="flex size-10 items-center justify-center rounded-xl bg-amber-50 text-amber-500">
-              <StarIcon size={20} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-black text-ink flex items-center gap-1.5">
-              <span>{ratingAverage}</span>
-              <span className="text-sm font-bold text-muted">/ 5 ★</span>
-            </h3>
-            <p className="text-xs font-semibold text-muted mt-1">
-              {ratingCount} lượt đánh giá
-            </p>
-          </div>
-        </Card>
-
-        {/* Rating Total Stars */}
-        <Card className="flex flex-col justify-between border border-divider/10 p-5">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted">Tổng số sao</p>
-            <div className="flex size-10 items-center justify-center rounded-xl bg-amber-50 text-amber-500">
-              <StarIcon size={20} />
-            </div>
-          </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-black text-ink">{ratingTotalStars} ★</h3>
-            <p className="text-xs font-semibold text-muted mt-1">
-              5★: {ratingDist[4]} · 1★: {ratingDist[0]}
-            </p>
-          </div>
-        </Card>
-      </div>
-
-      {/* Grid 4 Cards: Hệ thống & Người dùng */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Total Users */}
-        <Card className="flex items-center gap-5 border border-divider/10">
-          <div className="flex size-14 items-center justify-center rounded-2xl bg-brand/10 text-brand">
-            <UserIcon size={28} />
-          </div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted">Người dùng</p>
-            <h3 className="text-3xl font-extrabold text-ink mt-0.5">{stats?.totalUsers ?? 0}</h3>
-          </div>
-        </Card>
-
-        {/* AI Scans Today */}
-        <Card className="flex items-center gap-5 border border-divider/10">
-          <div className="flex size-14 items-center justify-center rounded-2xl bg-pink/10 text-pink">
-            <CameraIcon size={28} />
-          </div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted">Quét hôm nay</p>
-            <h3 className="text-3xl font-extrabold text-ink mt-0.5">{stats?.scansToday ?? 0}</h3>
-          </div>
-        </Card>
-
-        {/* Swaps Today */}
-        <Card className="flex items-center gap-5 border border-divider/10">
-          <div className="flex size-14 items-center justify-center rounded-2xl bg-lime/20 text-[#6a8b0d]">
-            <ScanIcon size={28} />
-          </div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted">Thử tóc hôm nay</p>
-            <h3 className="text-3xl font-extrabold text-ink mt-0.5">{stats?.swapsToday ?? 0}</h3>
-          </div>
-        </Card>
-
-        {/* Active Premium */}
-        <Card className="flex items-center gap-5 border border-divider/10">
-          <div className="flex size-14 items-center justify-center rounded-2xl bg-yellow-100 text-yellow-600">
-            <CrownIcon size={28} />
-          </div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted">Gói Premium Active</p>
-            <h3 className="text-3xl font-extrabold text-ink mt-0.5">{stats?.activeSubscriptions ?? 0}</h3>
-          </div>
-        </Card>
-      </div>
-
-      {/* Period Filter Pill Selector */}
-      <div className="flex justify-start gap-2 bg-canvas p-1 rounded-full border border-divider/10 max-w-max">
-        {PERIODS.map((p) => {
-          const isActive = period === p.value;
-          return (
+    <div className="space-y-5">
+      {/* Tiêu đề + chọn kỳ */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="font-display text-xl font-bold text-ink">Tổng quan</h1>
+          <p className="text-xs text-muted">Số liệu kinh doanh và sử dụng của Hairapy</p>
+        </div>
+        <div className="inline-flex rounded-2xl border border-line bg-white p-1">
+          {PERIODS.map((p) => (
             <button
               key={p.value}
+              type="button"
               onClick={() => setPeriod(p.value)}
-              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
-                isActive ? "bg-white text-ink shadow border border-divider/5" : "text-muted hover:text-ink"
+              className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                period === p.value ? "bg-ink text-white" : "text-mauve hover:text-ink"
               }`}
             >
               {p.label}
             </button>
-          );
-        })}
+          ))}
+        </div>
       </div>
 
-      {/* Biểu đồ Doanh thu theo thời gian */}
-      <Card className="border border-divider/10">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h4 className="font-bold text-ink text-lg">Doanh thu theo thời gian</h4>
-            <p className="text-xs text-muted">
-              Doanh thu từ các gói đăng ký trả phí trong {PERIODS.find((p) => p.value === period)?.label.toLowerCase() || period} qua
-            </p>
-          </div>
-          <Badge variant="new">{formatVND(stats?.revenueInPeriod ?? 0)}</Badge>
-        </div>
+      {/* KPI */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Kpi
+          label="Doanh thu trong kỳ"
+          value={formatVND(stats.revenueInPeriod)}
+          hint={`Tổng: ${formatVND(stats.totalRevenue)} · ${stats.paidTransactionsInPeriod ?? 0} giao dịch`}
+          Icon={Money}
+          tone={C.brand}
+        />
+        <Kpi
+          label="Người dùng"
+          value={nf.format(stats.totalUsers ?? 0)}
+          hint={`${stats.totalAdmins ?? 0} admin`}
+          Icon={People}
+          tone={C.magenta}
+        />
+        <Kpi
+          label="Gói Premium đang hoạt động"
+          value={nf.format(stats.activeSubscriptions ?? 0)}
+          Icon={Crown1}
+          tone={C.amber}
+        />
+        <Kpi
+          label="Lượt dùng AI"
+          value={nf.format((stats.totalScans ?? 0) + (stats.totalSwaps ?? 0))}
+          hint={`Hôm nay: ${stats.scansToday ?? 0} scan · ${stats.swapsToday ?? 0} thử tóc`}
+          Icon={Scan}
+          tone={C.primary}
+        />
+      </div>
 
-        {revData.length === 0 ? (
-          <div className="flex h-48 items-center justify-center text-sm text-muted">
-            Chưa có dữ liệu
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {/* Chart Area */}
-            <div className="flex h-56 items-end gap-1.5 border-b border-l border-line pb-2 pt-6 px-4">
-              {revData.map((d, idx) => {
-                const heightPercent = maxRevCount > 0 ? (d.count / maxRevCount) * 100 : 0;
-                return (
-                  <div
-                    key={idx}
-                    className="flex-1 bg-emerald-500 rounded-t-md hover:bg-emerald-600 transition-all duration-300 relative group"
-                    style={{ height: `${Math.max(heightPercent, 2)}%` }}
-                  >
-                    {/* Tooltip */}
-                    <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-ink text-white text-[10px] font-bold px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg whitespace-nowrap pointer-events-none z-10">
-                      {formatDateLabel(d.date)}: {formatVND(d.count)}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* X-axis Labels */}
-            <div className="flex justify-between text-[10px] font-bold text-muted px-4">
-              <span>{formatDateLabel(revData[0]?.date)}</span>
-              <span>{formatDateLabel(revData[Math.floor(revData.length / 2)]?.date)}</span>
-              <span>{formatDateLabel(revData[revData.length - 1]?.date)}</span>
-            </div>
-          </div>
-        )}
-      </Card>
-
-      {/* Grid: Hoạt động hệ thống & Phân bố đánh giá */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Activity Chart (Chiếm 2 cột) */}
-        <Card className="border border-divider/10 lg:col-span-2">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h4 className="font-bold text-ink text-lg">Hoạt động hệ thống</h4>
-              <p className="text-xs text-muted">
-                Tổng lượt quét & thử kiểu tóc trong {PERIODS.find((p) => p.value === period)?.label.toLowerCase() || period} qua
-              </p>
-            </div>
-            <Badge variant="new">{PERIODS.find((p) => p.value === period)?.label || period}</Badge>
-          </div>
-
-          {dailyData.length === 0 ? (
-            <div className="flex h-48 items-center justify-center text-sm text-muted">
-              Chưa có dữ liệu
-            </div>
+      {/* Doanh thu + đánh giá */}
+      <div className="grid gap-4 xl:grid-cols-3">
+        <Panel
+          className="xl:col-span-2"
+          title="Doanh thu"
+          subtitle={`${formatVND(stats.revenueInPeriod)} trong kỳ`}
+          right={<TrendUp size={18} variant="Bulk" color={C.brand} />}
+        >
+          {revenue.length === 0 ? (
+            <Empty />
           ) : (
-            <div className="space-y-4">
-              {/* Chart Area */}
-              <div className="flex h-56 items-end gap-1.5 border-b border-l border-line pb-2 pt-6 px-4">
-                {dailyData.map((d, idx) => {
-                  const heightPercent = (d.count / maxCount) * 100;
-                  return (
-                    <div
-                      key={idx}
-                      className="flex-1 bg-brand rounded-t-md hover:bg-pink transition-all duration-300 relative group"
-                      style={{ height: `${Math.max(heightPercent, 2)}%` }}
-                    >
-                      {/* Tooltip */}
-                      <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-ink text-white text-[10px] font-bold px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg whitespace-nowrap pointer-events-none z-10">
-                        {formatDateLabel(d.date)}: {d.count} lượt
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* X-axis Labels */}
-              <div className="flex justify-between text-[10px] font-bold text-muted px-4">
-                <span>{formatDateLabel(dailyData[0]?.date)}</span>
-                <span>{formatDateLabel(dailyData[Math.floor(dailyData.length / 2)]?.date)}</span>
-                <span>{formatDateLabel(dailyData[dailyData.length - 1]?.date)}</span>
-              </div>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={revenue} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gRevenue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={C.brand} stopOpacity={0.28} />
+                      <stop offset="100%" stopColor={C.brand} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} stroke={C.line} strokeDasharray="3 3" />
+                  <XAxis {...xAxisProps} />
+                  <YAxis
+                    width={44}
+                    tickFormatter={compactVND}
+                    tick={{ fontSize: 11, fill: C.muted }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    content={<ChartTooltip formatter={formatVND} granularity={g} />}
+                    cursor={{ stroke: C.line }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="count"
+                    name="Doanh thu"
+                    stroke={C.brand}
+                    strokeWidth={2.5}
+                    fill="url(#gRevenue)"
+                    dot={false}
+                    activeDot={{ r: 5 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           )}
-        </Card>
+        </Panel>
 
-        {/* Khối Phân bố đánh giá (Chiếm 1 cột) */}
-        <Card className="border border-divider/10 flex flex-col justify-between">
-          <div>
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h4 className="font-bold text-ink text-lg">Phân bố đánh giá</h4>
-                <p className="text-xs text-muted">Theo xếp hạng từ 5★ đến 1★</p>
-              </div>
-              <span className="text-sm font-extrabold text-amber-500 flex items-center gap-1">
-                {ratingAverage} ★
-              </span>
-            </div>
-
-            {ratingCount === 0 ? (
-              <div className="flex h-48 items-center justify-center text-sm text-muted">
-                Chưa có dữ liệu
-              </div>
-            ) : (
-              <div className="space-y-3 pt-2">
-                {[5, 4, 3, 2, 1].map((star) => {
-                  const count = ratingDist[star - 1] ?? 0;
-                  const pct = ratingCount > 0 ? Math.round((count / ratingCount) * 100) : 0;
-                  return (
-                    <div key={star} className="flex items-center gap-3 text-xs">
-                      <span className="w-8 font-bold text-ink flex items-center gap-0.5">
-                        {star} <span className="text-amber-500">★</span>
-                      </span>
-                      <div className="flex-1 h-3 rounded-full bg-line overflow-hidden">
-                        <div
-                          className="h-full bg-amber-400 rounded-full transition-all duration-500"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <span className="w-14 text-right font-medium text-muted">
-                        {count} ({pct}%)
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+        <Panel
+          title="Đánh giá"
+          subtitle={`${stats.ratingCount ?? 0} lượt đánh giá`}
+          right={<Star1 size={18} variant="Bulk" color={C.amber} />}
+        >
+          <div className="flex items-end gap-2">
+            <span className="text-4xl font-bold text-ink">
+              {(stats.ratingAverage ?? 0).toFixed(1)}
+            </span>
+            <span className="pb-1 text-xs text-muted">/ 5</span>
           </div>
-
-          <div className="mt-6 pt-4 border-t border-line flex justify-between items-center text-xs font-semibold text-muted">
-            <span>Tổng cộng</span>
-            <span className="font-bold text-ink">{ratingCount} đánh giá ({ratingTotalStars} ★)</span>
+          <div className="mt-4 space-y-2">
+            {[5, 4, 3, 2, 1].map((star) => {
+              const v = dist[star - 1] ?? 0;
+              return (
+                <div key={star} className="flex items-center gap-2 text-xs">
+                  <span className="w-3 text-mauve">{star}</span>
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-canvas">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${(v / ratingMax) * 100}%`, backgroundColor: C.amber }}
+                    />
+                  </div>
+                  <span className="w-8 text-right text-muted">{v}</span>
+                </div>
+              );
+            })}
           </div>
-        </Card>
+        </Panel>
       </div>
 
-      {/* User Registration Trend Chart */}
-      <Card className="border border-divider/10">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h4 className="font-bold text-ink text-lg">Đăng ký người dùng mới</h4>
-            <p className="text-xs text-muted">
-              Số lượng tài khoản đăng ký mới trong {PERIODS.find((p) => p.value === period)?.label.toLowerCase() || period} qua
-            </p>
-          </div>
-          <Badge variant="new">Tài khoản mới</Badge>
-        </div>
+      {/* Sử dụng + đăng ký */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Panel
+          title="Lượt sử dụng AI"
+          subtitle="Scan + thử kiểu tóc theo thời gian"
+          right={<Gallery size={18} variant="Bulk" color={C.magenta} />}
+        >
+          {usage.length === 0 ? (
+            <Empty />
+          ) : (
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={usage} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+                  <CartesianGrid vertical={false} stroke={C.line} strokeDasharray="3 3" />
+                  <XAxis {...xAxisProps} />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 11, fill: C.muted }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    content={<ChartTooltip granularity={g} />}
+                    cursor={{ fill: "#00000008" }}
+                  />
+                  <Bar dataKey="count" name="Lượt dùng" fill={C.magenta} radius={[6, 6, 0, 0]} maxBarSize={28} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </Panel>
 
-        {regData.length === 0 ? (
-          <div className="flex h-48 items-center justify-center text-sm text-muted">
-            Chưa có dữ liệu
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {/* Chart Area */}
-            <div className="flex h-56 items-end gap-1.5 border-b border-l border-line pb-2 pt-6 px-4">
-              {regData.map((d, idx) => {
-                const heightPercent = (d.count / maxRegCount) * 100;
-                return (
-                  <div
-                    key={idx}
-                    className="flex-1 bg-lime rounded-t-md hover:bg-brand transition-all duration-300 relative group"
-                    style={{ height: `${Math.max(heightPercent, 2)}%` }}
-                  >
-                    {/* Tooltip */}
-                    <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-ink text-white text-[10px] font-bold px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg whitespace-nowrap pointer-events-none z-10">
-                      {formatDateLabel(d.date)}: {d.count} tài khoản
-                    </div>
+        <Panel
+          title="Đăng ký mới"
+          subtitle="Người dùng mới theo thời gian"
+          right={<People size={18} variant="Bulk" color={C.primary} />}
+        >
+          {regs.length === 0 ? (
+            <Empty />
+          ) : (
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={regs} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+                  <CartesianGrid vertical={false} stroke={C.line} strokeDasharray="3 3" />
+                  <XAxis {...xAxisProps} />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 11, fill: C.muted }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    content={<ChartTooltip granularity={g} />}
+                    cursor={{ stroke: C.line }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="count"
+                    name="Đăng ký"
+                    stroke={C.primary}
+                    strokeWidth={2.5}
+                    dot={false}
+                    activeDot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </Panel>
+      </div>
+
+      {/* Giao dịch */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Panel
+          title="Trạng thái giao dịch"
+          subtitle={`${txTotal} giao dịch`}
+          right={<ReceiptText size={18} variant="Bulk" color={C.brand} />}
+        >
+          {txTotal === 0 ? (
+            <Empty text="Chưa có giao dịch" />
+          ) : (
+            <>
+              <div className="h-44">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={txData}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={48}
+                      outerRadius={70}
+                      paddingAngle={3}
+                      stroke="none"
+                    >
+                      {txData.map((x) => (
+                        <Cell key={x.name} fill={x.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <ul className="mt-2 space-y-1.5">
+                {txData.map((x) => (
+                  <li key={x.name} className="flex items-center justify-between text-xs">
+                    <span className="flex items-center gap-2 text-mauve">
+                      <span className="size-2.5 rounded-sm" style={{ backgroundColor: x.color }} />
+                      {x.name}
+                    </span>
+                    <b className="text-ink">{x.value}</b>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </Panel>
+
+        <Panel title="Giao dịch gần đây" subtitle="5 giao dịch mới nhất" className="lg:col-span-2">
+          {recentPayments.length === 0 ? (
+            <Empty text="Chưa có giao dịch nào" />
+          ) : (
+            <ul className="divide-y divide-line">
+              {recentPayments.map((p) => (
+                <li key={p.id} className="flex items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-ink">
+                      {p.userName || p.userEmail}
+                    </p>
+                    <p className="truncate text-xs text-muted">
+                      {p.plan} · {p.createdAt ? new Date(p.createdAt).toLocaleString("vi-VN") : ""}
+                    </p>
                   </div>
-                );
-              })}
-            </div>
-
-            {/* X-axis Labels */}
-            <div className="flex justify-between text-[10px] font-bold text-muted px-4">
-              <span>{formatDateLabel(regData[0]?.date)}</span>
-              <span>{formatDateLabel(regData[Math.floor(regData.length / 2)]?.date)}</span>
-              <span>{formatDateLabel(regData[regData.length - 1]?.date)}</span>
-            </div>
-          </div>
-        )}
-      </Card>
-
-      {/* Summary Box */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <Card className="bg-canvas border border-divider/20 text-center">
-          <p className="text-xs font-bold uppercase tracking-wider text-muted">Tổng lượt Quét AI</p>
-          <p className="text-2xl font-black text-magenta mt-1">{stats?.totalScans ?? 0} lượt</p>
-        </Card>
-        <Card className="bg-canvas border border-divider/20 text-center">
-          <p className="text-xs font-bold uppercase tracking-wider text-muted">Tổng lượt Thử kiểu tóc</p>
-          <p className="text-2xl font-black text-brand mt-1">{stats?.totalSwaps ?? 0} lượt</p>
-        </Card>
-        <Card className="bg-canvas border border-divider/20 text-center">
-          <p className="text-xs font-bold uppercase tracking-wider text-muted">Số lượng Quản trị viên</p>
-          <p className="text-2xl font-black text-ink mt-1">{stats?.totalAdmins ?? 0} Admin</p>
-        </Card>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="text-sm font-bold text-ink">{formatVND(p.amount)}</span>
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                        STATUS_STYLE[p.status] ?? "bg-canvas text-mauve"
+                      }`}
+                    >
+                      {STATUS_LABEL[p.status] ?? p.status}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
       </div>
     </div>
   );

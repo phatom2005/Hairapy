@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, useEffect, useState } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { SoftAurora } from "./components/animated";
 import useAuthStore from "./store/useAuthStore";
@@ -26,7 +26,8 @@ import PaymentSuccessPage from "./pages/PaymentSuccessPage";
 import PaymentCancelPage from "./pages/PaymentCancelPage";
 import AdminRoute from "./components/auth/AdminRoute";
 import AdminLayout from "./components/admin/AdminLayout";
-import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
+// Lazy-load dashboard để tách bundle recharts khỏi trang chính
+const AdminDashboardPage = lazy(() => import("./pages/admin/AdminDashboardPage"));
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminCatalogPage from "./pages/admin/AdminCatalogPage";
 import AdminSalonsPage from "./pages/admin/AdminSalonsPage";

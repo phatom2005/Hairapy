@@ -1,18 +1,38 @@
+import { Suspense } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import useAuthStore from "../../store/useAuthStore";
 import {
-  DashboardIcon,
-  UsersIcon,
-  ScissorsIcon,
-  CrownIcon,
-  ActivityIcon,
-  HomeIcon,
-  StarIcon
-} from "../icons";
+  Element3,
+  People,
+  Scissor,
+  Shop,
+  Crown1,
+  ReceiptText,
+  Star1,
+  Activity,
+  Home2,
+  Logout,
+} from "iconsax-reactjs";
+import useAuthStore from "../../store/useAuthStore";
 import logoStack from "../../assets/logo/logo-stack.png";
+
+// Danh sách menu — icon Iconsax (variant Bulk khi active, Linear khi thường)
+const navItems = [
+  { to: "/admin", label: "Dashboard", Icon: Element3, end: true },
+  { to: "/admin/users", label: "Người dùng", Icon: People },
+  { to: "/admin/catalog", label: "Kho kiểu tóc", Icon: Scissor },
+  { to: "/admin/salons", label: "Salon đối tác", Icon: Shop },
+  { to: "/admin/subscriptions", label: "Gói đăng ký", Icon: Crown1 },
+  { to: "/admin/payments", label: "Lịch sử thanh toán", Icon: ReceiptText },
+  { to: "/admin/feedback", label: "Đánh giá", Icon: Star1 },
+  { to: "/admin/usage", label: "Nhật ký sử dụng", Icon: Activity },
+];
+
+const linkBase =
+  "group flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-semibold transition-all duration-200 max-lg:justify-center max-lg:px-0";
 
 export default function AdminLayout() {
   const logout = useAuthStore((state) => state.logout);
+  const user = useAuthStore((state) => state.user);
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -20,76 +40,88 @@ export default function AdminLayout() {
     navigate("/login");
   };
 
-  const navItems = [
-    { to: "/admin", label: "Dashboard", icon: <DashboardIcon />, end: true },
-    { to: "/admin/users", label: "Người dùng", icon: <UsersIcon /> },
-    { to: "/admin/catalog", label: "Kho kiểu tóc", icon: <ScissorsIcon /> },
-    { to: "/admin/salons", label: "Salon đối tác", icon: <StarIcon size={18} /> },
-    { to: "/admin/subscriptions", label: "Gói đăng ký", icon: <CrownIcon /> },
-    { to: "/admin/payments", label: "Lịch sử thanh toán", icon: <CrownIcon size={18} /> },
-    { to: "/admin/feedback", label: "Đánh giá", icon: <StarIcon size={18} /> },
-    { to: "/admin/usage", label: "Nhật ký sử dụng", icon: <ActivityIcon /> },
-  ];
+  const displayName = user?.fullName || user?.name || user?.email || "Admin";
+  const initial = displayName.trim().charAt(0).toUpperCase();
 
   return (
-    <div className="flex min-h-screen bg-canvas font-sans">
-      {/* Sidebar cố định bên trái */}
-      <aside className="sticky top-0 flex h-screen w-64 flex-col border-r border-line bg-white p-6 shadow-sm">
-        {/* Logo & Subtitle */}
-        <div className="mb-8 px-2 flex flex-col items-center">
-          <img src={logoStack} alt="Hairapy Logo" className="h-16 w-auto object-contain" />
-          <p className="text-[9px] font-bold uppercase tracking-widest text-muted mt-3 text-center">
+    <div className="flex min-h-screen gap-4 bg-canvas p-3 font-sans lg:gap-6 lg:p-4">
+      {/* Sidebar nổi, bo góc — chỉ hiện icon khi màn hình < lg */}
+      <aside className="sticky top-3 flex h-[calc(100vh-1.5rem)] w-16 shrink-0 flex-col rounded-3xl border border-line bg-white p-3 shadow-sm lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-64 lg:p-4">
+        <div className="mb-6 flex flex-col items-center">
+          <img src={logoStack} alt="Hairapy" className="h-10 w-auto object-contain lg:h-14" />
+          <p className="mt-2 hidden text-center text-[9px] font-bold uppercase tracking-widest text-muted lg:block">
             Admin Management
           </p>
         </div>
 
-        {/* Navigation Items */}
-        <nav className="flex flex-1 flex-col gap-1.5">
-          {navItems.map((item) => (
+        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto">
+          {navItems.map(({ to, label, Icon, end }) => (
             <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
+              key={to}
+              to={to}
+              end={end}
+              title={label}
               className={({ isActive }) =>
-                `flex items-center gap-3.5 px-4 py-3 text-sm font-semibold transition-all duration-200 rounded-2xl ` +
+                `${linkBase} ` +
                 (isActive
-                  ? "bg-pink/10 text-magenta shadow-sm"
+                  ? "bg-ink text-white shadow-md"
                   : "text-mauve/80 hover:bg-canvas hover:text-ink")
               }
             >
-              <span className="shrink-0">{item.icon}</span>
-              {item.label}
+              {({ isActive }) => (
+                <>
+                  <Icon size={20} variant={isActive ? "Bold" : "Linear"} className="shrink-0" />
+                  <span className="max-lg:hidden">{label}</span>
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
 
-        {/* Bottom actions */}
-        <div className="mt-auto flex flex-col gap-1.5 pt-4 border-t border-line">
+        <div className="mt-3 flex flex-col gap-1 border-t border-line pt-3">
           <NavLink
             to="/"
-            className="flex items-center gap-3.5 px-4 py-3 text-sm font-semibold text-mauve/80 transition-all rounded-2xl hover:bg-canvas hover:text-ink"
+            title="Về trang chính"
+            className={`${linkBase} text-mauve/80 hover:bg-canvas hover:text-ink`}
           >
-            <HomeIcon />
-            Về trang chính
+            <Home2 size={20} variant="Linear" className="shrink-0" />
+            <span className="max-lg:hidden">Về trang chính</span>
           </NavLink>
           <button
+            type="button"
             onClick={handleLogout}
-            className="flex items-center gap-3.5 px-4 py-3 text-left text-sm font-semibold text-red-600 transition-all rounded-2xl hover:bg-red-50"
+            title="Đăng xuất"
+            className={`${linkBase} text-left text-red-600 hover:bg-red-50`}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-            Đăng xuất
+            <Logout size={20} variant="Linear" className="shrink-0" />
+            <span className="max-lg:hidden">Đăng xuất</span>
           </button>
         </div>
       </aside>
 
-      {/* Vùng hiển thị nội dung chính bên phải */}
-      <main className="flex-1 p-8 overflow-y-auto max-w-[1200px] mx-auto w-full">
-        <Outlet />
-      </main>
+      {/* Vùng nội dung */}
+      <div className="min-w-0 flex-1">
+        <header className="mb-5 flex items-center justify-end gap-3">
+          <div className="text-right max-sm:hidden">
+            <p className="text-sm font-bold leading-tight text-ink">{displayName}</p>
+            <p className="text-xs text-muted">Quản trị viên</p>
+          </div>
+          <div className="flex size-10 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">
+            {initial}
+          </div>
+        </header>
+        <main className="mx-auto w-full max-w-[1280px]">
+          <Suspense
+            fallback={
+              <div className="flex h-[50vh] items-center justify-center">
+                <div className="size-10 animate-spin rounded-full border-4 border-brand border-t-transparent" />
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
+        </main>
+      </div>
     </div>
   );
 }

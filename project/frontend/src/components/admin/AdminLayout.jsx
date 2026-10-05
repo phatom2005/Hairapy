@@ -11,13 +11,11 @@ import {
   Activity,
   Home2,
   Logout,
-  ArrowLeft2,
-  ArrowRight2,
 } from "iconsax-reactjs";
 import useAuthStore from "../../store/useAuthStore";
 import logoStack from "../../assets/logo/logo-stack.png";
 
-// Danh sách menu — icon Iconsax (variant Bulk khi active, Linear khi thường)
+// Danh sách menu — icon Iconsax (Bold khi active, Linear khi thường)
 const navItems = [
   { to: "/admin", label: "Dashboard", Icon: Element3, end: true },
   { to: "/admin/users", label: "Người dùng", Icon: People },
@@ -31,7 +29,7 @@ const navItems = [
 
 const STORAGE_KEY = "admin-sidebar-collapsed";
 
-// Đọc trạng thái thu gọn đã lưu (có thể lỗi khi chặn storage nên bọc try/catch)
+// Đọc trạng thái thu gọn đã lưu (bọc try/catch phòng khi trình duyệt chặn storage)
 const readCollapsed = () => {
   try {
     return localStorage.getItem(STORAGE_KEY) === "1";
@@ -40,11 +38,30 @@ const readCollapsed = () => {
   }
 };
 
+// Icon "«" / "»" cho nút thu gọn
+function DoubleChevron({ flip }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`transition-transform duration-300 ${flip ? "rotate-180" : ""}`}
+    >
+      <polyline points="11 17 6 12 11 7" />
+      <polyline points="18 17 13 12 18 7" />
+    </svg>
+  );
+}
+
 export default function AdminLayout() {
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
   const navigate = useNavigate();
-  // Thu gọn sidebar thành icon-only (dưới lg luôn thu gọn)
   const [collapsed, setCollapsed] = useState(readCollapsed);
 
   const toggleCollapsed = () => {
@@ -59,12 +76,6 @@ export default function AdminLayout() {
     });
   };
 
-  // Class dùng chung cho mục menu: thu gọn → căn giữa icon, ẩn chữ
-  const linkBase =
-    "group flex items-center gap-3 rounded-2xl py-3 text-sm font-semibold transition-all duration-200 " +
-    (collapsed ? "justify-center px-0" : "px-3.5 max-lg:justify-center max-lg:px-0");
-  const labelCls = collapsed ? "hidden" : "max-lg:hidden";
-
   const handleLogout = () => {
     logout();
     navigate("/login");
@@ -73,86 +84,95 @@ export default function AdminLayout() {
   const displayName = user?.fullName || user?.name || user?.email || "Admin";
   const initial = displayName.trim().charAt(0).toUpperCase();
 
+  // Icon luôn đứng yên ở vị trí cố định (aside p-3 + link px-3.5 → icon cách mép 26px),
+  // chỉ có chiều rộng aside và nhãn chữ thay đổi → không bị giật/nhảy chữ khi animate.
+  const linkCls =
+    "flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-semibold whitespace-nowrap transition-colors duration-200";
+  // Nhãn: thu gọn → mờ dần + rộng 0 (dưới lg luôn thu gọn)
+  const labelCls = `overflow-hidden transition-all duration-300 ${
+    collapsed ? "w-0 opacity-0" : "w-40 opacity-100 max-lg:w-0 max-lg:opacity-0"
+  }`;
+
   return (
     <div className="flex min-h-screen gap-4 bg-canvas p-3 font-sans lg:gap-6 lg:p-4">
-      {/* Sidebar nổi, bo góc — chỉ hiện icon khi màn hình < lg */}
       <aside
-        className={`sticky top-3 flex h-[calc(100vh-1.5rem)] shrink-0 flex-col rounded-3xl border border-line bg-white p-3 shadow-sm transition-[width] duration-300 lg:top-4 lg:h-[calc(100vh-2rem)] lg:p-4 ${
-          collapsed ? "w-16 lg:w-[72px]" : "w-16 lg:w-64"
+        className={`sticky top-3 h-[calc(100vh-1.5rem)] shrink-0 transition-[width] duration-300 ease-in-out lg:top-4 lg:h-[calc(100vh-2rem)] ${
+          collapsed ? "w-[72px]" : "w-[72px] lg:w-64"
         }`}
       >
-        <div className="mb-6 flex flex-col items-center">
-          <img
-            src={logoStack}
-            alt="Hairapy"
-            className={`w-auto object-contain ${collapsed ? "h-10" : "h-10 lg:h-14"}`}
-          />
-          <p
-            className={`mt-2 text-center text-[9px] font-bold uppercase tracking-widest text-muted ${
-              collapsed ? "hidden" : "hidden lg:block"
-            }`}
-          >
-            Admin Management
-          </p>
-        </div>
-
-        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto">
-          {navItems.map(({ to, label, Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              title={label}
-              className={({ isActive }) =>
-                `${linkBase} ` +
-                (isActive
-                  ? "bg-ink text-white shadow-md"
-                  : "text-mauve/80 hover:bg-canvas hover:text-ink")
-              }
+        <div className="flex h-full flex-col overflow-hidden rounded-3xl border border-line bg-white p-3 shadow-sm">
+          <div className="mb-6 flex flex-col items-center">
+            <img
+              src={logoStack}
+              alt="Hairapy"
+              className={`w-auto object-contain transition-all duration-300 ${
+                collapsed ? "h-10" : "h-10 lg:h-14"
+              }`}
+            />
+            <p
+              className={`overflow-hidden text-center text-[9px] font-bold uppercase tracking-widest text-muted transition-all duration-300 ${
+                collapsed ? "mt-0 max-h-0 opacity-0" : "mt-2 max-h-0 opacity-0 lg:max-h-6 lg:opacity-100"
+              }`}
             >
-              {({ isActive }) => (
-                <>
-                  <Icon size={20} variant={isActive ? "Bold" : "Linear"} className="shrink-0" />
-                  <span className={labelCls}>{label}</span>
-                </>
-              )}
-            </NavLink>
-          ))}
-        </nav>
+              Admin Management
+            </p>
+          </div>
 
-        <div className="mt-3 flex flex-col gap-1 border-t border-line pt-3">
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            title={collapsed ? "Mở rộng menu" : "Thu gọn menu"}
-            aria-label={collapsed ? "Mở rộng menu" : "Thu gọn menu"}
-            className={`${linkBase} hidden text-mauve/80 hover:bg-canvas hover:text-ink lg:flex`}
-          >
-            {collapsed ? (
-              <ArrowRight2 size={20} variant="Linear" className="shrink-0" />
-            ) : (
-              <ArrowLeft2 size={20} variant="Linear" className="shrink-0" />
-            )}
-            <span className={labelCls}>Thu gọn menu</span>
-          </button>
-          <NavLink
-            to="/"
-            title="Về trang chính"
-            className={`${linkBase} text-mauve/80 hover:bg-canvas hover:text-ink`}
-          >
-            <Home2 size={20} variant="Linear" className="shrink-0" />
-            <span className={labelCls}>Về trang chính</span>
-          </NavLink>
-          <button
-            type="button"
-            onClick={handleLogout}
-            title="Đăng xuất"
-            className={`${linkBase} text-left text-red-600 hover:bg-red-50`}
-          >
-            <Logout size={20} variant="Linear" className="shrink-0" />
-            <span className={labelCls}>Đăng xuất</span>
-          </button>
+          <nav className="flex flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden">
+            {navItems.map(({ to, label, Icon, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                title={label}
+                className={({ isActive }) =>
+                  `${linkCls} ` +
+                  (isActive
+                    ? "bg-ink text-white shadow-md"
+                    : "text-mauve/80 hover:bg-canvas hover:text-ink")
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <Icon size={20} variant={isActive ? "Bold" : "Linear"} className="shrink-0" />
+                    <span className={labelCls}>{label}</span>
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </nav>
+
+          <div className="mt-3 flex flex-col gap-1 border-t border-line pt-3">
+            <NavLink
+              to="/"
+              title="Về trang chính"
+              className={`${linkCls} text-mauve/80 hover:bg-canvas hover:text-ink`}
+            >
+              <Home2 size={20} variant="Linear" className="shrink-0" />
+              <span className={labelCls}>Về trang chính</span>
+            </NavLink>
+            <button
+              type="button"
+              onClick={handleLogout}
+              title="Đăng xuất"
+              className={`${linkCls} text-left text-red-600 hover:bg-red-50`}
+            >
+              <Logout size={20} variant="Linear" className="shrink-0" />
+              <span className={labelCls}>Đăng xuất</span>
+            </button>
+          </div>
         </div>
+
+        {/* Nút « / » nằm giữa cạnh phải sidebar (chỉ hiện từ lg) */}
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          title={collapsed ? "Mở rộng menu" : "Thu gọn menu"}
+          aria-label={collapsed ? "Mở rộng menu" : "Thu gọn menu"}
+          className="absolute -right-3 top-1/2 z-10 hidden size-6 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-white text-mauve shadow-md transition-colors hover:bg-ink hover:text-white lg:flex"
+        >
+          <DoubleChevron flip={collapsed} />
+        </button>
       </aside>
 
       {/* Vùng nội dung */}

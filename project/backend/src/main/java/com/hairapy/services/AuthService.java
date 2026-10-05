@@ -3,6 +3,8 @@ package com.hairapy.services;
 import com.hairapy.dto.auth.AuthResponse;
 import com.hairapy.dto.auth.LoginRequest;
 import com.hairapy.dto.auth.RegisterRequest;
+import com.hairapy.dto.auth.RegisterResponse;
+import com.hairapy.exceptions.EmailNotVerifiedException;
 import com.hairapy.models.Role;
 import com.hairapy.models.User;
 import com.hairapy.repositories.UserRepository;
@@ -28,14 +30,15 @@ public class AuthService {
     private final SubscriptionService subscriptionService;
     private final GoogleAuthService googleAuthService;
     private final FacebookAuthService facebookAuthService;
+    private final EmailVerificationService emailVerificationService;
 
     /**
      * Đăng ký tài khoản người dùng mới.
      *
      * @param request thông tin đăng ký tài khoản mới.
-     * @return AuthResponse chứa token JWT và thông tin người dùng vừa đăng ký.
+     * @return RegisterResponse — KHÔNG có JWT, user phải xác minh email qua link được gửi rồi mới đăng nhập.
      */
-    public AuthResponse register(RegisterRequest request) {
+    public RegisterResponse register(RegisterRequest request) {
         // Kiểm tra xem mật khẩu xác nhận có khớp với mật khẩu chính không
         if (!request.password().equals(request.confirmPassword())) {
             throw new IllegalArgumentException("Mật khẩu xác nhận không khớp");
@@ -52,16 +55,17 @@ public class AuthService {
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .role(Role.USER)
                 .fullName(request.fullName())
+                .emailVerified(false)
                 .build();
 
         // Lưu thông tin người dùng vào cơ sở dữ liệu
         userRepository.save(user);
 
-        // Tạo JWT token từ thông tin người dùng
-        String token = jwtService.generateToken(user);
+        // Gửi email xác minh (không throw nếu Resend lỗi — user có thể bấm gửi lại)
+        emailVerificationService.sendVerification(user);
 
-        // Trả về kết quả đăng ký thành công (user mới luôn là FREE vì chưa có subscription)
-        return new AuthResponse(token, user.getEmail(), user.getRole().name(), user.getFullName());
+        return new RegisterResponse(user.getEmail(),
+                "Đăng ký thành công. Vui lòng kiểm tra email để xác minh tài khoản trước khi đăng nhập.");
     }
 
     /**
@@ -80,6 +84,11 @@ public class AuthService {
         // Lấy thông tin người dùng từ cơ sở dữ liệu sau khi xác thực thành công
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại"));
+
+        // Chỉ kiểm tra SAU khi mật khẩu đúng để không lộ trạng thái xác minh cho người không phải chủ tài khoản
+        if (!user.isEmailVerified()) {
+            throw new EmailNotVerifiedException("Email chưa được xác minh. Vui lòng kiểm tra hộp thư hoặc gửi lại email xác minh.");
+        }
 
         // Tạo JWT token từ thông tin người dùng
         String token = jwtService.generateToken(user);
@@ -141,12 +150,22 @@ public class AuthService {
                     .role(Role.USER)
                     .provider(com.hairapy.models.AuthProvider.GOOGLE)
                     .providerId(profile.sub())
+                    .emailVerified(true)
                     .build();
             return userRepository.save(newUser);
         });
 
+        // Google đã xác thực chủ sở hữu email → coi như đã xác minh (kể cả tài khoản LOCAL chưa xác minh trước đó)
+        boolean dirty = false;
         if (user.getProviderId() == null) {
             user.setProviderId(profile.sub());
+            dirty = true;
+        }
+        if (!user.isEmailVerified()) {
+            user.setEmailVerified(true);
+            dirty = true;
+        }
+        if (dirty) {
             userRepository.save(user);
         }
 
@@ -173,12 +192,22 @@ public class AuthService {
                             .role(Role.USER)
                             .provider(com.hairapy.models.AuthProvider.FACEBOOK)
                             .providerId(profile.id())
+                            .emailVerified(true)
                             .build();
                     return userRepository.save(newUser);
                 }));
 
+        // Facebook đã xác thực email → coi như đã xác minh
+        boolean dirty = false;
         if (user.getProviderId() == null) {
             user.setProviderId(profile.id());
+            dirty = true;
+        }
+        if (!user.isEmailVerified()) {
+            user.setEmailVerified(true);
+            dirty = true;
+        }
+        if (dirty) {
             userRepository.save(user);
         }
 

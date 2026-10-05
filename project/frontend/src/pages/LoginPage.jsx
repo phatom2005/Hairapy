@@ -4,11 +4,14 @@ import { AuthShell, AuthHeading, OrDivider, SocialButtons } from "../components/
 import { Button, Input } from "../components/ui";
 import { AnimatedContent, BorderGlow } from "../components/animated";
 import { MailIcon, LockIcon, ArrowRight } from "../components/icons";
+import ResendVerification from "../components/auth/ResendVerification";
 import useAuthStore from "../store/useAuthStore";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // Email vừa bị từ chối vì chưa xác minh — để hiện nút gửi lại
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
   const { login, loading, error, clearError } = useAuthStore();
@@ -24,13 +27,17 @@ export default function LoginPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!email || !password) return;
+    setUnverifiedEmail("");
     try {
       const success = await login(email, password);
       if (success) {
         navigate(from);
       }
-    } catch {
+    } catch (err) {
       // Lỗi đã được lưu trữ trong store và hiển thị trên giao diện
+      if (err.cause?.response?.data?.code === "EMAIL_NOT_VERIFIED") {
+        setUnverifiedEmail(email);
+      }
     }
   }
 
@@ -45,6 +52,8 @@ export default function LoginPage() {
               {error}
             </div>
           )}
+
+          {unverifiedEmail && <ResendVerification email={unverifiedEmail} />}
 
           {message && !error && (
             <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-center text-sm font-semibold text-primary">

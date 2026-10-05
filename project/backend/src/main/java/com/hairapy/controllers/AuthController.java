@@ -3,6 +3,7 @@ package com.hairapy.controllers;
 import com.hairapy.dto.auth.AuthResponse;
 import com.hairapy.dto.auth.LoginRequest;
 import com.hairapy.dto.auth.RegisterRequest;
+import com.hairapy.dto.auth.RegisterResponse;
 import com.hairapy.dto.auth.UserMeResponse;
 import com.hairapy.models.User;
 import com.hairapy.repositories.UserRepository;
@@ -44,11 +45,11 @@ public class AuthController {
      * Endpoint đăng ký tài khoản mới.
      *
      * @param request dữ liệu đăng ký người dùng được validate.
-     * @return ResponseEntity chứa thông tin AuthResponse kèm theo HTTP Status 201 Created.
+     * @return ResponseEntity chứa RegisterResponse (không có JWT — phải xác minh email trước) kèm HTTP Status 201 Created.
      */
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> registerUser(@Valid @RequestBody RegisterRequest request) {
-        AuthResponse response = authService.register(request);
+    public ResponseEntity<RegisterResponse> registerUser(@Valid @RequestBody RegisterRequest request) {
+        RegisterResponse response = authService.register(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 

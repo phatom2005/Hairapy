@@ -42,16 +42,28 @@ public class EmailService {
      * tránh lộ thông tin email có tồn tại hay không và tránh chặn UX khi Resend tạm trục trặc.
      */
     public void sendPasswordResetEmail(String toEmail, String resetLink) {
+        send(toEmail, "Đặt lại mật khẩu Hairapy", buildResetHtml(resetLink), "đặt lại mật khẩu");
+    }
+
+    /**
+     * Gửi email xác minh tài khoản. Không throw ra ngoài nếu Resend lỗi — user vẫn được tạo,
+     * có thể bấm "Gửi lại email xác minh" ở trang đăng nhập.
+     */
+    public void sendVerificationEmail(String toEmail, String verifyLink) {
+        send(toEmail, "Xác minh email Hairapy", buildVerifyHtml(verifyLink), "xác minh tài khoản");
+    }
+
+    private void send(String toEmail, String subject, String html, String label) {
         if (resendApiKey == null || resendApiKey.isBlank()) {
-            log.warn("RESEND_API_KEY chưa được cấu hình. Bỏ qua gửi email đặt lại mật khẩu tới {}", toEmail);
+            log.warn("RESEND_API_KEY chưa được cấu hình. Bỏ qua gửi email {} tới {}", label, toEmail);
             return;
         }
 
         Map<String, Object> body = new HashMap<>();
         body.put("from", fromAddress);
         body.put("to", List.of(toEmail));
-        body.put("subject", "Đặt lại mật khẩu Hairapy");
-        body.put("html", buildResetHtml(resetLink));
+        body.put("subject", subject);
+        body.put("html", html);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -59,10 +71,21 @@ public class EmailService {
 
         try {
             restTemplate.exchange(RESEND_API_URL, HttpMethod.POST, new HttpEntity<>(body, headers), String.class);
-            log.info("Đã gửi email đặt lại mật khẩu tới {}", toEmail);
+            log.info("Đã gửi email {} tới {}", label, toEmail);
         } catch (Exception e) {
-            log.error("Lỗi gửi email đặt lại mật khẩu tới {}: {}", toEmail, e.getMessage());
+            log.error("Lỗi gửi email {} tới {}: {}", label, toEmail, e.getMessage());
         }
+    }
+
+    private String buildVerifyHtml(String verifyLink) {
+        return "<div style=\"font-family:sans-serif;max-width:480px;margin:0 auto\">"
+                + "<h2>Xác minh email Hairapy</h2>"
+                + "<p>Cảm ơn bạn đã đăng ký Hairapy! Bấm nút bên dưới để xác minh địa chỉ email và bắt đầu sử dụng.</p>"
+                + "<p><a href=\"" + verifyLink + "\" style=\"display:inline-block;padding:12px 24px;"
+                + "background:#ff4d94;color:#fff;border-radius:24px;text-decoration:none;font-weight:bold\">"
+                + "Xác minh email</a></p>"
+                + "<p>Liên kết có hiệu lực trong 24 giờ. Nếu bạn không đăng ký tài khoản này, hãy bỏ qua email này.</p>"
+                + "</div>";
     }
 
     private String buildResetHtml(String resetLink) {

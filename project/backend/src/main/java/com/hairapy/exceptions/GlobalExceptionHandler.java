@@ -31,6 +31,19 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.UNAUTHORIZED, "Unauthorized", "Email hoặc mật khẩu không đúng", request);
     }
 
+    @ExceptionHandler(EmailNotVerifiedException.class)
+    public ResponseEntity<Object> handleEmailNotVerified(EmailNotVerifiedException ex, WebRequest request) {
+        log.warn("Đăng nhập khi chưa xác minh email");
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.FORBIDDEN.value());
+        body.put("error", "Forbidden");
+        body.put("code", "EMAIL_NOT_VERIFIED");
+        body.put("message", ex.getMessage());
+        body.put("path", extractPath(request));
+        return new ResponseEntity<>(body, HttpStatus.FORBIDDEN);
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Object> handleIllegalArgumentException(IllegalArgumentException ex, WebRequest request) {
         log.warn("Tham số không hợp lệ: {}", ex.getMessage());

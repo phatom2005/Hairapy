@@ -32,6 +32,8 @@ class AccountDeletionServiceTest {
     @Mock
     private PasswordResetTokenRepository passwordResetTokenRepository;
     @Mock
+    private EmailVerificationTokenRepository emailVerificationTokenRepository;
+    @Mock
     private FeedbackRepository feedbackRepository;
     @Mock
     private CloudinaryService cloudinaryService;
@@ -47,6 +49,7 @@ class AccountDeletionServiceTest {
                 usageHistoryRepository,
                 subscriptionRepository,
                 passwordResetTokenRepository,
+                emailVerificationTokenRepository,
                 feedbackRepository,
                 cloudinaryService
         );

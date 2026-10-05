@@ -57,6 +57,11 @@ public class User implements UserDetails {
     @Column(name = "provider_id", length = 255)
     private String providerId;
 
+    // Đăng ký LOCAL phải xác minh email mới đăng nhập được; Google/Facebook coi là đã xác minh.
+    @Column(name = "email_verified", nullable = false)
+    @Builder.Default
+    private boolean emailVerified = false;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

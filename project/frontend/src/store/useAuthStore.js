@@ -50,17 +50,9 @@ const useAuthStore = create((set, get) => ({
   register: async (email, password, confirmPassword, fullName) => {
     set({ loading: true, error: null });
     try {
-      const res = await api.post("/auth/register", { email, password, confirmPassword, fullName });
-      const { token, email: userEmail, role, fullName: userFullName } = res.data;
-      localStorage.setItem("token", token);
-      set({ token, user: { email: userEmail, role, fullName: userFullName }, loading: false, hydrated: true });
-      // Tải đầy đủ thông tin chi tiết từ /auth/me
-      try {
-        const meRes = await api.get("/auth/me");
-        set({ user: meRes.data });
-      } catch {
-        // Giữ thông tin user cơ bản nếu endpoint me gặp lỗi tạm thời
-      }
+      // Backend KHÔNG trả JWT khi đăng ký: user phải xác minh email rồi mới đăng nhập được
+      await api.post("/auth/register", { email, password, confirmPassword, fullName });
+      set({ loading: false });
       return true;
     } catch (err) {
       let errMsg = "Đăng ký thất bại. Vui lòng thử lại.";

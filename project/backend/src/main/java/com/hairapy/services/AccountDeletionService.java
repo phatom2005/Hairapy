@@ -27,6 +27,7 @@ public class AccountDeletionService {
     private final UsageHistoryRepository usageHistoryRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final FeedbackRepository feedbackRepository;
     private final CloudinaryService cloudinaryService;
 
@@ -53,6 +54,7 @@ public class AccountDeletionService {
 
         // 2. Xóa các dữ liệu cá nhân liên quan
         passwordResetTokenRepository.deleteByUserId(userId);
+        emailVerificationTokenRepository.deleteByUserId(userId);
         savedHairstyleRepository.deleteByUserId(userId);
         scanHistoryRepository.deleteByUserId(userId);
         usageHistoryRepository.deleteByUserId(userId);

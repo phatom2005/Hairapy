@@ -38,7 +38,8 @@ export default function RegisterPage() {
     try {
       const success = await register(email, password, confirm, fullName);
       if (success) {
-        navigate("/profile");
+        // Chưa đăng nhập được — chuyển sang màn hình chờ xác minh email
+        navigate("/check-email", { state: { email } });
       }
     } catch {
       // Lỗi từ server đã được lưu trữ trong store và hiển thị trên giao diện

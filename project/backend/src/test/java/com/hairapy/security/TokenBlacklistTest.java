@@ -2,7 +2,6 @@ package com.hairapy.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hairapy.dto.auth.LoginRequest;
-import com.hairapy.dto.auth.RegisterRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -29,6 +28,12 @@ class TokenBlacklistTest {
     private ObjectMapper objectMapper;
 
     @Autowired
+    private com.hairapy.repositories.UserRepository userRepository;
+
+    @Autowired
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
+    @Autowired
     private org.springframework.data.redis.connection.RedisConnectionFactory redisConnectionFactory;
 
     @Test
@@ -42,11 +47,16 @@ class TokenBlacklistTest {
 
         // 1. Đăng ký + đăng nhập để lấy token thật
         // RegisterRequest thật có 4 field theo thứ tự: fullName, email, password, confirmPassword
-        RegisterRequest register = new RegisterRequest(
-                "Blacklist Test", "blacklist-test@hairapy.ai", "Password123!", "Password123!");
-        mockMvc.perform(post("/api/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(register)));
+        // (Đăng ký không còn trả JWT và đăng nhập yêu cầu email đã xác minh → tạo thẳng user đã xác minh)
+        if (userRepository.findByEmail("blacklist-test@hairapy.ai").isEmpty()) {
+            userRepository.save(com.hairapy.models.User.builder()
+                    .email("blacklist-test@hairapy.ai")
+                    .passwordHash(passwordEncoder.encode("Password123!"))
+                    .fullName("Blacklist Test")
+                    .role(com.hairapy.models.Role.USER)
+                    .emailVerified(true)
+                    .build());
+        }
 
         LoginRequest login = new LoginRequest("blacklist-test@hairapy.ai", "Password123!");
         String loginResponse = mockMvc.perform(post("/api/auth/login")

@@ -42,7 +42,8 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers(
                                 "/api/auth/register", "/api/auth/login",
-                                "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/google", "/api/auth/facebook"
+                                "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/google", "/api/auth/facebook",
+                                "/api/auth/verify-email", "/api/auth/resend-verification"
                         ).permitAll()
                         .requestMatchers("/api/payments/webhook").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

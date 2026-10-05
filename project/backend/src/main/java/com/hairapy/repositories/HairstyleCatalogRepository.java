@@ -2,6 +2,7 @@ package com.hairapy.repositories;
 
 import com.hairapy.models.HairstyleCatalog;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -9,7 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface HairstyleCatalogRepository extends JpaRepository<HairstyleCatalog, Long> {
+public interface HairstyleCatalogRepository extends JpaRepository<HairstyleCatalog, Long>, JpaSpecificationExecutor<HairstyleCatalog> {
 
     // Free user: chi xem kho gioi han (premiumOnly = false)
     List<HairstyleCatalog> findByPremiumOnlyFalse();

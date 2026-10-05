@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   Element3,
@@ -11,6 +11,8 @@ import {
   Activity,
   Home2,
   Logout,
+  ArrowLeft2,
+  ArrowRight2,
 } from "iconsax-reactjs";
 import useAuthStore from "../../store/useAuthStore";
 import logoStack from "../../assets/logo/logo-stack.png";
@@ -27,13 +29,41 @@ const navItems = [
   { to: "/admin/usage", label: "Nhật ký sử dụng", Icon: Activity },
 ];
 
-const linkBase =
-  "group flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-semibold transition-all duration-200 max-lg:justify-center max-lg:px-0";
+const STORAGE_KEY = "admin-sidebar-collapsed";
+
+// Đọc trạng thái thu gọn đã lưu (có thể lỗi khi chặn storage nên bọc try/catch)
+const readCollapsed = () => {
+  try {
+    return localStorage.getItem(STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
 
 export default function AdminLayout() {
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
   const navigate = useNavigate();
+  // Thu gọn sidebar thành icon-only (dưới lg luôn thu gọn)
+  const [collapsed, setCollapsed] = useState(readCollapsed);
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+      } catch {
+        /* bỏ qua nếu không ghi được storage */
+      }
+      return next;
+    });
+  };
+
+  // Class dùng chung cho mục menu: thu gọn → căn giữa icon, ẩn chữ
+  const linkBase =
+    "group flex items-center gap-3 rounded-2xl py-3 text-sm font-semibold transition-all duration-200 " +
+    (collapsed ? "justify-center px-0" : "px-3.5 max-lg:justify-center max-lg:px-0");
+  const labelCls = collapsed ? "hidden" : "max-lg:hidden";
 
   const handleLogout = () => {
     logout();
@@ -46,10 +76,22 @@ export default function AdminLayout() {
   return (
     <div className="flex min-h-screen gap-4 bg-canvas p-3 font-sans lg:gap-6 lg:p-4">
       {/* Sidebar nổi, bo góc — chỉ hiện icon khi màn hình < lg */}
-      <aside className="sticky top-3 flex h-[calc(100vh-1.5rem)] w-16 shrink-0 flex-col rounded-3xl border border-line bg-white p-3 shadow-sm lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-64 lg:p-4">
+      <aside
+        className={`sticky top-3 flex h-[calc(100vh-1.5rem)] shrink-0 flex-col rounded-3xl border border-line bg-white p-3 shadow-sm transition-[width] duration-300 lg:top-4 lg:h-[calc(100vh-2rem)] lg:p-4 ${
+          collapsed ? "w-16 lg:w-[72px]" : "w-16 lg:w-64"
+        }`}
+      >
         <div className="mb-6 flex flex-col items-center">
-          <img src={logoStack} alt="Hairapy" className="h-10 w-auto object-contain lg:h-14" />
-          <p className="mt-2 hidden text-center text-[9px] font-bold uppercase tracking-widest text-muted lg:block">
+          <img
+            src={logoStack}
+            alt="Hairapy"
+            className={`w-auto object-contain ${collapsed ? "h-10" : "h-10 lg:h-14"}`}
+          />
+          <p
+            className={`mt-2 text-center text-[9px] font-bold uppercase tracking-widest text-muted ${
+              collapsed ? "hidden" : "hidden lg:block"
+            }`}
+          >
             Admin Management
           </p>
         </div>
@@ -71,7 +113,7 @@ export default function AdminLayout() {
               {({ isActive }) => (
                 <>
                   <Icon size={20} variant={isActive ? "Bold" : "Linear"} className="shrink-0" />
-                  <span className="max-lg:hidden">{label}</span>
+                  <span className={labelCls}>{label}</span>
                 </>
               )}
             </NavLink>
@@ -79,13 +121,27 @@ export default function AdminLayout() {
         </nav>
 
         <div className="mt-3 flex flex-col gap-1 border-t border-line pt-3">
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            title={collapsed ? "Mở rộng menu" : "Thu gọn menu"}
+            aria-label={collapsed ? "Mở rộng menu" : "Thu gọn menu"}
+            className={`${linkBase} hidden text-mauve/80 hover:bg-canvas hover:text-ink lg:flex`}
+          >
+            {collapsed ? (
+              <ArrowRight2 size={20} variant="Linear" className="shrink-0" />
+            ) : (
+              <ArrowLeft2 size={20} variant="Linear" className="shrink-0" />
+            )}
+            <span className={labelCls}>Thu gọn menu</span>
+          </button>
           <NavLink
             to="/"
             title="Về trang chính"
             className={`${linkBase} text-mauve/80 hover:bg-canvas hover:text-ink`}
           >
             <Home2 size={20} variant="Linear" className="shrink-0" />
-            <span className="max-lg:hidden">Về trang chính</span>
+            <span className={labelCls}>Về trang chính</span>
           </NavLink>
           <button
             type="button"
@@ -94,7 +150,7 @@ export default function AdminLayout() {
             className={`${linkBase} text-left text-red-600 hover:bg-red-50`}
           >
             <Logout size={20} variant="Linear" className="shrink-0" />
-            <span className="max-lg:hidden">Đăng xuất</span>
+            <span className={labelCls}>Đăng xuất</span>
           </button>
         </div>
       </aside>

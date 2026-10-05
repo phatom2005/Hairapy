@@ -12,7 +12,18 @@ export default function AdminCatalogPage() {
   const [catalog, setCatalog] = useState([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // Bộ lọc — lọc phía server vì danh sách có phân trang
+  const [filters, setFilters] = useState({
+    keyword: "",
+    faceShape: "",
+    hairLength: "",
+    gender: "",
+    premiumOnly: "", // "" = tất cả, "true" = Premium, "false" = Free
+  });
+  const [debouncedKeyword, setDebouncedKeyword] = useState("");
 
   // Trạng thái modal form
   const [isOpen, setIsOpen] = useState(false);
@@ -36,20 +47,54 @@ export default function AdminCatalogPage() {
     premiumOnly: false,
   });
 
+  // Debounce ô tìm kiếm 400ms để không gọi API mỗi lần gõ phím
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedKeyword(filters.keyword.trim());
+      setPage(0);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [filters.keyword]);
+
+  // Đổi bộ lọc dạng select → về trang đầu
+  const setFilter = (key, value) => {
+    setFilters((f) => ({ ...f, [key]: value }));
+    setPage(0);
+  };
+
+  const hasFilter =
+    filters.keyword || filters.faceShape || filters.hairLength || filters.gender || filters.premiumOnly;
+
+  const clearFilters = () => {
+    setFilters({ keyword: "", faceShape: "", hairLength: "", gender: "", premiumOnly: "" });
+    setDebouncedKeyword("");
+    setPage(0);
+  };
+
+  const { faceShape, hairLength, gender, premiumOnly } = filters;
+
   const fetchCatalog = useCallback(() => {
     setLoading(true);
+    // Chỉ gửi tham số nào có giá trị
+    const params = { page, size: 10 };
+    if (debouncedKeyword) params.keyword = debouncedKeyword;
+    if (faceShape) params.faceShape = faceShape;
+    if (hairLength) params.hairLength = hairLength;
+    if (gender) params.gender = gender;
+    if (premiumOnly) params.premiumOnly = premiumOnly;
     api
-      .get("/admin/catalog", { params: { page, size: 10 } })
+      .get("/admin/catalog", { params })
       .then((res) => {
         setCatalog(res.data.content || []);
         setTotalPages(res.data.totalPages || 1);
+        setTotalElements(res.data.totalElements ?? 0);
         setLoading(false);
       })
       .catch((err) => {
         console.error(err);
         setLoading(false);
       });
-  }, [page]);
+  }, [page, debouncedKeyword, faceShape, hairLength, gender, premiumOnly]);
 
   useEffect(() => {
     let active = true;
@@ -214,6 +259,48 @@ export default function AdminCatalogPage() {
         </Button>
       </div>
 
+      {/* Bộ lọc */}
+      <Card className="border border-divider/10">
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="search"
+            placeholder="Tìm theo tên hoặc tag..."
+            value={filters.keyword}
+            onChange={(e) => setFilters((f) => ({ ...f, keyword: e.target.value }))}
+            className="min-w-[220px] flex-1 rounded-2xl border-2 border-line bg-white px-4 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted/60 focus:border-brand"
+          />
+          {[
+            { key: "faceShape", label: "Dáng mặt", options: FACE_SHAPES.map((v) => [v, v]) },
+            { key: "hairLength", label: "Độ dài", options: HAIR_LENGTHS.map((v) => [v, v]) },
+            { key: "gender", label: "Giới tính", options: GENDERS.map((v) => [v, v]) },
+            { key: "premiumOnly", label: "Giới hạn", options: [["false", "FREE"], ["true", "PREMIUM"]] },
+          ].map(({ key, label, options }) => (
+            <select
+              key={key}
+              aria-label={label}
+              value={filters[key]}
+              onChange={(e) => setFilter(key, e.target.value)}
+              className="rounded-2xl border-2 border-line bg-white px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand"
+            >
+              <option value="">{label}: tất cả</option>
+              {options.map(([value, text]) => (
+                <option key={value} value={value}>
+                  {text}
+                </option>
+              ))}
+            </select>
+          ))}
+          {hasFilter && (
+            <Button size="sm" variant="ghost" className="rounded-xl text-xs" onClick={clearFilters}>
+              Xóa bộ lọc
+            </Button>
+          )}
+        </div>
+        <p className="mt-3 text-xs font-semibold text-muted">
+          {hasFilter ? `Tìm thấy ${totalElements} kiểu tóc` : `Tổng ${totalElements} kiểu tóc`}
+        </p>
+      </Card>
+
       {/* Table */}
       <Card className="overflow-hidden border border-divider/10" padded={false}>
         {loading ? (
@@ -222,7 +309,7 @@ export default function AdminCatalogPage() {
           </div>
         ) : catalog.length === 0 ? (
           <div className="flex h-64 items-center justify-center text-muted">
-            Kho kiểu tóc hiện tại trống
+            {hasFilter ? "Không có kiểu tóc nào khớp bộ lọc" : "Kho kiểu tóc hiện tại trống"}
           </div>
         ) : (
           <div className="overflow-x-auto">

@@ -4,14 +4,19 @@ import com.hairapy.exceptions.ResourceNotFoundException;
 import com.hairapy.models.HairstyleCatalog;
 import com.hairapy.repositories.HairstyleCatalogRepository;
 import com.hairapy.services.CloudinaryService;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Controller quản trị CRUD cho danh mục kiểu tóc.
@@ -27,12 +32,45 @@ public class AdminCatalogController {
     private final CloudinaryService cloudinaryService;
 
     /**
-     * Lấy danh sách kiểu tóc có phân trang.
+     * Lấy danh sách kiểu tóc có phân trang + bộ lọc (tất cả tham số lọc đều tùy chọn).
+     * - keyword: tìm theo tên hoặc tag (không phân biệt hoa thường)
+     * - faceShape: dáng mặt (cột lưu dạng "Oval,Round" nên dùng LIKE)
+     * - hairLength / gender: khớp chính xác
+     * - premiumOnly: true = chỉ Premium, false = chỉ Free
      */
     @GetMapping
-    public ResponseEntity<Page<HairstyleCatalog>> getCatalog(Pageable pageable) {
-        Page<HairstyleCatalog> page = hairstyleCatalogRepository.findAll(pageable);
-        return ResponseEntity.ok(page);
+    public ResponseEntity<Page<HairstyleCatalog>> getCatalog(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String faceShape,
+            @RequestParam(required = false) String hairLength,
+            @RequestParam(required = false) String gender,
+            @RequestParam(required = false) Boolean premiumOnly,
+            Pageable pageable
+    ) {
+        Specification<HairstyleCatalog> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (keyword != null && !keyword.isBlank()) {
+                String like = "%" + keyword.trim().toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("name")), like),
+                        cb.like(cb.lower(cb.coalesce(root.<String>get("tag"), "")), like)
+                ));
+            }
+            if (faceShape != null && !faceShape.isBlank()) {
+                predicates.add(cb.like(root.get("faceShape"), "%" + faceShape.trim() + "%"));
+            }
+            if (hairLength != null && !hairLength.isBlank()) {
+                predicates.add(cb.equal(root.get("hairLength"), hairLength.trim()));
+            }
+            if (gender != null && !gender.isBlank()) {
+                predicates.add(cb.equal(root.get("gender"), gender.trim()));
+            }
+            if (premiumOnly != null) {
+                predicates.add(cb.equal(root.get("premiumOnly"), premiumOnly));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+        return ResponseEntity.ok(hairstyleCatalogRepository.findAll(spec, pageable));
     }
 
     /**

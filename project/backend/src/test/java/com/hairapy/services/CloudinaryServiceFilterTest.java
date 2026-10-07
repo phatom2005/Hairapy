@@ -15,7 +15,8 @@ class CloudinaryServiceFilterTest {
 
     // Không cần Spring context — new trực tiếp, Cloudinary bean chỉ cần khác null
     // (không dùng tới trong method filterExpiredPublicIds, chỉ dùng ở deleteExpiredResources).
-    private final CloudinaryService service = new CloudinaryService(new Cloudinary());
+    private final CloudinaryService service =
+            new CloudinaryService(new Cloudinary(), org.mockito.Mockito.mock(AlertService.class));
 
     @Test
     void filterExpiredPublicIds_OnlyReturnsResourcesOlderThan24h() {

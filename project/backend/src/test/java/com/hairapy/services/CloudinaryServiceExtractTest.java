@@ -7,7 +7,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class CloudinaryServiceExtractTest {
 
-    private final CloudinaryService service = new CloudinaryService(new Cloudinary());
+    // AlertService chỉ dùng khi upload lỗi — không liên quan tới extractPublicId nên dùng mock
+    private final CloudinaryService service =
+            new CloudinaryService(new Cloudinary(), org.mockito.Mockito.mock(AlertService.class));
 
     @Test
     void extractPublicId_StandardUrlWithVersion_ReturnsPublicId() {

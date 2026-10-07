@@ -61,6 +61,8 @@ export const useScanStore = create((set, get) => ({
   // Khôi phục trạng thái ảnh quét từ lịch sử quét lưu trên server
   hydrateFromHistory: async (scan) => {
     const res = await fetch(scan.imageUrl);
+    // Không dùng response lỗi (404/403...) làm "ảnh" — tránh gửi file rác lên AI
+    if (!res.ok) throw new Error(`Không tải được ảnh lịch sử quét (HTTP ${res.status})`);
     const blob = await res.blob();
     const file = new File([blob], "scan-history.jpg", { type: blob.type || "image/jpeg" });
     const currentPreviewUrl = get().previewUrl;

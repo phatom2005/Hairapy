@@ -79,6 +79,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 10),
                 Text(auth.error!, style: const TextStyle(color: Colors.red, fontSize: 13)),
               ],
+              // Email chưa xác thực → cho gửi lại mail ngay tại đây
+              if (auth.unverifiedEmail != null) ...[
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: () => context.go('/check-email', extra: auth.unverifiedEmail),
+                    style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero),
+                    child: const Text('Gửi lại email xác thực',
+                        style: TextStyle(color: AppColors.magenta, fontWeight: FontWeight.w700, fontSize: 13)),
+                  ),
+                ),
+              ],
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: auth.isLoading ? null : _submit,

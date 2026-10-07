@@ -28,6 +28,14 @@ final _faceShapeProvider = StateProvider.autoDispose<String?>((ref) => null);
 final catalogProvider = FutureProvider.autoDispose<List<Hairstyle>>((ref) async {
   final search = ref.watch(_searchProvider);
   final faceShape = ref.watch(_faceShapeProvider);
+  // Debounce 350ms khi đang gõ tìm kiếm: mỗi lần gõ đổi provider sẽ dispose lượt cũ,
+  // nên chỉ lượt cuối (sau khi ngừng gõ) mới thực sự gọi API — tránh spam request.
+  if (search.trim().isNotEmpty) {
+    var cancelled = false;
+    ref.onDispose(() => cancelled = true);
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    if (cancelled) return const <Hairstyle>[];
+  }
   final res = await ApiClient.instance.dio.get('/hairstyles', queryParameters: {
     if (search.trim().isNotEmpty) 'search': search.trim(),
     'faceShape': ?faceShape,
@@ -100,7 +108,19 @@ class CatalogScreen extends ConsumerWidget {
           Expanded(
             child: stylesAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Không tải được kho kiểu tóc: $e')),
+              error: (e, _) => Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Không tải được kho kiểu tóc.', style: TextStyle(color: AppColors.muted)),
+                    const SizedBox(height: 12),
+                    OutlinedButton(
+                      onPressed: () => ref.invalidate(catalogProvider),
+                      child: const Text('Thử lại'),
+                    ),
+                  ],
+                ),
+              ),
               data: (styles) {
                 if (styles.isEmpty) {
                   return const Center(child: Text('Không tìm thấy kiểu tóc phù hợp', style: TextStyle(color: AppColors.muted)));

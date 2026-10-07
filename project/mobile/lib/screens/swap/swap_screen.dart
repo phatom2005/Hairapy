@@ -45,6 +45,12 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
   String? _error;
   bool _refunded = false;
   Timer? _pollTimer;
+  // Giới hạn số lần poll (3s/lần → tối đa ~3 phút) và số lỗi mạng liên tiếp được bỏ qua,
+  // tránh poll vô hạn khi backend kẹt ở PENDING hoặc mạng chập chờn nhất thời.
+  static const _maxPollAttempts = 60;
+  static const _maxPollNetworkErrors = 3;
+  int _pollAttempts = 0;
+  int _pollNetworkErrors = 0;
 
   Timer? _loadingTextTimer;
   int _loadingIndex = 0;
@@ -101,6 +107,8 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
       _error = null;
       _refunded = false;
     });
+    _pollAttempts = 0;
+    _pollNetworkErrors = 0;
     _startLoadingCycle();
 
     try {
@@ -111,12 +119,16 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
       });
       final res = await ApiClient.instance.dio.post('/swap/submit', data: formData);
       final taskId = (res.data as Map<String, dynamic>)['taskId'] as String;
+      if (!mounted) return; // người dùng đã thoát màn hình trong lúc upload
       setState(() => _phase = _Phase.polling);
       _poll(taskId);
     } on DioException catch (e) {
       _stopLoadingCycle();
+      if (!mounted) return;
       final data = e.response?.data;
-      String message = 'Không thể xử lý ảnh bằng AI. Vui lòng thử lại sau.';
+      String message = e.response == null
+          ? 'Không kết nối được máy chủ. Kiểm tra mạng và thử lại.'
+          : 'Không thể xử lý ảnh bằng AI. Vui lòng thử lại sau.';
       bool refunded = false;
       if (data is Map) {
         if (data['error'] is String) message = data['error'] as String;
@@ -127,13 +139,37 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
         _error = message;
         _refunded = refunded;
       });
+    } catch (_) {
+      // Lỗi ngoài Dio (đọc file ảnh lỗi, phản hồi sai định dạng...) — nếu không bắt thì
+      // màn hình kẹt mãi ở trạng thái "đang xử lý".
+      _stopLoadingCycle();
+      if (!mounted) return;
+      setState(() {
+        _phase = _Phase.error;
+        _error = 'Không thể xử lý ảnh. Vui lòng chọn ảnh khác hoặc thử lại.';
+      });
     }
   }
 
   void _poll(String taskId) {
+    _pollTimer?.cancel();
     _pollTimer = Timer(const Duration(seconds: 3), () async {
+      if (!mounted) return;
+      _pollAttempts++;
+      if (_pollAttempts > _maxPollAttempts) {
+        _stopLoadingCycle();
+        setState(() {
+          _phase = _Phase.error;
+          _error = 'AI xử lý quá lâu. Vui lòng thử lại sau.';
+        });
+        return;
+      }
       try {
         final res = await ApiClient.instance.dio.get('/swap/status/$taskId');
+        // Màn hình đã đóng trong lúc chờ phản hồi → dừng hẳn, không poll tiếp
+        // (trước đây timer bị tạo lại sau khi dispose nên poll mãi ở nền).
+        if (!mounted) return;
+        _pollNetworkErrors = 0;
         final data = res.data as Map<String, dynamic>;
         final status = data['status'] as String?;
         if (status == 'DONE') {
@@ -142,37 +178,37 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
           // Rung nhe bao hieu ket qua da san sang -- diem nhan nho, khong can
           // nguoi dung phai nhin man hinh cham cham cho biet xong chua.
           HapticFeedback.mediumImpact();
-          if (mounted) {
-            setState(() {
-              _phase = _Phase.done;
-              _resultImage = data['image'] as String?;
-            });
-            _triggerFeedbackOnce();
-          }
+          setState(() {
+            _phase = _Phase.done;
+            _resultImage = data['image'] as String?;
+          });
+          _triggerFeedbackOnce();
           return;
         }
         if (status == 'ERROR') {
           _stopLoadingCycle();
           ref.invalidate(usageSummaryProvider);
-          if (mounted) {
-            setState(() {
-              _phase = _Phase.error;
-              _error = data['error'] as String? ?? 'AI xử lý quá lâu, lượt của bạn đã được hoàn lại.';
-              _refunded = data['refunded'] == true;
-            });
-          }
+          setState(() {
+            _phase = _Phase.error;
+            _error = data['error'] as String? ?? 'AI xử lý quá lâu, lượt của bạn đã được hoàn lại.';
+            _refunded = data['refunded'] == true;
+          });
           return;
         }
         // PENDING -> tiếp tục poll
         _poll(taskId);
       } catch (_) {
-        _stopLoadingCycle();
-        if (mounted) {
-          setState(() {
-            _phase = _Phase.error;
-            _error = 'Mất kết nối khi kiểm tra trạng thái xử lý. Vui lòng thử lại.';
-          });
+        if (!mounted) return;
+        // Cho phép vài lần lỗi mạng thoáng qua (đổi sóng, vào hầm...) rồi mới báo lỗi
+        if (++_pollNetworkErrors < _maxPollNetworkErrors) {
+          _poll(taskId);
+          return;
         }
+        _stopLoadingCycle();
+        setState(() {
+          _phase = _Phase.error;
+          _error = 'Mất kết nối khi kiểm tra trạng thái xử lý. Vui lòng thử lại.';
+        });
       }
     });
   }

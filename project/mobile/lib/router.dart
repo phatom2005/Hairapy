@@ -5,6 +5,7 @@ import 'models/hairstyle.dart';
 import 'providers/auth_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
+import 'screens/auth/check_email_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
 import 'screens/landing/landing_screen.dart';
@@ -30,7 +31,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final loggedIn = ref.read(authProvider).isLoggedIn;
       final loc = state.matchedLocation;
-      const authRoutes = ['/', '/login', '/register', '/forgot-password', '/reset-password'];
+      const authRoutes = ['/', '/login', '/register', '/check-email', '/forgot-password', '/reset-password'];
       final isAuthRoute = authRoutes.contains(loc);
       final isLegalRoute = loc == '/legal';
 
@@ -48,6 +49,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', builder: (context, state) => const LandingScreen()),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
+      GoRoute(
+        path: '/check-email',
+        builder: (context, state) => CheckEmailScreen(email: (state.extra as String?) ?? ''),
+      ),
       GoRoute(path: '/forgot-password', builder: (context, state) => const ForgotPasswordScreen()),
       GoRoute(path: '/reset-password', builder: (context, state) => const ResetPasswordScreen()),
 

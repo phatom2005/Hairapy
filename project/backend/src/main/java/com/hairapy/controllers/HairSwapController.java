@@ -112,6 +112,15 @@ public class HairSwapController {
                     "error", "AI xử lý quá lâu. Lượt của bạn đã được hoàn lại, vui lòng thử lại.",
                     "refunded", true
             ));
+        } catch (com.hairapy.exceptions.InvalidImageException e) {
+            // Ảnh không đạt yêu cầu AI (vd không thấy mặt) — hoàn lượt, báo user chọn ảnh khác
+            usageService.releaseUsage(reservation);
+            log.warn("Ảnh không đạt yêu cầu AI cho user {}: {}", currentUser.getEmail(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of(
+                    "error", e.getMessage(),
+                    "code", "INVALID_IMAGE",
+                    "refunded", true
+            ));
         } catch (IllegalArgumentException e) {
             usageService.releaseUsage(reservation);
             log.warn("Yêu cầu không hợp lệ: {}", e.getMessage());

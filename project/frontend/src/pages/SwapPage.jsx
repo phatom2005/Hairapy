@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { normalizeImage } from "../utils/imageUtils";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CheckIcon, DownloadIcon } from "../components/icons";
 import Footer from "../components/layout/Footer";
@@ -248,8 +249,11 @@ export default function SwapPage() {
     setLoading(true);
     setError(null);
 
+    // Xoay đúng EXIF + thu nhỏ trước khi gửi — tránh lỗi AI "không thấy mặt" do ảnh bị xoay/quá lớn
+    const uploadFile = await normalizeImage(imageFile);
+
     const formData = new FormData();
-    formData.append("image", imageFile);
+    formData.append("image", uploadFile);
     formData.append("hairStyle", activeStyle.ailabProStyle);
     formData.append("hairstyleId", activeStyle.id);
 
@@ -273,6 +277,13 @@ export default function SwapPage() {
       console.error("Lỗi khi submit Hair Swap Pro API:", err);
       queryClient.invalidateQueries({ queryKey: ["usage-summary"] });
       const errorData = err.response?.data;
+
+      // Ảnh không đạt yêu cầu AI (không thấy mặt...) — hiển thị đúng thông điệp từ backend
+      if (errorData?.code === "INVALID_IMAGE") {
+        setError(errorData.error);
+        setLoading(false);
+        return;
+      }
 
       if (err.response?.status === 504 || errorData?.refunded) {
         setError(

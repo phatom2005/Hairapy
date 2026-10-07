@@ -34,6 +34,7 @@ public class HairSwapService {
     private final AiLabConfig aiLabConfig;
     private final RestTemplate aiRestTemplate;
     private final CloudinaryService cloudinaryService;
+    private final AlertService alertService;
 
     // Pro API endpoint — async, chỉ thay tóc (không thay mặt)
     private static final String AILAB_PRO_URL = "https://www.ailabapi.com/api/portrait/effects/hairstyle-editor-pro";
@@ -96,6 +97,39 @@ public class HairSwapService {
         } catch (org.springframework.web.client.ResourceAccessException e) {
             log.warn("AILab Pro API timeout khi submit task");
             throw new com.hairapy.exceptions.AiTimeoutException("AI xử lý quá lâu, lượt của bạn đã được hoàn lại.");
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            // RestTemplate mặc định ném exception với mọi 4xx. AILab trả 422 (FILE_CONTENT_NON_COMPLIANCE)
+            // khi ảnh không đạt yêu cầu → đây là lỗi do ẢNH của user, không phải lỗi hệ thống.
+            String errBody = e.getResponseBodyAsString();
+            log.warn("AILab Pro API từ chối ảnh: status={}, body={}", e.getStatusCode(), errBody);
+            if (e.getStatusCode().value() == 422 || (errBody != null && errBody.contains("FILE_CONTENT_NON_COMPLIANCE"))) {
+                if (errBody != null && errBody.contains("NO_FACE")) {
+                    throw new com.hairapy.exceptions.InvalidImageException(
+                            "AI không nhận ra khuôn mặt trong ảnh này. Hãy dùng ảnh chụp thẳng mặt, đủ sáng, "
+                                    + "khuôn mặt chiếm phần lớn khung hình và không bị che. Lượt của bạn đã được hoàn lại.");
+                }
+                throw new com.hairapy.exceptions.InvalidImageException(
+                        "Ảnh chưa đạt yêu cầu của AI (mặt quá nhỏ, quá nghiêng hoặc ảnh quá nhỏ/lớn). "
+                                + "Vui lòng chọn ảnh khác. Lượt của bạn đã được hoàn lại.");
+            }
+            // 401/402/403/429... (sai khóa, hết credit, bị giới hạn) → lỗi hệ thống, báo admin ngay
+            int httpCode = e.getStatusCode().value();
+            if (httpCode == 401 || httpCode == 402 || httpCode == 403) {
+                alertService.alert("AILAB_AUTH",
+                        "AILab từ chối API key / hết credit (HTTP " + httpCode + ") — swap kiểu tóc đang không dùng được",
+                        "HTTP " + httpCode + " — " + truncate(errBody, 500));
+            } else if (httpCode == 429) {
+                alertService.alert("AILAB_RATE_LIMIT", "AILab giới hạn tốc độ (HTTP 429)",
+                        truncate(errBody, 500));
+            } else {
+                alertService.alert("AILAB_4XX", "AILab trả lỗi 4xx bất thường (HTTP " + httpCode + ")",
+                        truncate(errBody, 500));
+            }
+            throw new RuntimeException("Dịch vụ AI từ chối yêu cầu: HTTP " + httpCode);
+        } catch (org.springframework.web.client.HttpServerErrorException e) {
+            alertService.alert("AILAB_5XX", "AILab gặp lỗi máy chủ (HTTP " + e.getStatusCode().value() + ")",
+                    truncate(e.getResponseBodyAsString(), 500));
+            throw new RuntimeException("Dịch vụ AI đang gặp sự cố, vui lòng thử lại sau.");
         }
 
         if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
@@ -112,6 +146,8 @@ public class HairSwapService {
             if (errorCode != 0) {
                 Object errorMsg = responseBody.get("error_msg");
                 log.error("AILab Pro API báo lỗi: [Code: {}] {}", errorCode, errorMsg);
+                alertService.alert("AILAB_ERROR", "AILab báo lỗi khi submit (code " + errorCode + ")",
+                        truncate(String.valueOf(errorMsg), 500));
                 throw new RuntimeException("Dịch vụ AI báo lỗi: " + errorMsg);
             }
         }
@@ -160,6 +196,8 @@ public class HairSwapService {
         if (errorCodeObj != null && Integer.parseInt(errorCodeObj.toString()) != 0) {
             Object errorMsg = body.get("error_msg");
             log.error("Check status lỗi: [Code: {}] {}", errorCodeObj, errorMsg);
+            alertService.alert("AILAB_ERROR", "AILab báo lỗi khi check status (code " + errorCodeObj + ")",
+                    truncate(String.valueOf(errorMsg), 500));
             return HairSwapPollResult.error("Dịch vụ AI báo lỗi: " + errorMsg);
         }
 
@@ -200,6 +238,12 @@ public class HairSwapService {
             log.error("Không thể upload ảnh kết quả lên Cloudinary, sử dụng URL tạm thời của AILab: {}", tempUrl, e);
             return tempUrl;
         }
+    }
+
+    /** Cắt chuỗi dài (body lỗi) để mail/log gọn. */
+    private static String truncate(String s, int max) {
+        if (s == null) return "";
+        return s.length() <= max ? s : s.substring(0, max) + "...";
     }
 
     /**

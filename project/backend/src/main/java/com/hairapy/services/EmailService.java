@@ -53,6 +53,13 @@ public class EmailService {
         send(toEmail, "Xác minh email Hairapy", buildVerifyHtml(verifyLink), "xác minh tài khoản");
     }
 
+    /**
+     * Gửi email cảnh báo hệ thống cho admin (xem AlertService). Không throw ra ngoài khi Resend lỗi.
+     */
+    public void sendAlertEmail(String toEmail, String subject, String html) {
+        send(toEmail, subject, html, "cảnh báo hệ thống");
+    }
+
     private void send(String toEmail, String subject, String html, String label) {
         if (resendApiKey == null || resendApiKey.isBlank()) {
             log.warn("RESEND_API_KEY chưa được cấu hình. Bỏ qua gửi email {} tới {}", label, toEmail);

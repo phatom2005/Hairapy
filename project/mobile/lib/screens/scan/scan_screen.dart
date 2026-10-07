@@ -83,8 +83,15 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       return;
     }
     final picker = ImagePicker();
-    final file = await picker.pickImage(source: source, imageQuality: 90);
-    if (file == null) return;
+    // Thu nhỏ ảnh về tối đa 1600px: ảnh camera 12MP+ nặng vài MB, upload chậm và dễ vượt
+    // giới hạn kích thước của AI/Cloudinary; 1600px vẫn dư để nhận diện khuôn mặt.
+    final file = await picker.pickImage(
+      source: source,
+      imageQuality: 90,
+      maxWidth: 1600,
+      maxHeight: 1600,
+    );
+    if (file == null || !mounted) return;
     setState(() {
       _picked = File(file.path);
       _error = null;
@@ -142,7 +149,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
           final msg = (e.response?.data is Map)
               ? (e.response?.data['error'] as String?)
               : null;
-          setState(() => _error = msg ?? 'Bạn đã hết lượt quét khuôn mặt hôm nay.');
+          if (mounted) setState(() => _error = msg ?? 'Bạn đã hết lượt quét khuôn mặt hôm nay.');
           return;
         }
         // Các lỗi lưu lịch sử khác (mạng chập chờn, Cloudinary lỗi...) không
@@ -168,9 +175,9 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
         }
       }
     } on FaceAnalysisException catch (e) {
-      setState(() => _error = e.message);
+      if (mounted) setState(() => _error = e.message);
     } catch (e) {
-      setState(() => _error = 'Không thể phân tích khuôn mặt. Hãy chắc chắn ảnh rõ mặt.');
+      if (mounted) setState(() => _error = 'Không thể phân tích khuôn mặt. Hãy chắc chắn ảnh rõ mặt.');
     } finally {
       _stopLoadingCycle();
       if (mounted) setState(() => _analyzing = false);

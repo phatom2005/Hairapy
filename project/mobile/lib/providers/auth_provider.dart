@@ -12,31 +12,54 @@ class AuthState {
   final AppUser? user;
   final String? error;
 
-  const AuthState({this.isLoading = false, this.user, this.error});
+  /// Có giá trị khi đăng nhập bị chặn vì email chưa xác thực (mã EMAIL_NOT_VERIFIED)
+  /// — UI dùng để hiện nút "Gửi lại email xác thực".
+  final String? unverifiedEmail;
+
+  const AuthState({this.isLoading = false, this.user, this.error, this.unverifiedEmail});
 
   bool get isLoggedIn => user != null;
 
-  AuthState copyWith({bool? isLoading, AppUser? user, String? error}) => AuthState(
+  AuthState copyWith({bool? isLoading, AppUser? user, String? error, String? unverifiedEmail}) =>
+      AuthState(
         isLoading: isLoading ?? this.isLoading,
         user: user ?? this.user,
         error: error,
+        unverifiedEmail: unverifiedEmail,
       );
 }
 
-/// Đọc thông điệp lỗi trả về từ backend (Map {"error": "..."} hoặc {"message": "..."})
-/// — khớp cách RestControllerAdvice/ResponseEntity.body bên Spring Boot trả lỗi.
+/// Đọc thông điệp lỗi trả về từ backend.
+/// GlobalExceptionHandler trả `message` là nội dung thật, còn `error` chỉ là tên
+/// trạng thái HTTP ("Unauthorized", "Forbidden"...) — ngoại trừ lỗi validation thì
+/// `error` mới là câu thông báo đầu tiên. Vì vậy ưu tiên `message`, rồi mới tới `error`.
 String _extractError(Object e, String fallback) {
   if (e is DioException) {
     final data = e.response?.data;
     if (data is Map) {
-      if (data['error'] is String) return data['error'] as String;
-      if (data['message'] is String) return data['message'] as String;
+      final message = data['message'];
+      if (message is String && message.trim().isNotEmpty) return message;
+      final error = data['error'];
+      if (error is String && error.trim().isNotEmpty) return error;
       if (data['errors'] is Map) {
         return (data['errors'] as Map).values.join(', ');
       }
     }
+    // Không có phản hồi từ server (mất mạng/timeout) → báo rõ để người dùng biết
+    if (e.response == null) {
+      return 'Không kết nối được máy chủ. Kiểm tra mạng và thử lại.';
+    }
   }
   return fallback;
+}
+
+/// Mã lỗi nghiệp vụ backend trả kèm (vd EMAIL_NOT_VERIFIED).
+String? _extractCode(Object e) {
+  if (e is DioException) {
+    final data = e.response?.data;
+    if (data is Map && data['code'] is String) return data['code'] as String;
+  }
+  return null;
 }
 
 class AuthNotifier extends StateNotifier<AuthState> {
@@ -77,14 +100,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(
         isLoading: false,
         error: _extractError(e, 'Email hoặc mật khẩu không đúng'),
+        // Email chưa xác thực → UI hiện nút gửi lại email
+        unverifiedEmail: _extractCode(e) == 'EMAIL_NOT_VERIFIED' ? email : null,
       );
       return false;
     }
   }
 
   /// Đăng ký — khớp RegisterRequest bên backend (fullName, email, password, confirmPassword).
-  /// Backend trả cùng AuthResponse như /auth/login nên đăng ký xong là đăng nhập luôn,
-  /// không cần bắt người dùng đăng nhập lại lần nữa (giống useAuthStore.register bên web).
+  /// Backend KHÔNG trả JWT nữa: tài khoản phải xác thực email (link gửi qua mail) rồi mới
+  /// đăng nhập được. Vì vậy ở đây chỉ trả true để UI chuyển sang màn "Kiểm tra email".
   Future<bool> register({
     required String fullName,
     required String email,
@@ -93,15 +118,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final res = await ApiClient.instance.dio.post('/auth/register', data: {
+      await ApiClient.instance.dio.post('/auth/register', data: {
         'fullName': fullName,
         'email': email,
         'password': password,
         'confirmPassword': confirmPassword,
       });
-      final token = (res.data as Map<String, dynamic>)['token'] as String;
-      await TokenStorage.instance.save(token);
-      await fetchMe();
       state = state.copyWith(isLoading: false);
       return true;
     } catch (e) {
@@ -109,6 +131,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
         isLoading: false,
         error: _extractError(e, 'Đăng ký thất bại. Vui lòng thử lại.'),
       );
+      return false;
+    }
+  }
+
+  /// POST /auth/resend-verification {email} — backend luôn trả phản hồi trung tính
+  /// (không lộ email có tồn tại không) và có cooldown 60s phía server.
+  /// Không đụng tới state chung để không xoá lỗi/trạng thái đang hiển thị ở màn khác.
+  Future<bool> resendVerification(String email) async {
+    try {
+      await ApiClient.instance.dio.post('/auth/resend-verification', data: {'email': email});
+      return true;
+    } catch (_) {
       return false;
     }
   }

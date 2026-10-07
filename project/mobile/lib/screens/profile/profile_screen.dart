@@ -381,14 +381,20 @@ class _MenuTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Nền trắng đặt ở Material (không đặt ở DecoratedBox) để hiệu ứng chạm của ListTile hiển thị đúng
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.line)),
-      child: ListTile(
-        leading: Icon(icon, color: AppColors.mauve),
-        title: Text(label, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
-        trailing: onTap != null ? const Icon(Icons.chevron_right, size: 20, color: AppColors.muted) : null,
-        onTap: onTap,
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.line)),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          leading: Icon(icon, color: AppColors.mauve),
+          title: Text(label, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+          trailing: onTap != null ? const Icon(Icons.chevron_right, size: 20, color: AppColors.muted) : null,
+          onTap: onTap,
+        ),
       ),
     );
   }

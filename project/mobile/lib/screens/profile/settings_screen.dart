@@ -17,6 +17,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _phoneCtrl;
+  late final TextEditingController _emailCtrl; // email chỉ đọc
   bool _saved = false;
 
   @override
@@ -25,12 +26,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final user = ref.read(authProvider).user;
     _nameCtrl = TextEditingController(text: user?.fullName ?? '');
     _phoneCtrl = TextEditingController(text: user?.phone ?? '');
+    _emailCtrl = TextEditingController(text: user?.email ?? '');
   }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
+    _emailCtrl.dispose();
     super.dispose();
   }
 
@@ -48,7 +51,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     bool deleting = false;
     String? localError;
 
-    await showDialog(
+    await showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (dialogCtx) {
@@ -139,7 +142,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authProvider);
-    final user = auth.user;
     final usageAsync = ref.watch(usageSummaryProvider);
 
     return Scaffold(
@@ -153,7 +155,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 6),
           TextField(
             enabled: false,
-            controller: TextEditingController(text: user?.email ?? ''),
+            controller: _emailCtrl,
           ),
           const SizedBox(height: 14),
           const Text('Họ và tên', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
@@ -195,13 +197,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 28),
           const Text('Pháp lý & Điều khoản', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
           const SizedBox(height: 12),
+          // Viền ở Container, nền trắng đặt ở Material: ListTile vẽ nền/hiệu ứng chạm lên
+          // Material gần nhất, nếu nền nằm ở DecoratedBox thì hiệu ứng bị che (và báo assert).
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: AppColors.line),
             ),
-            child: Column(
+            child: Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
               children: [
                 ListTile(
                   leading: const Icon(Icons.privacy_tip_outlined, color: AppColors.mauve),
@@ -223,6 +230,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   }),
                 ),
               ],
+            ),
             ),
           ),
           const SizedBox(height: 28),

@@ -27,6 +27,7 @@ import java.util.Map;
 public class CloudinaryService {
 
     private final Cloudinary cloudinary;
+    private final AlertService alertService;
 
     /**
      * Upload file ảnh (MultipartFile) lên Cloudinary.
@@ -46,7 +47,12 @@ public class CloudinaryService {
             return url;
         } catch (IOException e) {
             log.error("Lỗi upload ảnh lên Cloudinary: {}", e.getMessage());
+            alertService.alert("CLOUDINARY_UPLOAD", "Upload ảnh lên Cloudinary thất bại", String.valueOf(e.getMessage()));
             throw new RuntimeException("Không thể upload ảnh lên cloud storage.");
+        } catch (RuntimeException e) {
+            // SDK Cloudinary ném RuntimeException khi sai key / hết quota / bị từ chối
+            alertService.alert("CLOUDINARY_UPLOAD", "Upload ảnh lên Cloudinary thất bại", String.valueOf(e.getMessage()));
+            throw e;
         }
     }
 
@@ -91,7 +97,11 @@ public class CloudinaryService {
             return url;
         } catch (IOException e) {
             log.error("Lỗi upload ảnh từ URL lên Cloudinary: {}", e.getMessage());
+            alertService.alert("CLOUDINARY_UPLOAD", "Upload ảnh lên Cloudinary thất bại", String.valueOf(e.getMessage()));
             throw new RuntimeException("Không thể lưu ảnh kết quả AI lên cloud storage.");
+        } catch (RuntimeException e) {
+            alertService.alert("CLOUDINARY_UPLOAD", "Upload ảnh lên Cloudinary thất bại", String.valueOf(e.getMessage()));
+            throw e;
         }
     }
 

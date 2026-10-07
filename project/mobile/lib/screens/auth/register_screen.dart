@@ -44,13 +44,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       setState(() => _localError = 'Vui lòng đồng ý Điều khoản và Chính sách bảo mật');
       return;
     }
+    final email = _emailCtrl.text.trim();
     final ok = await ref.read(authProvider.notifier).register(
           fullName: _nameCtrl.text.trim(),
-          email: _emailCtrl.text.trim(),
+          email: email,
           password: _pwCtrl.text,
           confirmPassword: _pw2Ctrl.text,
         );
-    if (ok && mounted) context.go('/home');
+    // Đăng ký xong chưa đăng nhập được — phải xác thực email trước
+    if (ok && mounted) context.go('/check-email', extra: email);
   }
 
   @override

@@ -10,6 +10,7 @@ import '../../models/usage_summary.dart';
 import '../../models/hairstyle.dart';
 import '../../providers/scan_state_provider.dart';
 import '../../services/face_shape_analyzer.dart';
+import '../../services/image_quality_checker.dart';
 import '../../theme.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/face_mesh_overlay.dart';
@@ -47,6 +48,8 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
   File? _picked;
   bool _analyzing = false;
   String? _error;
+  // Cảnh báo chất lượng ảnh (tối/chói/mờ) — chỉ nhắc, không chặn người dùng
+  String? _qualityWarning;
 
   Timer? _loadingTimer;
   int _loadingIndex = 0;
@@ -92,10 +95,16 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       maxHeight: 1600,
     );
     if (file == null || !mounted) return;
+    final picked = File(file.path);
     setState(() {
-      _picked = File(file.path);
+      _picked = picked;
       _error = null;
+      _qualityWarning = null;
     });
+    final warning = await ImageQualityChecker.check(picked);
+    if (mounted && _picked?.path == picked.path) {
+      setState(() => _qualityWarning = warning);
+    }
   }
 
   Future<void> _analyze() async {
@@ -198,8 +207,23 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       orElse: () => false,
     );
 
-    return Scaffold(
+    // Màn Scan thường được mở bằng go('/scan') nên stack chỉ có 1 trang → không có nút back mặc định.
+    // Cho phép quay về Home bằng nút trên AppBar và cả nút back hệ thống (trừ lúc đang phân tích).
+    final canPop = context.canPop();
+    return PopScope(
+      canPop: canPop && !_analyzing,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && !_analyzing) context.go('/home');
+      },
+      child: Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Về trang chủ',
+          onPressed: _analyzing
+              ? null
+              : () => canPop ? context.pop() : context.go('/home'),
+        ),
         title: const Text('Quét khuôn mặt'),
         actions: [
           Padding(
@@ -239,6 +263,21 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Text(_error!, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
               ),
+            if (_qualityWarning != null && _error == null && !_analyzing)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.lightbulb_outline, size: 16, color: Colors.orange),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(_qualityWarning!,
+                          style: const TextStyle(color: AppColors.muted, fontWeight: FontWeight.w600, fontSize: 12.5)),
+                    ),
+                  ],
+                ),
+              ),
             ElevatedButton(
               onPressed: (_picked == null || _analyzing || isExhausted) ? null : _analyze,
               child: _analyzing
@@ -251,6 +290,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
         ),
       ),
       bottomNavigationBar: const AppBottomNav(currentIndex: 1),
+      ),
     );
   }
 }
@@ -286,6 +326,16 @@ class DottedUploadArea extends StatelessWidget {
                   const SizedBox(height: 16),
                   const Text('Chụp ảnh hoặc tải ảnh lên',
                       style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                  const SizedBox(height: 10),
+                  // Gợi ý chụp để AI nhận diện được mặt (tránh lỗi "No face detected")
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 24),
+                    child: Text(
+                      'Nhìn thẳng, đủ sáng, rõ nét\nKhông đeo kính râm/khẩu trang, tóc không che mặt',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: AppColors.muted, fontSize: 12.5, height: 1.4),
+                    ),
+                  ),
                   const SizedBox(height: 20),
                   Row(
                     mainAxisSize: MainAxisSize.min,

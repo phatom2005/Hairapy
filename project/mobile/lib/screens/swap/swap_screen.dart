@@ -4,7 +4,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gal/gal.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../api/api_client.dart';
 import '../../config/feature_flags.dart';
@@ -56,6 +58,9 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
   int _loadingIndex = 0;
 
   bool _sharing = false;
+  bool _saving = false;
+  // Đã lưu/chia sẻ ảnh kết quả chưa — nếu chưa mà thoát thì hỏi xác nhận (ảnh không được lưu ở server)
+  bool _saved = false;
   bool _feedbackShown = false;
 
   void _triggerFeedbackOnce() {
@@ -223,6 +228,7 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
         afterImageUrl: resultUrl,
         styleName: widget.hairstyle?.name ?? 'Kiểu tóc mới',
       );
+      _saved = true;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -231,6 +237,78 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
       }
     } finally {
       if (mounted) setState(() => _sharing = false);
+    }
+  }
+
+  /// Tải ảnh kết quả về máy → lưu vào thư viện ảnh (album Hairapy).
+  Future<void> _saveToGallery() async {
+    final url = _resultImage;
+    if (url == null || _saving) return;
+    setState(() => _saving = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final dir = await getTemporaryDirectory();
+      final path = '${dir.path}/hairapy_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      await Dio().download(
+        url,
+        path,
+        options: Options(
+          receiveTimeout: const Duration(seconds: 30),
+          sendTimeout: const Duration(seconds: 15),
+        ),
+      );
+      if (!await Gal.hasAccess()) {
+        final granted = await Gal.requestAccess();
+        if (!granted) {
+          messenger.showSnackBar(
+            const SnackBar(content: Text('Hairapy cần quyền truy cập ảnh để lưu. Hãy cấp quyền trong Cài đặt.')),
+          );
+          return;
+        }
+      }
+      await Gal.putImage(path, album: 'Hairapy');
+      _saved = true;
+      messenger.showSnackBar(const SnackBar(content: Text('Đã lưu ảnh vào thư viện.')));
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Không lưu được ảnh. Kiểm tra mạng và thử lại.')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  /// Rời màn có cần xác nhận không: đang xử lý AI, hoặc đã có kết quả nhưng chưa lưu/chia sẻ.
+  bool get _needsLeaveConfirm =>
+      _phase == _Phase.submitting || _phase == _Phase.polling || (_phase == _Phase.done && !_saved);
+
+  Future<void> _confirmLeave() async {
+    if (!_needsLeaveConfirm) {
+      _doLeave();
+      return;
+    }
+    final processing = _phase == _Phase.submitting || _phase == _Phase.polling;
+    final leave = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(processing ? 'AI đang xử lý' : 'Ảnh chưa được lưu'),
+        content: Text(processing
+            ? 'Thoát bây giờ bạn sẽ không nhận được kết quả của lượt này.'
+            : 'Kết quả không được lưu trên hệ thống. Thoát bây giờ bạn sẽ mất ảnh này.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Ở lại')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Vẫn thoát')),
+        ],
+      ),
+    );
+    if (leave == true && mounted) _doLeave();
+  }
+
+  void _doLeave() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/catalog');
     }
   }
 
@@ -259,12 +337,22 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
       });
     }
 
-    return Scaffold(
-      appBar: AppBar(title: Text(hairstyle?.name ?? 'Thử kiểu tóc')),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: _buildBody(context, image),
+    return PopScope(
+      // Chặn back hệ thống/thao tác vuốt khi cần xác nhận, rồi tự hỏi người dùng
+      canPop: !_needsLeaveConfirm,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _confirmLeave();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: BackButton(onPressed: _confirmLeave),
+          title: Text(hairstyle?.name ?? 'Thử kiểu tóc'),
+        ),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: _buildBody(context, image),
+          ),
         ),
       ),
     );
@@ -351,31 +439,21 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
           ),
         if (_phase == _Phase.done) ...[
           Row(
-            // KHONG dung crossAxisAlignment: stretch o day -- Row nay nam
-            // trong 1 Column duoc Padding/SafeArea cap chieu cao khong gioi
-            // han (h<=Infinity) trong 1 so truong hop, stretch + unbounded
-            // height gay loi "RenderBox was not laid out" (crash that su
-            // gay man trang/treo may bao cao truoc). Da co SizedBox(height:52)
-            // rieng cho tung nut nen khong can stretch nua.
+            // KHONG dung crossAxisAlignment: stretch (xem ghi chu loi layout cu) -- moi nut co SizedBox(height: 52) rieng.
             children: [
-              // Ca 2 nut deu ep chieu cao 52 + font/padding giong nhau de
-              // can bang ti le voi nhau (truoc do OutlinedButton dung
-              // kich thuoc mac dinh nho hon ElevatedButton.icon gay lech).
               Expanded(
                 child: SizedBox(
                   height: 52,
-                  child: OutlinedButton(
-                    onPressed: () => context.pop(),
-                    style: OutlinedButton.styleFrom(
+                  child: ElevatedButton.icon(
+                    onPressed: _saving ? null : _saveToGallery,
+                    style: ElevatedButton.styleFrom(
                       textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                     ),
-                    child: const Text(
-                      'Xem thêm kiểu khác',
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    icon: _saving
+                        ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.download_rounded, size: 18),
+                    label: Text(_saving ? 'Đang lưu...' : 'Lưu ảnh', maxLines: 1, overflow: TextOverflow.ellipsis),
                   ),
                 ),
               ),
@@ -383,24 +461,29 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
               Expanded(
                 child: SizedBox(
                   height: 52,
-                  child: ElevatedButton.icon(
+                  child: OutlinedButton.icon(
                     onPressed: _sharing ? null : () => _share(image),
-                    style: ElevatedButton.styleFrom(
+                    style: OutlinedButton.styleFrom(
                       textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                     ),
                     icon: _sharing
-                        ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(Icons.ios_share, size: 18),
-                    label: Text(
-                      _sharing ? 'Đang tạo ảnh...' : 'Chia sẻ',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    label: Text(_sharing ? 'Đang tạo ảnh...' : 'Chia sẻ', maxLines: 1, overflow: TextOverflow.ellipsis),
                   ),
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: TextButton(
+              onPressed: _confirmLeave,
+              child: const Text('Xem thêm kiểu khác', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+            ),
           ),
           const SizedBox(height: 12),
           Center(

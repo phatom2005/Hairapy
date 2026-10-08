@@ -88,7 +88,11 @@ const useAuthStore = create((set, get) => ({
       }
       return true;
     } catch (err) {
-      const errMsg = err.response?.data?.message || "Đăng nhập Google thất bại. Vui lòng thử lại.";
+      const data = err.response?.data;
+      const errMsg =
+        data?.message ||
+        (typeof data?.error === "string" ? data.error : null) ||
+        (err.response ? "Đăng nhập Google thất bại. Vui lòng thử lại." : "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.");
       set({ error: errMsg, loading: false });
       throw new Error(errMsg, { cause: err });
     }

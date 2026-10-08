@@ -31,13 +31,29 @@ class ApiClient {
           handler.next(options);
         },
         onError: (error, handler) async {
-          // 401 -> token hết hạn/không hợp lệ: xoá token, để UI tự điều hướng
-          // về Login (xử lý ở tầng provider/router, không side-effect ở đây).
+          // Phiên hết hạn: backend hiện trả 403 với body RỖNG khi JWT hết hạn/sai
+          // (Spring Security mặc định), còn các lỗi nghiệp vụ (hết lượt, cần Premium,
+          // sai mật khẩu...) luôn có body JSON. Nên: có gửi token + body rỗng + 401/403
+          // => token không còn dùng được -> xoá token và báo cho AuthNotifier đăng xuất.
+          // (Nếu sau này backend đổi sang 401 kèm JSON, cần cập nhật điều kiện này.)
+          final status = error.response?.statusCode;
+          final data = error.response?.data;
+          final emptyBody = data == null ||
+              (data is String && data.trim().isEmpty) ||
+              (data is Map && data.isEmpty);
+          final hadToken = error.requestOptions.headers['Authorization'] != null;
+          if (hadToken && emptyBody && (status == 401 || status == 403)) {
+            await TokenStorage.instance.clear();
+            onSessionExpired?.call();
+          }
           handler.next(error);
         },
       ),
     );
   }
+
+  /// AuthNotifier gán callback này để reset state đăng nhập khi phiên hết hạn.
+  static void Function()? onSessionExpired;
 
   static final ApiClient instance = ApiClient._internal();
   late final Dio _dio;

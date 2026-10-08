@@ -68,6 +68,9 @@ function loadGoogleScript() {
   return googleScriptPromise;
 }
 
+// Tạm ẩn đăng nhập Facebook (Meta yêu cầu app của doanh nghiệp đã xác minh). Đổi true để bật lại.
+const SHOW_FACEBOOK = false;
+
 export function SocialButtons({ redirectTo = "/profile" }) {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [facebookLoading, setFacebookLoading] = useState(false);
@@ -140,13 +143,15 @@ export function SocialButtons({ redirectTo = "/profile" }) {
   };
 
   return (
-    <div className="grid w-full grid-cols-2 gap-4">
+    <div className={`grid w-full gap-4 ${SHOW_FACEBOOK ? "grid-cols-2" : "grid-cols-1"}`}>
       <button type="button" className={base} onClick={handleGoogleClick} disabled={googleLoading || facebookLoading}>
         <GoogleIcon /> {googleLoading ? "Đang kết nối..." : "Google"}
       </button>
-      <button type="button" className={base} onClick={handleFacebookClick} disabled={googleLoading || facebookLoading}>
-        <FacebookIcon /> {facebookLoading ? "Đang kết nối..." : "Facebook"}
-      </button>
+      {SHOW_FACEBOOK && (
+        <button type="button" className={base} onClick={handleFacebookClick} disabled={googleLoading || facebookLoading}>
+          <FacebookIcon /> {facebookLoading ? "Đang kết nối..." : "Facebook"}
+        </button>
+      )}
     </div>
   );
 }

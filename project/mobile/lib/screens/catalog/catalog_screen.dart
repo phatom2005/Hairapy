@@ -196,7 +196,13 @@ class _CatalogCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                CachedNetworkImage(imageUrl: hairstyle.imageUrl, fit: BoxFit.cover),
+                CachedNetworkImage(
+                  imageUrl: hairstyle.imageUrl,
+                  fit: BoxFit.cover,
+                  errorWidget: (context, url, error) => const Center(
+                    child: Icon(Icons.broken_image_outlined, color: AppColors.muted),
+                  ),
+                ),
                 if (hairstyle.premiumOnly)
                   Positioned(
                     top: 10, left: 10,

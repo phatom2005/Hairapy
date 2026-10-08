@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: ^3.13.3
@@ -60,6 +60,8 @@ dependencies:
   # Lay thu muc tam de ghi file anh card truoc khi share (share_plus can
   # duong dan file, khong nhan thang bytes voi ban dang dung).
   path_provider: ^2.1.5
+  # Luu anh ket qua Thu toc vao thu vien anh cua may
+  gal: ^2.3.1
   # Dong bo font voi web (Be Vietnam Pro + Unbounded qua Google Fonts) --
   # truoc do fontFamily 'BeVietnamPro' bi khai bao ma khong co font that,
   # Flutter am tham fallback ve font he thong (Roboto).
@@ -97,6 +99,12 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Font đóng gói sẵn cho google_fonts (Be Vietnam Pro + Unbounded) — app không cần
+  # tải font từ Google lúc chạy, hiển thị đúng ngay cả khi mở app lần đầu lúc offline.
+  # Tên file phải đúng quy ước <Family>-<Variant>.ttf thì google_fonts mới nhận.
+  assets:
+    - google_fonts/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

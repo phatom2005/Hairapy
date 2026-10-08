@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'config/feature_flags.dart';
 import 'models/hairstyle.dart';
 import 'providers/auth_provider.dart';
+import 'providers/scan_state_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/auth/check_email_screen.dart';
@@ -26,8 +28,23 @@ import 'screens/salons/salons_screen.dart';
 /// cộng thêm Catalog/Profile/Settings/Salons/Checkout/PaymentResult — khớp toàn bộ
 /// trang thật bên project/frontend/src/pages, trừ phần Admin (không cần trên mobile).
 final routerProvider = Provider<GoRouter>((ref) {
+  // Báo cho GoRouter chạy lại redirect mỗi khi trạng thái đăng nhập đổi:
+  // - mở app có token lưu sẵn -> khôi phục xong tự vào /home (không kẹt ở Landing)
+  // - đăng xuất / phiên hết hạn -> tự về /login
+  final authRefresh = ValueNotifier<int>(0);
+  ref.listen(authProvider, (prev, next) {
+    // Người dùng vừa đăng xuất/hết phiên/xoá tài khoản -> xoá ảnh khuôn mặt + kết quả quét
+    // còn giữ trong bộ nhớ, tránh tài khoản đăng nhập sau trên cùng máy thấy ảnh của người trước.
+    if (prev?.user != null && next.user == null) {
+      ref.read(scanStateProvider.notifier).clear();
+    }
+    authRefresh.value++;
+  });
+  ref.onDispose(authRefresh.dispose);
+
   return GoRouter(
     initialLocation: '/',
+    refreshListenable: authRefresh,
     redirect: (context, state) {
       final loggedIn = ref.read(authProvider).isLoggedIn;
       final loc = state.matchedLocation;

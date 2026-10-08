@@ -177,6 +177,20 @@ public class HairSwapService {
         ResponseEntity<Map> response;
         try {
             response = aiRestTemplate.exchange(url, HttpMethod.GET, requestEntity, Map.class);
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            // AILab trả 422 (FILE_CONTENT_NON_COMPLIANCE) khi ảnh KHÔNG đạt yêu cầu (vd không thấy mặt):
+            // đây là lỗi vĩnh viễn, poll lại vô ích → báo lỗi ngay để hoàn lượt, không bắt user chờ hết timeout.
+            int code = e.getStatusCode().value();
+            if (code == 422 || code == 400) {
+                String body = String.valueOf(e.getResponseBodyAsString());
+                log.warn("Ảnh không đạt yêu cầu AI, taskId={}, http={}: {}", taskId, code, truncate(body, 300));
+                String msg = body.contains("NO_FACE")
+                        ? "Không nhận diện được khuôn mặt trong ảnh. Hãy chụp lại: nhìn thẳng, đủ sáng, rõ nét và không bị che mặt."
+                        : "Ảnh chưa đạt yêu cầu của AI. Hãy thử ảnh khác rõ mặt, đủ sáng và nhìn thẳng.";
+                return HairSwapPollResult.error(msg);
+            }
+            log.warn("Lỗi khi check status taskId={}: {}", taskId, e.getMessage());
+            return HairSwapPollResult.pending();
         } catch (Exception e) {
             // Lỗi mạng thoáng qua khi check status — coi như PENDING, để lần poll sau thử lại
             // (khác timeout thật sự, được HairSwapController quyết định dựa trên tổng thời gian trôi qua).

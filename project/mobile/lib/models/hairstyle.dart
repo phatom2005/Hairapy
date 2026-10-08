@@ -23,7 +23,7 @@ class Hairstyle {
   factory Hairstyle.fromJson(Map<String, dynamic> json) => Hairstyle(
         id: json['id'] as int,
         name: json['name'] as String,
-        imageUrl: json['imageUrl'] as String,
+        imageUrl: json['imageUrl'] as String? ?? '',
         description: json['description'] as String?,
         tag: json['tag'] as String?,
         premiumOnly: json['premiumOnly'] as bool? ?? false,

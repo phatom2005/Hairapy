@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import '../../config/app_links.dart';
 import '../../theme.dart';
 
 /// Màn hình hiển thị nội dung pháp lý (Chính sách bảo mật, Điều khoản sử dụng) qua WebView.
@@ -28,6 +29,17 @@ class _LegalWebViewScreenState extends State<LegalWebViewScreen> {
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(NavigationDelegate(
+        // Chỉ cho phép điều hướng trong domain Hairapy (trang Điều khoản/Privacy).
+        // Link ra ngoài (nếu có) bị chặn để WebView này không trở thành trình duyệt tự do.
+        onNavigationRequest: (request) {
+          final uri = Uri.tryParse(request.url);
+          if (uri == null) return NavigationDecision.prevent;
+          final allowedHost = Uri.parse(kWebBaseUrl).host; // hairapy.io.vn
+          final isAllowed = uri.scheme == 'about' ||
+              (uri.scheme == 'https' &&
+                  (uri.host == allowedHost || uri.host == 'www.$allowedHost'));
+          return isAllowed ? NavigationDecision.navigate : NavigationDecision.prevent;
+        },
         onPageStarted: (_) {
           if (mounted) setState(() => _loading = true);
         },
@@ -43,7 +55,19 @@ class _LegalWebViewScreenState extends State<LegalWebViewScreen> {
           }
         },
       ))
-      ..loadRequest(Uri.parse(widget.url));
+      ..loadRequest(_safeUri(widget.url));
+  }
+
+  /// URL đầu vào luôn phải thuộc domain Hairapy (https); sai thì rơi về trang chủ.
+  Uri _safeUri(String raw) {
+    final allowedHost = Uri.parse(kWebBaseUrl).host;
+    final uri = Uri.tryParse(raw);
+    if (uri != null &&
+        uri.scheme == 'https' &&
+        (uri.host == allowedHost || uri.host == 'www.$allowedHost')) {
+      return uri;
+    }
+    return Uri.parse(kWebBaseUrl);
   }
 
   @override

@@ -156,7 +156,19 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       ),
       body: stylesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Không tải được danh sách: $e')),
+        error: (e, _) => Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Không tải được danh sách kiểu tóc.', style: TextStyle(color: AppColors.muted)),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: () => ref.invalidate(_hairstylesByFaceShapeProvider(faceShape)),
+                child: const Text('Thử lại'),
+              ),
+            ],
+          ),
+        ),
         data: (styles) {
           return ListView(
             padding: const EdgeInsets.all(20),
@@ -340,7 +352,13 @@ class HairstyleCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                CachedNetworkImage(imageUrl: hairstyle.imageUrl, fit: BoxFit.cover),
+                CachedNetworkImage(
+                  imageUrl: hairstyle.imageUrl,
+                  fit: BoxFit.cover,
+                  errorWidget: (context, url, error) => const Center(
+                    child: Icon(Icons.broken_image_outlined, color: AppColors.muted),
+                  ),
+                ),
                 if (hairstyle.premiumOnly)
                   Positioned(
                     top: 10, right: 10,

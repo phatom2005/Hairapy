@@ -64,6 +64,10 @@ String? _extractCode(Object e) {
 
 class AuthNotifier extends StateNotifier<AuthState> {
   AuthNotifier() : super(const AuthState()) {
+    // Phiên hết hạn giữa chừng (token 24h) -> về trạng thái guest, router tự đưa về Login.
+    ApiClient.onSessionExpired = () {
+      if (mounted) state = const AuthState();
+    };
     _restoreSession();
   }
 
@@ -77,10 +81,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final res = await ApiClient.instance.dio.get('/auth/me');
       state = state.copyWith(user: AppUser.fromJson(res.data as Map<String, dynamic>));
-    } catch (_) {
-      // Token hết hạn/không hợp lệ -> coi như guest
-      await TokenStorage.instance.clear();
-      state = const AuthState();
+    } catch (e) {
+      // Chỉ xoá token khi server THẬT SỰ từ chối (401/403). Lỗi mạng/timeout/5xx
+      // (mở app lúc mất sóng) thì giữ token để lần mở sau vẫn tự đăng nhập.
+      final status = e is DioException ? e.response?.statusCode : null;
+      if (status == 401 || status == 403) {
+        await TokenStorage.instance.clear();
+        state = const AuthState();
+      }
     }
   }
 

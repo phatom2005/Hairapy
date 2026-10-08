@@ -131,7 +131,7 @@ class FaceShapeAnalyzer {
     try {
       meshes = await detector.processImage(inputImage);
     } catch (e) {
-      throw FaceAnalysisException('Không thể xử lý ảnh để phân tích khuôn mặt: $e');
+      throw const FaceAnalysisException('Không thể xử lý ảnh này. Vui lòng thử ảnh khác (ảnh rõ mặt, đủ sáng).');
     }
 
     if (meshes.isEmpty) {

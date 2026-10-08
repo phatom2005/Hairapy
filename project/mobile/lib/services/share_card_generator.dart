@@ -61,7 +61,11 @@ class ShareCardGenerator {
     required String styleName,
   }) async {
     final beforeBytes = await beforeImage.readAsBytes();
-    final response = await Dio().get<List<int>>(
+    // Có timeout để không treo mãi nếu mạng chậm/đứt khi tải ảnh kết quả.
+    final response = await Dio(BaseOptions(
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 30),
+    )).get<List<int>>(
       afterImageUrl,
       options: Options(responseType: ResponseType.bytes),
     );
@@ -108,6 +112,10 @@ class ShareCardGenerator {
     final picture = recorder.endRecording();
     final composed = await picture.toImage(cardWidth.round(), cardHeight.round());
     final byteData = await composed.toByteData(format: ui.ImageByteFormat.png);
+    // Giải phóng bộ nhớ ảnh native sau khi đã xong (ảnh 1080x1260 + 2 ảnh nguồn).
+    beforeImg.dispose();
+    afterImg.dispose();
+    composed.dispose();
     if (byteData == null) return;
 
     final dir = await getTemporaryDirectory();

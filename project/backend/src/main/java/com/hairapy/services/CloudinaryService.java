@@ -26,6 +26,10 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CloudinaryService {
 
+    // Watermark chữ "Hairapy" cho ảnh kết quả của user Free (xem uploadFromUrl)
+    static final String WATERMARK_TRANSFORMATION =
+            "l_text:Arial_60_bold:Hairapy,co_white,o_65/fl_layer_apply,g_south_east,x_30,y_30";
+
     private final Cloudinary cloudinary;
     private final AlertService alertService;
 
@@ -80,15 +84,11 @@ public class CloudinaryService {
             ));
 
             if (watermark) {
-                options.put("transformation", java.util.List.of(
-                        ObjectUtils.asMap(
-                                "overlay", "text:Arial_60_bold:Hairapy",
-                                "gravity", "south_east",
-                                "x", 30, "y", 30,
-                                "opacity", 65,
-                                "color", "white"
-                        )
-                ));
+                // PHẢI truyền dạng CHUỖI transformation (hoặc đối tượng Transformation của SDK).
+                // Truyền List<Map> thì SDK chuyển thành chuỗi "[{x=30, ...}]" → Cloudinary báo
+                // "Invalid transformation component". Cú pháp: component layer (chữ, màu, độ mờ)
+                // "/" rồi fl_layer_apply kèm vị trí (góc dưới phải, cách mép 30px).
+                options.put("transformation", WATERMARK_TRANSFORMATION);
             }
 
             Map result = cloudinary.uploader().upload(imageUrl, options);

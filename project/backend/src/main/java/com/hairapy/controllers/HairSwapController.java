@@ -56,10 +56,10 @@ public class HairSwapController {
     @PostMapping("/submit")
     public ResponseEntity<?> submit(
             @RequestParam("image") MultipartFile image,
-            @RequestParam("hairStyle") String hairStyle,
+            @RequestParam(value = "hairStyle", required = false) String clientHairStyle,
             @RequestParam(value = "hairstyleId", required = false) Long hairstyleId) {
 
-        log.info("Nhận yêu cầu submit thử kiểu tóc Pro: hairStyle={}, hairstyleId={}", hairStyle, hairstyleId);
+        log.info("Nhận yêu cầu submit thử kiểu tóc Pro: hairstyleId={}", hairstyleId);
 
         User currentUser = usageService.getCurrentUser();
         if (currentUser == null) {
@@ -71,17 +71,25 @@ public class HairSwapController {
         boolean isPaidUser = subscriptionService.isPaidUser(currentUser.getId());
         com.hairapy.models.UsageHistory reservation = null;
 
-        try {
-            // 0. Chặn Free user thử style premiumOnly
-            if (hairstyleId != null) {
-                hairstyleCatalogRepository.findById(hairstyleId).ifPresent(style -> {
-                    if (style.isPremiumOnly() && !isPaidUser) {
-                        throw new PremiumRequiredException(
-                                "Kiểu tóc này chỉ dành cho gói Premium. Nâng cấp để thử ngay!");
-                    }
-                });
-            }
+        // Bắt buộc có hairstyleId: kiểu tóc được tra ở SERVER, KHÔNG tin giá trị hairStyle
+        // do client gửi (tránh Free user bỏ hairstyleId để lách kiểm tra premiumOnly).
+        if (hairstyleId == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Vui lòng chọn một kiểu tóc."));
+        }
+        com.hairapy.models.HairstyleCatalog style = hairstyleCatalogRepository.findById(hairstyleId).orElse(null);
+        if (style == null || style.getAilabProStyle() == null || style.getAilabProStyle().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Kiểu tóc không tồn tại hoặc chưa hỗ trợ thử."));
+        }
+        // Chặn Free user thử style premiumOnly (trước khi trừ lượt)
+        if (style.isPremiumOnly() && !isPaidUser) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "error", "Kiểu tóc này chỉ dành cho gói Premium. Nâng cấp để thử ngay!",
+                    "requiresPremium", true
+            ));
+        }
+        final String hairStyle = style.getAilabProStyle(); // luôn dùng mã style từ DB
 
+        try {
             // 1. Kiểm tra + ghi nhận lượt dùng ngay (atomic)
             reservation = usageService.reserveUsage(currentUser, "HAIR_SWAP");
 

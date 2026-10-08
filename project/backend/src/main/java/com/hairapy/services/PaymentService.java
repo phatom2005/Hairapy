@@ -234,14 +234,22 @@ public class PaymentService {
         Payment paymentToGrant = currentPayment;
         User user = paymentToGrant.getUser();
 
-        subscriptionRepository.findByUserIdAndStatus(user.getId(), SubscriptionStatus.ACTIVE)
-                .ifPresent(oldSub -> {
-                    oldSub.setStatus(SubscriptionStatus.EXPIRED);
-                    subscriptionRepository.save(oldSub);
-                    log.info("Hủy gói active cũ ID: {} của user: {}", oldSub.getId(), user.getEmail());
-                });
+        // Cộng dồn: nếu còn gói ACTIVE chưa hết hạn thì gói mới bắt đầu từ lúc gói cũ hết,
+        // để user không mất ngày đã trả tiền.
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startDate = now;
+        var oldSubOpt = subscriptionRepository.findByUserIdAndStatus(user.getId(), SubscriptionStatus.ACTIVE);
+        if (oldSubOpt.isPresent()) {
+            Subscription oldSub = oldSubOpt.get();
+            if (oldSub.getEndDate() != null && oldSub.getEndDate().isAfter(now)) {
+                startDate = oldSub.getEndDate();
+            }
+            oldSub.setStatus(SubscriptionStatus.EXPIRED);
+            subscriptionRepository.save(oldSub);
+            log.info("Thay gói active cũ ID: {} của user: {} (gói mới bắt đầu {})",
+                    oldSub.getId(), user.getEmail(), startDate);
+        }
 
-        LocalDateTime startDate = LocalDateTime.now();
         LocalDateTime endDate = (paymentToGrant.getPlan() == SubscriptionPlan.PRO)
                 ? startDate.plusDays(7)
                 : startDate.plusDays(30);

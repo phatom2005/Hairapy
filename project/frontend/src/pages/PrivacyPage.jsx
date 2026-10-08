@@ -2,7 +2,6 @@ import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import { Card } from "../components/ui";
 
-// TODO: người dùng xác nhận email hỗ trợ thật khi phát hành chính thức
 export const SUPPORT_EMAIL = "hairapy.exe@gmail.com";
 
 export default function PrivacyPage() {
@@ -73,10 +72,14 @@ export default function PrivacyPage() {
               <h2 className="text-lg font-bold text-ink mb-3">3. Các bên thứ ba tiếp nhận và xử lý dữ liệu</h2>
               <p className="mb-2">Chúng tôi chỉ hợp tác với các nhà cung cấp dịch vụ hạ tầng và công nghệ uy tín:</p>
               <ul className="list-disc list-inside space-y-1.5 pl-2">
-                <li><strong className="text-ink">AILabTools:</strong> Cung cấp dịch vụ trí tuệ nhân tạo ghép kiểu tóc qua giao thức API bảo mật.</li>
+                <li><strong className="text-ink">AILabTools:</strong> Cung cấp dịch vụ trí tuệ nhân tạo ghép kiểu tóc. Ảnh bạn tải lên để thử kiểu tóc sẽ được gửi sang AILabTools để xử lý.</li>
                 <li><strong className="text-ink">Cloudinary:</strong> Nền tảng lưu trữ hình ảnh đám mây bảo mật cao cho ảnh quét khuôn mặt và catalog.</li>
                 <li><strong className="text-ink">PayOS:</strong> Cổng thanh toán trực tuyến xử lý giao dịch quét mã VietQR ngân hàng.</li>
                 <li><strong className="text-ink">Railway & Supabase:</strong> Hạ tầng máy chủ lưu trữ backend và cơ sở dữ liệu PostgreSQL.</li>
+                <li><strong className="text-ink">Google Gemini:</strong> Mô hình ngôn ngữ phục vụ tính năng AI Stylist (chỉ nhận thông tin văn bản bạn nhập, không nhận ảnh).</li>
+                <li><strong className="text-ink">Resend:</strong> Dịch vụ gửi email xác minh tài khoản, đặt lại mật khẩu và thông báo (nhận địa chỉ email của bạn).</li>
+                <li><strong className="text-ink">Google &amp; Facebook (đăng nhập):</strong> Nếu bạn chọn đăng nhập bằng Google/Facebook, chúng tôi nhận tên, email và ảnh đại diện từ nhà cung cấp tương ứng.</li>
+                <li><strong className="text-ink">Vercel &amp; jsDelivr/Google Cloud Storage (CDN):</strong> Vercel phân phối giao diện web; thư viện nhận diện khuôn mặt MediaPipe được tải từ CDN và chạy ngay trên thiết bị của bạn.</li>
                 <li><strong className="text-ink">Sentry:</strong> Hệ thống giám sát và báo cáo lỗi hệ thống phục vụ việc khắc phục sự cố kỹ thuật.</li>
               </ul>
             </section>

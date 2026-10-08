@@ -1,13 +1,18 @@
 import { LOGO_NGANG } from "../../lib/figmaAssets";
 import { Link } from "react-router-dom";
 
+// links: [{ label, to }] (route nội bộ) hoặc [{ label, href }] (mailto/link ngoài)
 function FooterCol({ title, links }) {
   return (
     <div className="flex flex-col gap-4">
       <h5 className="font-bold text-magenta">{title}</h5>
-      {links.map((l) => (
-        <a key={l} href="#" className="text-mauve hover:text-ink">{l}</a>
-      ))}
+      {links.map((l) =>
+        l.to ? (
+          <Link key={l.label} to={l.to} className="text-mauve hover:text-ink">{l.label}</Link>
+        ) : (
+          <a key={l.label} href={l.href} className="text-mauve hover:text-ink">{l.label}</a>
+        )
+      )}
     </div>
   );
 }
@@ -26,8 +31,15 @@ export default function Footer() {
           </p>
         </div>
         <div className="grid grid-cols-2 gap-8">
-          <FooterCol title="Khám Phá" links={["Về chúng tôi", "Tính năng", "Catalog"]} />
-          <FooterCol title="Liên Hệ" links={["Instagram", "TikTok", "Hỗ trợ"]} />
+          <FooterCol
+            title="Khám Phá"
+            links={[
+              { label: "Catalog", to: "/catalog" },
+              { label: "Bảng giá", to: "/pricing" },
+              { label: "Salon", to: "/salons" },
+            ]}
+          />
+          <FooterCol title="Liên Hệ" links={[{ label: "Hỗ trợ", href: "mailto:hairapy.exe@gmail.com" }]} />
         </div>
       </div>
       <div className="mx-auto flex max-w-[1200px] flex-col items-center justify-between gap-4 border-t border-divider/10 py-8 sm:flex-row sm:px-16">

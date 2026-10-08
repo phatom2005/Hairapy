@@ -52,10 +52,26 @@ public class JwtFilter extends OncePerRequestFilter {
             return;
         }
 
-        final String username = jwtService.extractUsername(token);
+        // Token hết hạn/sai định dạng/sai chữ ký -> coi như chưa đăng nhập (không ném 500).
+        // Endpoint protected sẽ tự trả 401/403, endpoint public vẫn chạy bình thường.
+        final String username;
+        try {
+            username = jwtService.extractUsername(token);
+        } catch (Exception ex) {
+            logger.debug("JWT không hợp lệ: " + ex.getMessage());
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            UserDetails userDetails;
+            try {
+                userDetails = userDetailsService.loadUserByUsername(username);
+            } catch (Exception ex) {
+                // User trong token không còn tồn tại (vd đã bị xóa) -> coi như chưa đăng nhập
+                filterChain.doFilter(request, response);
+                return;
+            }
             if (jwtService.isTokenValid(token, userDetails)) {
                 var authToken = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities()

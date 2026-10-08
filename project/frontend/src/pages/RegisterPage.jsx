@@ -11,6 +11,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [agreed, setAgreed] = useState(false); // đồng ý Điều khoản + Chính sách bảo mật
   const [localError, setLocalError] = useState("");
   
   const navigate = useNavigate();
@@ -27,6 +28,11 @@ export default function RegisterPage() {
 
     if (!fullName || !email || !password || !confirm) {
       setLocalError("Vui lòng điền đầy đủ các thông tin bắt buộc");
+      return;
+    }
+
+    if (!agreed) {
+      setLocalError("Vui lòng đồng ý Điều khoản sử dụng và Chính sách bảo mật để tiếp tục");
       return;
     }
 
@@ -100,6 +106,22 @@ export default function RegisterPage() {
               onChange={(e) => setConfirm(e.target.value)}
               required
             />
+            <label className="flex items-start gap-2 text-xs text-muted leading-relaxed cursor-pointer">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-brand"
+                required
+              />
+              <span>
+                Tôi đã đọc và đồng ý với{" "}
+                <Link to="/terms" target="_blank" className="font-bold text-brand underline">Điều khoản sử dụng</Link>{" "}
+                và{" "}
+                <Link to="/privacy" target="_blank" className="font-bold text-brand underline">Chính sách bảo mật</Link>,
+                bao gồm việc xử lý ảnh khuôn mặt để phân tích và gợi ý kiểu tóc.
+              </span>
+            </label>
             <BorderGlow rounded="rounded-full" thickness={2} className="w-full block">
               <Button
                 type="submit"

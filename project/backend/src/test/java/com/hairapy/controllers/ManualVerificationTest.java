@@ -201,10 +201,10 @@ public class ManualVerificationTest {
 
         Map optionsTrue = optionsCaptor.getValue();
         assertNotNull(optionsTrue.get("transformation"));
-        List transformation = (List) optionsTrue.get("transformation");
-        Map transMap = (Map) transformation.get(0);
-        assertEquals("text:Arial_60_bold:Hairapy", transMap.get("overlay"));
-        assertEquals("south_east", transMap.get("gravity"));
+        // Watermark giờ là chuỗi transformation của Cloudinary (không còn List<Map>)
+        String transformation = (String) optionsTrue.get("transformation");
+        assertTrue(transformation.contains("Hairapy"));
+        assertTrue(transformation.contains("g_south_east"));
 
         // 2b. Gọi upload với watermark = false (dành cho Premium user)
         Mockito.clearInvocations(uploader);

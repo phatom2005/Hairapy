@@ -196,6 +196,15 @@ public class PaymentService {
                         "Không tìm thấy giao dịch thanh toán với orderCode: " + orderCode));
 
         if ("00".equals(code)) {
+            // Đối chiếu số tiền PayOS báo đã thu với số tiền ta tạo cho đơn này (chống nâng gói khi trả thiếu).
+            // Lệch → KHÔNG cấp gói, để PENDING để admin kiểm tra tay; trả 200 để PayOS không gửi lại vô ích.
+            Object paidAmountObj = data.get("amount");
+            if (!(paidAmountObj instanceof Number paidAmount) || paidAmount.longValue() != payment.getAmount().longValue()) {
+                log.error("Webhook PayOS lệch số tiền, KHÔNG cấp gói: orderCode={}, expected={}, received={}",
+                        orderCode, payment.getAmount(), paidAmountObj);
+                return;
+            }
+
             // Thanh toán thành công
             payment.setStatus(PaymentStatus.PAID);
             payment.setPaidAt(LocalDateTime.now());

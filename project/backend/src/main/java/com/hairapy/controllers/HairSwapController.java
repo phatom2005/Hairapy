@@ -6,6 +6,7 @@ import com.hairapy.exceptions.PremiumRequiredException;
 import com.hairapy.dto.HairSwapPollResult;
 import com.hairapy.models.User;
 import com.hairapy.services.HairSwapService;
+import com.hairapy.services.SwapHistoryService;
 import com.hairapy.services.HairSwapTask;
 import com.hairapy.services.HairSwapTaskStore;
 import com.hairapy.services.UsageService;
@@ -42,6 +43,7 @@ public class HairSwapController {
     private final UsageService usageService;
     private final SubscriptionService subscriptionService;
     private final HairstyleCatalogRepository hairstyleCatalogRepository;
+    private final SwapHistoryService swapHistoryService;
 
     // Trần thời gian chờ tối đa cho 1 task (tính từ lúc submit) — xấp xỉ ceiling cũ
     // (MAX_POLL_ATTEMPTS=12 * POLL_INTERVAL_MS=5000 = 60s ở bản blocking cũ), nới thêm
@@ -97,7 +99,8 @@ public class HairSwapController {
             String taskId = hairSwapService.submitTask(image, hairStyle);
 
             // 3. Đăng ký task để FE poll status sau — lưu reservation để hoàn lượt nếu cần
-            HairSwapTask task = new HairSwapTask(taskId, currentUser.getId(), reservation, isPaidUser);
+            HairSwapTask task = new HairSwapTask(taskId, currentUser.getId(), reservation, isPaidUser,
+                    style.getId(), style.getName());
             taskStore.register(task);
 
             return ResponseEntity.ok(Map.of("taskId", taskId));
@@ -190,6 +193,8 @@ public class HairSwapController {
                 if (task.tryMarkUploaded()) {
                     String cloudinaryUrl = hairSwapService.uploadResult(result.imageUrl(), task.isPaidUser());
                     task.markDone(cloudinaryUrl);
+                    // Lưu vào lịch sử thử tóc (lỗi lưu chỉ ghi log, không ảnh hưởng kết quả trả cho user)
+                    swapHistoryService.record(task.getUserId(), task.getHairstyleId(), task.getHairstyleName(), cloudinaryUrl);
                     return ResponseEntity.ok(Map.of("status", "DONE", "image", cloudinaryUrl));
                 } else {
                     // Một request khác đang/đã upload — trả PENDING, lần poll kế tiếp sẽ thấy DONE đã cache

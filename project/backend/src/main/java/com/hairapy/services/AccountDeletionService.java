@@ -29,6 +29,7 @@ public class AccountDeletionService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final FeedbackRepository feedbackRepository;
+    private final SwapHistoryRepository swapHistoryRepository;
     private final CloudinaryService cloudinaryService;
 
     /**
@@ -46,17 +47,24 @@ public class AccountDeletionService {
 
         // 1. Thu thập public_id từ các ảnh trong ScanHistory trước khi xoá bản ghi
         List<ScanHistory> scans = scanHistoryRepository.findByUserId(userId);
-        List<String> publicIdsToDelete = scans.stream()
+        List<String> publicIdsToDelete = new java.util.ArrayList<>(scans.stream()
                 .map(ScanHistory::getImageUrl)
                 .map(cloudinaryService::extractPublicId)
                 .filter(Objects::nonNull)
-                .toList();
+                .toList());
+        // Cả ảnh kết quả thử tóc trong lịch sử
+        swapHistoryRepository.findByUserId(userId).stream()
+                .map(com.hairapy.models.SwapHistory::getImageUrl)
+                .map(cloudinaryService::extractPublicId)
+                .filter(Objects::nonNull)
+                .forEach(publicIdsToDelete::add);
 
         // 2. Xóa các dữ liệu cá nhân liên quan
         passwordResetTokenRepository.deleteByUserId(userId);
         emailVerificationTokenRepository.deleteByUserId(userId);
         savedHairstyleRepository.deleteByUserId(userId);
         scanHistoryRepository.deleteByUserId(userId);
+        swapHistoryRepository.deleteByUserId(userId);
         usageHistoryRepository.deleteByUserId(userId);
         subscriptionRepository.deleteByUserId(userId);
         feedbackRepository.clearCommentsByUserId(userId);

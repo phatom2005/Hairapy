@@ -25,6 +25,7 @@ const FACE_SHAPE_MAP = {
 const TABS = [
   { key: "overview", label: "Tổng quan" },
   { key: "history", label: "Lịch sử quét" },
+  { key: "swaps", label: "Ảnh đã thử tóc" },
   { key: "saved", label: "Yêu thích" },
 ];
 
@@ -57,6 +58,25 @@ export default function ProfilePage() {
   });
 
   const scans = scanData?.scans || [];
+
+  // Lịch sử ảnh đã thử tóc (giữ 30 ngày, tối đa 20 ảnh)
+  const { data: swapData, isLoading: swapsLoading } = useQuery({
+    queryKey: ["profile-swaps"],
+    queryFn: async () => (await api.get("/profile/swaps")).data,
+  });
+  const swaps = swapData?.swaps || [];
+
+  const handleDeleteSwap = async (id) => {
+    if (!window.confirm("Xoá ảnh này khỏi lịch sử? Hành động không thể hoàn tác.")) return;
+    try {
+      await api.delete(`/profile/swaps/${id}`);
+      queryClient.invalidateQueries({ queryKey: ["profile-swaps"] });
+    } catch {
+      window.alert("Không xoá được ảnh. Vui lòng thử lại.");
+    }
+  };
+  // Cloudinary: chèn fl_attachment để trình duyệt tải xuống thay vì mở tab mới
+  const downloadUrl = (url) => (url || "").replace("/upload/", "/upload/fl_attachment/");
   const latestScan = scans[0];
   const latestFaceShape = latestScan?.faceShape || null;
   const latestFaceShapeVi = latestFaceShape ? (FACE_SHAPE_MAP[latestFaceShape] || latestFaceShape) : "Chưa quét";
@@ -259,6 +279,52 @@ export default function ProfilePage() {
                       </div>
                     </Card>
                   </AnimatedContent>
+                ))}
+              </div>
+            )}
+          </Section>
+        </AnimatedContent>
+      )}
+
+      {/* Tab: Ảnh đã thử tóc */}
+      {activeTab === "swaps" && (
+        <AnimatedContent key="swaps">
+          <Section className="bg-transparent">
+            <SectionHeading center={false} title={`${swaps.length} ảnh đã thử tóc`} />
+            <p className="-mt-2 mb-4 text-xs text-muted">
+              Ảnh được lưu 30 ngày và tối đa {swapData?.maxItems ?? 20} ảnh gần nhất. Hãy tải về nếu bạn muốn giữ lâu hơn.
+            </p>
+
+            {swapsLoading ? (
+              <p className="text-sm text-muted">Đang tải...</p>
+            ) : swaps.length === 0 ? (
+              <Card className="flex flex-col items-center justify-center p-10 text-center border border-divider/10 bg-white">
+                <p className="font-bold text-ink">Chưa có ảnh thử tóc nào</p>
+                <p className="text-sm text-mauve max-w-md mt-1">Ảnh kết quả sau khi bạn thử kiểu tóc bằng AI sẽ xuất hiện ở đây.</p>
+                <Button to="/swap" size="sm" className="mt-4">Thử kiểu tóc ngay</Button>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+                {swaps.map((sw) => (
+                  <Card key={sw.id} padded={false} className="overflow-hidden">
+                    <img src={sw.imageUrl} alt={sw.hairstyleName || "Ảnh thử tóc"} loading="lazy"
+                      className="aspect-[3/4] w-full object-cover"
+                      onError={(e) => { e.target.src = "https://placehold.co/300x400?text=Anh"; }} />
+                    <div className="p-3">
+                      <p className="truncate text-sm font-bold text-ink">{sw.hairstyleName || "Kiểu tóc"}</p>
+                      <p className="text-xs text-muted">{formatScanDate(sw.createdAt)}</p>
+                      <div className="mt-2 flex gap-2">
+                        <a href={downloadUrl(sw.imageUrl)} download
+                          className="flex-1 rounded-full bg-primary px-3 py-1.5 text-center text-xs font-semibold text-white">
+                          Tải về
+                        </a>
+                        <button type="button" onClick={() => handleDeleteSwap(sw.id)}
+                          className="rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-mauve hover:bg-canvas">
+                          Xoá
+                        </button>
+                      </div>
+                    </div>
+                  </Card>
                 ))}
               </div>
             )}

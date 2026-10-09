@@ -22,25 +22,6 @@ const FACE_SHAPE_MAP = {
   Diamond: "Kim cương",
 };
 
-const PALETTES = {
-  "Tự nhiên": [
-    "#1a1a1a",
-    "#3a2a1a",
-    "#6b4423",
-    "#a0703c",
-    "#c89b6a",
-    "#e0c097",
-  ],
-  "Neon & Pastel": [
-    "#ff57cf",
-    "#2a4ae8",
-    "#d0ee88",
-    "#9b5cff",
-    "#42d6e8",
-    "#ff8fb1",
-  ],
-};
-
 export default function SwapPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -53,9 +34,6 @@ export default function SwapPage() {
   const { user } = useAuthStore();
 
   const [selectedStyle, setSelectedStyle] = useState(selectedHairstyle);
-  const [tab, setTab] = useState("Tự nhiên");
-  const [color, setColor] = useState(PALETTES["Tự nhiên"][2]);
-  const [shade, setShade] = useState(50);
 
   const [loading, setLoading] = useState(false);
   const [resultImage, setResultImage] = useState(null);
@@ -384,54 +362,6 @@ export default function SwapPage() {
             )}
           </div>
 
-          <div>
-            <h2 className="mb-3 text-lg font-bold text-ink">
-              Màu sắc mô phỏng
-            </h2>
-            <div className="mb-3 flex gap-2 rounded-full bg-canvas p-1">
-              {Object.keys(PALETTES).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => {
-                    setTab(t);
-                    setColor(PALETTES[t][2]);
-                  }}
-                  className={`flex-1 rounded-full py-2 text-sm font-semibold transition ${
-                    tab === t ? "bg-white text-ink shadow" : "text-muted"
-                  }`}>
-                  {t}
-                </button>
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-3">
-              {PALETTES[tab].map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setColor(c)}
-                  className={`size-9 rounded-full border-2 transition ${
-                    color === c ? "border-ink scale-110" : "border-white"
-                  }`}
-                  style={{ backgroundColor: c }}
-                  aria-label={c}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-mauve">
-              Sắc độ phủ màu
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={shade}
-              onChange={(e) => setShade(+e.target.value)}
-              className="w-full accent-primary"
-            />
-          </div>
-
           {error && (
             <div className="text-xs font-semibold text-red-500 bg-red-500/10 p-3 rounded-xl border border-red-500/20">
               {error}
@@ -485,13 +415,6 @@ export default function SwapPage() {
               className="aspect-[3/4] w-full object-cover transition-all duration-300"
             />
 
-            {!resultImage && (
-              <div
-                className="pointer-events-none absolute inset-0 mix-blend-soft-light"
-                style={{ backgroundColor: color, opacity: shade / 150 }}
-              />
-            )}
-
             {loading && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink/75 backdrop-blur-sm transition-opacity duration-300">
                 <span className="size-14 animate-spin rounded-full border-4 border-pink border-t-transparent shadow-lg" />
@@ -526,10 +449,6 @@ export default function SwapPage() {
                   Kiểu: {activeStyle?.ailabProStyle || "N/A"}
                 </p>
               </div>
-              <span
-                className="size-8 rounded-full border border-line shrink-0"
-                style={{ backgroundColor: color }}
-              />
             </div>
           </div>
 

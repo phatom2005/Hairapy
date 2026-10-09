@@ -6,6 +6,8 @@ import '../../api/api_client.dart';
 import '../../config/feature_flags.dart';
 import '../../models/hairstyle.dart';
 import '../../models/scan_record.dart';
+import '../../models/swap_record.dart';
+import '../../services/gallery_saver.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/saved_styles_provider.dart';
 import '../../screens/scan/scan_screen.dart' show usageSummaryProvider;
@@ -25,6 +27,13 @@ final scanHistoryProvider = FutureProvider.autoDispose<List<ScanRecord>>((ref) a
   return scans.map((e) => ScanRecord.fromJson(e as Map<String, dynamic>)).toList();
 });
 
+/// GET /profile/swaps — ảnh đã thử tóc (giữ 30 ngày, tối đa 20 ảnh).
+final swapHistoryProvider = FutureProvider.autoDispose<List<SwapRecord>>((ref) async {
+  final res = await ApiClient.instance.dio.get('/profile/swaps');
+  final swaps = (res.data as Map<String, dynamic>)['swaps'] as List;
+  return swaps.map((e) => SwapRecord.fromJson(e as Map<String, dynamic>)).toList();
+});
+
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -34,6 +43,7 @@ class ProfileScreen extends ConsumerWidget {
     final usageAsync = ref.watch(usageSummaryProvider);
     final savedAsync = ref.watch(savedStylesProvider);
     final scansAsync = ref.watch(scanHistoryProvider);
+    final swapsAsync = ref.watch(swapHistoryProvider);
 
     if (user == null) {
       // Phòng hờ — router đã chặn route này khi chưa đăng nhập.
@@ -47,6 +57,7 @@ class ProfileScreen extends ConsumerWidget {
           ref.invalidate(usageSummaryProvider);
           ref.invalidate(savedStylesProvider);
           ref.invalidate(scanHistoryProvider);
+          ref.invalidate(swapHistoryProvider);
         },
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
@@ -148,6 +159,60 @@ class ProfileScreen extends ConsumerWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(h.name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+
+            const Text('Ảnh đã thử tóc', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            const Text('Lưu 30 ngày, tối đa 20 ảnh gần nhất. Hãy lưu về máy nếu muốn giữ lâu hơn.',
+                style: TextStyle(color: AppColors.muted, fontSize: 11.5)),
+            const SizedBox(height: 10),
+            swapsAsync.when(
+              loading: () => const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Center(child: CircularProgressIndicator())),
+              error: (e, _) => const Text('Không tải được ảnh đã thử', style: TextStyle(color: AppColors.muted, fontSize: 12.5)),
+              data: (swaps) {
+                if (swaps.isEmpty) {
+                  return const Text('Chưa có ảnh thử tóc nào.', style: TextStyle(color: AppColors.muted, fontSize: 12.5));
+                }
+                return SizedBox(
+                  height: 150,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: swaps.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 10),
+                    itemBuilder: (context, i) {
+                      final sw = swaps[i];
+                      return GestureDetector(
+                        onTap: () => _showSwapDialog(context, ref, sw),
+                        child: SizedBox(
+                          width: 104,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: CachedNetworkImage(
+                                  imageUrl: sw.imageUrl,
+                                  width: 104,
+                                  height: 120,
+                                  fit: BoxFit.cover,
+                                  errorWidget: (_, __, ___) => Container(
+                                    width: 104, height: 120, color: AppColors.line,
+                                    child: const Icon(Icons.broken_image_outlined, color: AppColors.muted),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(sw.hairstyleName, maxLines: 1, overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600)),
                             ],
                           ),
@@ -349,6 +414,64 @@ void _showAllSavedStyles(BuildContext context, WidgetRef ref, List<Hairstyle> li
         },
       );
     },
+  );
+}
+
+/// Xem ảnh đã thử tóc: lưu về máy hoặc xoá khỏi lịch sử.
+Future<void> _showSwapDialog(BuildContext context, WidgetRef ref, SwapRecord sw) async {
+  final messenger = ScaffoldMessenger.of(context);
+  await showDialog<void>(
+    context: context,
+    builder: (ctx) => Dialog(
+      insetPadding: const EdgeInsets.all(20),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(sw.hairstyleName, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+            const SizedBox(height: 10),
+            Flexible(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: CachedNetworkImage(imageUrl: sw.imageUrl, fit: BoxFit.contain),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      try {
+                        await ApiClient.instance.dio.delete('/profile/swaps/${sw.id}');
+                        ref.invalidate(swapHistoryProvider);
+                      } catch (_) {
+                        messenger.showSnackBar(const SnackBar(content: Text('Không xoá được ảnh. Vui lòng thử lại.')));
+                      }
+                    },
+                    child: const Text('Xoá'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      final err = await GallerySaver.saveFromUrl(sw.imageUrl);
+                      messenger.showSnackBar(SnackBar(content: Text(err ?? 'Đã lưu ảnh vào thư viện.')));
+                    },
+                    icon: const Icon(Icons.download_rounded, size: 18),
+                    label: const Text('Lưu ảnh'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
   );
 }
 

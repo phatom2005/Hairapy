@@ -89,6 +89,7 @@ export default function PrivacyPage() {
               <h2 className="text-lg font-bold text-ink mb-3">4. Thời gian và phạm vi lưu trữ</h2>
               <ul className="list-disc list-inside space-y-1.5 pl-2">
                 <li><strong className="text-ink">Ảnh kết quả AI (ai-results):</strong> Tự động xóa vĩnh viễn khỏi Cloudinary sau khoảng 24 giờ kể từ thời điểm tạo ra.</li>
+                <li><strong className="text-ink">Ảnh thử tóc đã lưu (Lịch sử):</strong> Ảnh kết quả thử tóc của tài khoản đăng nhập được giữ tối đa 30 ngày và tối đa 20 ảnh gần nhất; bạn có thể xoá bất cứ lúc nào trong Hồ sơ.</li>
                 <li><strong className="text-ink">Ảnh quét khuôn mặt trong Lịch sử:</strong> Được lưu trữ an toàn để hiển thị trong mục Lịch sử quét của tài khoản cho đến khi bạn chủ động xóa tài khoản.</li>
                 <li><strong className="text-ink">Bản ghi giao dịch thanh toán:</strong> Sau khi tài khoản bị xóa, thông tin cá nhân của bạn sẽ bị ẩn danh hoàn toàn; bản ghi thanh toán được lưu trữ theo nghĩa vụ pháp lý kế toán và thuế.</li>
               </ul>
@@ -101,7 +102,7 @@ export default function PrivacyPage() {
               <ul className="list-disc list-inside space-y-1 pl-2">
                 <li>Xem, kiểm tra và chỉnh sửa thông tin hồ sơ bất kỳ lúc nào tại mục Cài đặt.</li>
                 <li><strong className="text-ink">Yêu cầu xoá vĩnh viễn tài khoản:</strong> Bạn có thể tự thực hiện ngay trong ứng dụng di động (Cài đặt → Xoá tài khoản) hoặc trên giao diện website (Cài đặt → Vùng nguy hiểm → Xoá tài khoản). Ngoài ra, bạn cũng có thể gửi yêu cầu xóa qua email.</li>
-                <li>Khi tài khoản được xoá: Toàn bộ ảnh quét trên Cloudinary, lịch sử phân tích, kiểu tóc đã lưu và thông tin cá nhân sẽ bị xoá hoặc ẩn danh hoá hoàn toàn, không thể khôi phục.</li>
+                <li>Khi tài khoản được xoá: Toàn bộ ảnh quét và ảnh thử tóc trên Cloudinary, lịch sử phân tích, kiểu tóc đã lưu và thông tin cá nhân sẽ bị xoá hoặc ẩn danh hoá hoàn toàn, không thể khôi phục.</li>
               </ul>
             </section>
 

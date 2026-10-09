@@ -1,15 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Bar,
-  BarChart,
   Cell,
   Pie,
   PieChart,
   ResponsiveContainer,
   Tooltip,
-  XAxis,
-  YAxis,
 } from "recharts";
 import { People, Crown1, TrendUp, Activity } from "iconsax-reactjs";
 import api from "../../lib/api";

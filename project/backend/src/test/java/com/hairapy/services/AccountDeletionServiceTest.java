@@ -36,6 +36,8 @@ class AccountDeletionServiceTest {
     @Mock
     private FeedbackRepository feedbackRepository;
     @Mock
+    private SwapHistoryRepository swapHistoryRepository;
+    @Mock
     private CloudinaryService cloudinaryService;
 
     private AccountDeletionService accountDeletionService;
@@ -51,6 +53,7 @@ class AccountDeletionServiceTest {
                 passwordResetTokenRepository,
                 emailVerificationTokenRepository,
                 feedbackRepository,
+                swapHistoryRepository,
                 cloudinaryService
         );
     }
@@ -81,6 +84,7 @@ class AccountDeletionServiceTest {
         verify(passwordResetTokenRepository).deleteByUserId(42L);
         verify(savedHairstyleRepository).deleteByUserId(42L);
         verify(scanHistoryRepository).deleteByUserId(42L);
+        verify(swapHistoryRepository).deleteByUserId(42L);
         verify(usageHistoryRepository).deleteByUserId(42L);
         verify(subscriptionRepository).deleteByUserId(42L);
         verify(feedbackRepository).clearCommentsByUserId(42L);

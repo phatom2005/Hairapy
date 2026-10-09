@@ -247,7 +247,7 @@ public class HairSwapService {
      */
     public String uploadResult(String tempUrl, boolean isPaidUser) {
         try {
-            return cloudinaryService.uploadFromUrl(tempUrl, "ai-results", !isPaidUser);
+            return cloudinaryService.uploadFromUrl(tempUrl, "swap-history", !isPaidUser);
         } catch (Exception e) {
             log.error("Không thể upload ảnh kết quả lên Cloudinary, sử dụng URL tạm thời của AILab: {}", tempUrl, e);
             return tempUrl;

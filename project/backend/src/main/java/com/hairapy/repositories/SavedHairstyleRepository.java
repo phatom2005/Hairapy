@@ -22,4 +22,8 @@ public interface SavedHairstyleRepository extends JpaRepository<SavedHairstyle, 
     boolean existsByUserAndHairstyle(User user, HairstyleCatalog hairstyle);
 
     void deleteByUserId(Long userId);
+
+    // Top kiểu tóc được lưu yêu thích: [hairstyleId, số lượt lưu]
+    @org.springframework.data.jpa.repository.Query("SELECT sh.hairstyle.id, COUNT(sh) FROM SavedHairstyle sh GROUP BY sh.hairstyle.id ORDER BY COUNT(sh) DESC")
+    java.util.List<Object[]> topSaved(org.springframework.data.domain.Pageable pageable);
 }

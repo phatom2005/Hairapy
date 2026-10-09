@@ -31,4 +31,8 @@ public class UsageHistory {
 
     @Column(nullable = false)
     private LocalDateTime usedAt;
+
+    // Kiểu tóc được thử (chỉ có với HAIR_SWAP từ V26 trở đi; NULL với lượt cũ / feature khác)
+    @Column(name = "hairstyle_id")
+    private Long hairstyleId;
 }

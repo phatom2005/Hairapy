@@ -34,4 +34,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // Thống kê user đăng ký theo tháng
     @Query("SELECT FUNCTION('to_char', u.createdAt, 'YYYY-MM') as month, COUNT(u) as count FROM User u WHERE u.createdAt >= :since GROUP BY FUNCTION('to_char', u.createdAt, 'YYYY-MM') ORDER BY month")
     List<Object[]> countMonthlyRegistrationsSince(@Param("since") LocalDateTime since);
+
+    // Phân bố user theo nguồn đăng nhập (LOCAL / GOOGLE / FACEBOOK)
+    @org.springframework.data.jpa.repository.Query("SELECT u.provider, COUNT(u) FROM User u GROUP BY u.provider")
+    java.util.List<Object[]> countByProvider();
 }

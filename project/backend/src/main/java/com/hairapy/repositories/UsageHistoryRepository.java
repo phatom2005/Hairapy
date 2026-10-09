@@ -37,4 +37,14 @@ public interface UsageHistoryRepository extends JpaRepository<UsageHistory, Long
     List<Object[]> countMonthlyUsageSince(@Param("since") LocalDateTime since);
 
     void deleteByUserId(Long userId);
+
+    // Top kiểu tóc được thử bằng AI từ mốc since: [hairstyleId, số lượt] (chỉ có dữ liệu từ migration V26 trở đi)
+    @org.springframework.data.jpa.repository.Query("SELECT u.hairstyleId, COUNT(u) FROM UsageHistory u WHERE u.feature = 'HAIR_SWAP' "
+            + "AND u.hairstyleId IS NOT NULL AND u.usedAt >= :since GROUP BY u.hairstyleId ORDER BY COUNT(u) DESC")
+    java.util.List<Object[]> topTriedSince(@org.springframework.data.repository.query.Param("since") java.time.LocalDateTime since,
+                                           org.springframework.data.domain.Pageable pageable);
+
+    // Thời điểm lượt thử có ghi kiểu tóc ĐẦU TIÊN (để trình bày "số liệu tính từ ngày...")
+    @org.springframework.data.jpa.repository.Query("SELECT MIN(u.usedAt) FROM UsageHistory u WHERE u.hairstyleId IS NOT NULL")
+    java.time.LocalDateTime firstTrackedAt();
 }

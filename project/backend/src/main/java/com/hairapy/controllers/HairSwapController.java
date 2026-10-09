@@ -91,7 +91,7 @@ public class HairSwapController {
 
         try {
             // 1. Kiểm tra + ghi nhận lượt dùng ngay (atomic)
-            reservation = usageService.reserveUsage(currentUser, "HAIR_SWAP");
+            reservation = usageService.reserveUsage(currentUser, "HAIR_SWAP", style.getId());
 
             // 2. Submit task lên AILab Pro API — nhanh, không chờ xử lý xong
             String taskId = hairSwapService.submitTask(image, hairStyle);

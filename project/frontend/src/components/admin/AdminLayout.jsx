@@ -9,6 +9,7 @@ import {
   ReceiptText,
   Star1,
   Activity,
+  Chart,
   Home2,
   Logout,
 } from "iconsax-reactjs";
@@ -18,6 +19,7 @@ import logoStack from "../../assets/logo/logo-stack.png";
 // Danh sách menu — icon Iconsax (Bold khi active, Linear khi thường)
 const navItems = [
   { to: "/admin", label: "Dashboard", Icon: Element3, end: true },
+  { to: "/admin/analytics", label: "Phân tích", Icon: Chart },
   { to: "/admin/users", label: "Người dùng", Icon: People },
   { to: "/admin/catalog", label: "Kho kiểu tóc", Icon: Scissor },
   { to: "/admin/salons", label: "Salon đối tác", Icon: Shop },

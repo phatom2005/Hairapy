@@ -35,6 +35,7 @@ import AdminSubscriptionsPage from "./pages/admin/AdminSubscriptionsPage";
 import AdminPaymentsPage from "./pages/admin/AdminPaymentsPage";
 import AdminFeedbackPage from "./pages/admin/AdminFeedbackPage";
 import AdminUsagePage from "./pages/admin/AdminUsagePage";
+import AdminAnalyticsPage from "./pages/admin/AdminAnalyticsPage";
 
 // Luồng chính: / -> /scan -> /results -> /swap
 export default function App() {
@@ -140,6 +141,7 @@ export default function App() {
             <Route path="/admin/feedback" element={<AdminFeedbackPage />} />
             <Route path="/admin/salons" element={<AdminSalonsPage />} />
             <Route path="/admin/usage" element={<AdminUsagePage />} />
+            <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
           </Route>
         </Route>
 

@@ -48,4 +48,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long>, JpaSpec
     // 5. Biểu đồ doanh thu theo tháng (cho chart khi period > 90 ngày)
     @Query("SELECT FUNCTION('to_char', p.paidAt, 'YYYY-MM') as month, COALESCE(SUM(p.amount), 0) as total FROM Payment p WHERE p.status = com.hairapy.models.PaymentStatus.PAID AND p.paidAt >= :since GROUP BY FUNCTION('to_char', p.paidAt, 'YYYY-MM') ORDER BY month")
     List<Object[]> sumMonthlyRevenueSince(@Param("since") LocalDateTime since);
+
+    // Số user đã từng thanh toán thành công ít nhất 1 lần (tử số tỷ lệ chuyển đổi Free -> trả phí)
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(DISTINCT p.user.id) FROM Payment p WHERE p.status = com.hairapy.models.PaymentStatus.PAID")
+    long countPayingUsers();
 }

@@ -80,6 +80,12 @@ public class UsageService {
      */
     @Transactional
     public UsageHistory reserveUsage(User user, String feature) {
+        return reserveUsage(user, feature, null);
+    }
+
+    /** Như trên, kèm kiểu tóc được thử (hairstyleId) để thống kê; null nếu không áp dụng. */
+    @Transactional
+    public UsageHistory reserveUsage(User user, String feature, Long hairstyleId) {
         if (user == null) {
             throw new IllegalArgumentException("Người dùng chưa đăng nhập.");
         }
@@ -112,6 +118,7 @@ public class UsageService {
                     .user(user)
                     .feature(feature)
                     .usedAt(LocalDateTime.now())
+                    .hairstyleId(hairstyleId)
                     .build();
             usageHistoryRepository.save(history);
             log.info("Đã ghi nhận (reserve) lượt sử dụng: user={}, feature={}, id={}", user.getEmail(), feature, history.getId());

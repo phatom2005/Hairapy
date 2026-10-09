@@ -58,6 +58,10 @@ public class HairSwapService {
         if (contentType == null || !contentType.startsWith("image/")) {
             throw new IllegalArgumentException("Định dạng tệp không hợp lệ. Chỉ chấp nhận ảnh.");
         }
+        // Kiểm tra magic bytes thật, không chỉ tin Content-Type client khai
+        if (!com.hairapy.utils.ImageValidator.isSupportedImage(image)) {
+            throw new IllegalArgumentException(com.hairapy.utils.ImageValidator.INVALID_MESSAGE);
+        }
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);

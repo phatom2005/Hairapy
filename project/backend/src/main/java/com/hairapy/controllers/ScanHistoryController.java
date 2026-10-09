@@ -62,6 +62,11 @@ public class ScanHistoryController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Vui lòng đăng nhập."));
         }
 
+        // Validate trước khi trừ lượt để file rác không tốn quota
+        if (!com.hairapy.utils.ImageValidator.isSupportedImage(image)) {
+            return ResponseEntity.badRequest().body(Map.of("error", com.hairapy.utils.ImageValidator.INVALID_MESSAGE));
+        }
+
         com.hairapy.models.UsageHistory reservation = null;
         try {
             reservation = usageService.reserveUsage(currentUser, "FACE_SCAN");

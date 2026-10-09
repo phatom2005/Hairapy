@@ -70,6 +70,11 @@ public class HairSwapController {
             ));
         }
 
+        // Kiểm tra magic bytes trước khi trừ lượt: file giả dạng ảnh không tốn quota
+        if (!com.hairapy.utils.ImageValidator.isSupportedImage(image)) {
+            return ResponseEntity.badRequest().body(Map.of("error", com.hairapy.utils.ImageValidator.INVALID_MESSAGE));
+        }
+
         boolean isPaidUser = subscriptionService.isPaidUser(currentUser.getId());
         com.hairapy.models.UsageHistory reservation = null;
 

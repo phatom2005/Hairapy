@@ -283,6 +283,14 @@ public class PaymentService {
      * Lấy trạng thái thanh toán từ PayOS REST API.
      */
     public String getPaymentStatus(long orderCode) throws Exception {
+        return getPaymentInfo(orderCode).status();
+    }
+
+    /** Kết quả tra cứu PayOS: trạng thái + số tiền đã thanh toán thực tế. */
+    public record PayosInfo(String status, long amountPaid) {
+    }
+
+    public PayosInfo getPaymentInfo(long orderCode) throws Exception {
         HttpHeaders headers = new HttpHeaders();
         headers.set("x-client-id", clientId.trim());
         headers.set("x-api-key", apiKey.trim());
@@ -292,7 +300,8 @@ public class PaymentService {
                 PAYOS_API_URL + "/" + orderCode, HttpMethod.GET, request, String.class);
 
         JsonNode root = objectMapper.readTree(response.getBody());
-        return root.path("data").path("status").asText();
+        JsonNode data = root.path("data");
+        return new PayosInfo(data.path("status").asText(), data.path("amountPaid").asLong(0));
     }
 
     // === Utility methods ===

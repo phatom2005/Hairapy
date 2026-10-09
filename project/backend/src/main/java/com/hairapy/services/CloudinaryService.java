@@ -41,6 +41,10 @@ public class CloudinaryService {
      * @return URL ảnh đã upload (HTTPS).
      */
     public String uploadFile(MultipartFile file, String folder) {
+        // Chặn file giả dạng ảnh (kiểm tra magic bytes) trước khi đẩy lên cloud
+        if (!com.hairapy.utils.ImageValidator.isSupportedImage(file)) {
+            throw new IllegalArgumentException(com.hairapy.utils.ImageValidator.INVALID_MESSAGE);
+        }
         try {
             Map result = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
                     "folder", "hairapy/" + folder,

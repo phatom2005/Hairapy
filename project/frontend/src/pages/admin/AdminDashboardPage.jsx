@@ -132,7 +132,7 @@ function Skeleton() {
   return (
     <div className="animate-pulse space-y-4">
       <div className="h-10 w-64 rounded-xl bg-line" />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {[0, 1, 2, 3].map((i) => (
           <div key={i} className="h-32 rounded-3xl bg-line" />
         ))}
@@ -232,6 +232,13 @@ export default function AdminDashboardPage() {
           value={formatVND(stats.revenueInPeriod)}
           hint={`Tổng: ${formatVND(stats.totalRevenue)} · ${stats.paidTransactionsInPeriod ?? 0} giao dịch`}
           Icon={Money}
+          tone={C.brand}
+        />
+        <Kpi
+          label="Giao dịch thành công"
+          value={nf.format(stats.paidTransactions ?? 0)}
+          hint={`Trong kỳ: ${stats.paidTransactionsInPeriod ?? 0} · Chờ: ${stats.pendingTransactions ?? 0} · Huỷ: ${stats.cancelledTransactions ?? 0}`}
+          Icon={ReceiptText}
           tone={C.brand}
         />
         <Kpi

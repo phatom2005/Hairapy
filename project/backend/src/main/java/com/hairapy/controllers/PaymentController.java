@@ -108,11 +108,16 @@ public class PaymentController {
             }
 
             // Lấy trạng thái realtime từ PayOS SDK và đồng bộ cục bộ nếu thanh toán thành công
-            String payosStatus = paymentService.getPaymentStatus(orderCode);
+            var payosInfo = paymentService.getPaymentInfo(orderCode);
+            String payosStatus = payosInfo.status();
             
             // Đồng bộ nếu PayOS trả về thành công hoặc đã bị hủy mà trạng thái cục bộ đang là PENDING
             if (payment.getStatus() == PaymentStatus.PENDING) {
-                if ("PAID".equals(payosStatus)) {
+                if ("PAID".equals(payosStatus) && (payment.getAmount() == null || payosInfo.amountPaid() != payment.getAmount().longValue())) {
+                    // Số tiền PayOS ghi nhận lệch hóa đơn: KHÔNG cấp gói, chờ admin kiểm tra
+                    log.error("PayOS lệch số tiền orderCode={}, hóa đơn={}, đã thanh toán={}. KHÔNG cấp gói.",
+                            orderCode, payment.getAmount(), payosInfo.amountPaid());
+                } else if ("PAID".equals(payosStatus)) {
                     payment.setStatus(PaymentStatus.PAID);
                     payment.setPaidAt(java.time.LocalDateTime.now());
                     paymentRepository.save(payment);

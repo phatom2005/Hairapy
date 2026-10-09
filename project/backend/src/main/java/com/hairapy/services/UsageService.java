@@ -2,6 +2,7 @@ package com.hairapy.services;
 
 import com.hairapy.dto.UsageSummaryResponse;
 import com.hairapy.exceptions.QuotaExceededException;
+import com.hairapy.models.SubscriptionPlan;
 import com.hairapy.models.UsageHistory;
 import com.hairapy.models.User;
 import com.hairapy.repositories.UsageHistoryRepository;
@@ -47,16 +48,25 @@ public class UsageService {
         return userRepository.findByEmail(email).orElse(null);
     }
 
-    private int getDailyLimit(String feature, boolean isPaid) {
+    /**
+     * Hạn mức mỗi ngày theo gói. Bám chi phí thật: Face Scan chạy on-device (0đ) nên Free được thoáng,
+     * còn Hair Swap tốn tiền AILab mỗi lượt nên chặt nhất ở Free: Free 1 | PRO (Tuần) 5 | PREMIUM (Tháng) 8.
+     * Phải khớp số hiển thị ở LandingPage / PricingPage / CheckoutPage.
+     */
+    private int getDailyLimit(String feature, SubscriptionPlan plan) {
         if ("HAIR_SWAP".equals(feature)) {
-            return isPaid ? 20 : 5;
+            return switch (plan) {
+                case FREE -> 1;
+                case PRO -> 5;
+                case PREMIUM -> 8;
+            };
         } else if ("FACE_SCAN".equals(feature)) {
-            return isPaid ? 5 : 1;
+            return 5;
         } else if ("AI_STYLIST".equals(feature)) {
             // AI Stylist chi danh Premium (xem PremiumRequiredException o
             // AiStylistController) -- Free luon bi chan truoc khi toi day,
             // nhung van tra ve 0 cho ro rang neu co goi nham.
-            return isPaid ? 5 : 0;
+            return plan.isPaid() ? 5 : 0;
         }
         return Integer.MAX_VALUE;
     }
@@ -80,9 +90,10 @@ public class UsageService {
                     || user.getRole() == com.hairapy.models.Role.TESTER;
 
             if (!bypass) {
-                boolean isPaid = subscriptionService.isPaidUser(user.getId());
+                SubscriptionPlan plan = subscriptionService.getEffectivePlan(user.getId());
+                boolean isPaid = plan.isPaid();
 
-                int limit = getDailyLimit(feature, isPaid);
+                int limit = getDailyLimit(feature, plan);
 
                 LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
                 long todayCount = usageHistoryRepository.countTodayUsage(user.getId(), feature, startOfDay);
@@ -132,15 +143,15 @@ public class UsageService {
         boolean unlimited = user.getRole() == com.hairapy.models.Role.ADMIN
                 || user.getRole() == com.hairapy.models.Role.TESTER;
 
-        boolean isPaid = !unlimited && subscriptionService.isPaidUser(user.getId());
+        SubscriptionPlan plan = unlimited ? SubscriptionPlan.FREE : subscriptionService.getEffectivePlan(user.getId());
 
         LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
 
         long faceScanUsed = usageHistoryRepository.countTodayUsage(user.getId(), "FACE_SCAN", startOfDay);
         long hairSwapUsed = usageHistoryRepository.countTodayUsage(user.getId(), "HAIR_SWAP", startOfDay);
 
-        int faceScanLimit = unlimited ? Integer.MAX_VALUE : getDailyLimit("FACE_SCAN", isPaid);
-        int hairSwapLimit = unlimited ? Integer.MAX_VALUE : getDailyLimit("HAIR_SWAP", isPaid);
+        int faceScanLimit = unlimited ? Integer.MAX_VALUE : getDailyLimit("FACE_SCAN", plan);
+        int hairSwapLimit = unlimited ? Integer.MAX_VALUE : getDailyLimit("HAIR_SWAP", plan);
 
         return new UsageSummaryResponse(
                 new UsageSummaryResponse.FeatureUsage(faceScanUsed, faceScanLimit, unlimited),

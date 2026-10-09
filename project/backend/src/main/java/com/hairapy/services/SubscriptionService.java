@@ -1,6 +1,7 @@
 package com.hairapy.services;
 
 import com.hairapy.models.Subscription;
+import com.hairapy.models.SubscriptionPlan;
 import com.hairapy.models.SubscriptionStatus;
 import com.hairapy.repositories.SubscriptionRepository;
 import lombok.RequiredArgsConstructor;
@@ -41,5 +42,20 @@ public class SubscriptionService {
         Subscription sub = activeSubOpt.get();
         boolean notExpired = sub.getEndDate() == null || sub.getEndDate().isAfter(LocalDateTime.now());
         return notExpired && sub.getPlan().isPaid();
+    }
+
+    /**
+     * Gói trả phí đang THỰC SỰ hoạt động của user (PRO hoặc PREMIUM), hoặc FREE nếu không có.
+     * Dùng cho việc tính hạn mức theo từng gói; cùng điều kiện "chưa hết hạn" với isPaidUser().
+     */
+    public SubscriptionPlan getEffectivePlan(Long userId) {
+        Optional<Subscription> activeSubOpt =
+                subscriptionRepository.findByUserIdAndStatus(userId, SubscriptionStatus.ACTIVE);
+        if (activeSubOpt.isEmpty()) {
+            return SubscriptionPlan.FREE;
+        }
+        Subscription sub = activeSubOpt.get();
+        boolean notExpired = sub.getEndDate() == null || sub.getEndDate().isAfter(LocalDateTime.now());
+        return (notExpired && sub.getPlan().isPaid()) ? sub.getPlan() : SubscriptionPlan.FREE;
     }
 }

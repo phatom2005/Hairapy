@@ -249,7 +249,7 @@ public class ManualVerificationTest {
                 .build();
         premiumStyle = hairstyleCatalogRepository.save(premiumStyle);
 
-        MockMultipartFile file = new MockMultipartFile("image", "test.jpg", "image/jpeg", "dummy image content".getBytes());
+        MockMultipartFile file = new MockMultipartFile("image", "test.jpg", "image/jpeg", validJpegBytes());
 
         // Gửi request thử kiểu tóc premium
         mockMvc.perform(multipart("/api/swap/submit")
@@ -278,5 +278,14 @@ public class ManualVerificationTest {
             hexString.append(hex);
         }
         return hexString.toString();
+    }
+
+    /** Byte giả có magic bytes JPEG (FF D8 FF) để qua kiểm tra ImageValidator. */
+    private static byte[] validJpegBytes() {
+        byte[] b = new byte[32];
+        b[0] = (byte) 0xFF;
+        b[1] = (byte) 0xD8;
+        b[2] = (byte) 0xFF;
+        return b;
     }
 }

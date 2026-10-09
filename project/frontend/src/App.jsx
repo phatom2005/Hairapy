@@ -1,5 +1,6 @@
 import { lazy, useEffect, useState } from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { trackPageView } from "./lib/analytics";
 import { SoftAurora } from "./components/animated";
 import useAuthStore from "./store/useAuthStore";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -43,6 +44,12 @@ export default function App() {
   const hydrated = useAuthStore((state) => state.hydrated);
   const loginWithFacebook = useAuthStore((state) => state.loginWithFacebook);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // GA4: gửi page_view mỗi lần đổi route
+  useEffect(() => {
+    trackPageView(location.pathname);
+  }, [location.pathname]);
   // Khởi tạo trực tiếp từ URL hash lúc render đầu (không setState đồng bộ trong effect)
   const [fbProcessing, setFbProcessing] = useState(() =>
     window.location.hash.includes("access_token=")

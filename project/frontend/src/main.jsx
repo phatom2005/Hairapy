@@ -5,6 +5,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import './index.css'
 import App from './App.jsx'
+import { initAnalytics } from './lib/analytics.js'
+
+initAnalytics()
 
 const queryClient = new QueryClient({
   defaultOptions: {

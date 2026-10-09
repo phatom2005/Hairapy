@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { trackEvent } from "../lib/analytics";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatedContent, BorderGlow, GlareHover } from "../components/animated";
 import { CheckIcon, CrownIcon, ShieldIcon } from "../components/icons";
@@ -42,6 +43,7 @@ export default function CheckoutPage() {
     try {
       const response = await api.post("/payments/create", { plan });
       const { checkoutUrl } = response.data;
+      trackEvent("begin_checkout", { plan });
       if (checkoutUrl) {
         // Redirect sang trang thanh toán VietQR của PayOS
         window.location.href = checkoutUrl;

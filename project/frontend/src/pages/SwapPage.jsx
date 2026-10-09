@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { trackEvent } from "../lib/analytics";
 import { useEffect, useRef, useState } from "react";
 import { normalizeImage } from "../utils/imageUtils";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -241,6 +242,7 @@ export default function SwapPage() {
         timeout: 20000, // Bước submit giờ nhanh (không còn chờ AI xử lý xong ở đây)
       });
 
+      trackEvent("hair_swap", { hairstyle_id: activeStyle.id });
       const taskId = response.data.taskId;
       if (!taskId) {
         throw new Error("Không nhận được mã tác vụ từ máy chủ.");

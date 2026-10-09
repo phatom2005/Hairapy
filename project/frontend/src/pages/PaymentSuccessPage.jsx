@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { trackEvent } from "../lib/analytics";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import api from "../lib/api";
 import useAuthStore from "../store/useAuthStore";
@@ -28,6 +29,7 @@ export default function PaymentSuccessPage() {
         const { status: paymentStatus } = response.data;
 
         if (paymentStatus === "PAID") {
+          trackEvent("purchase", { transaction_id: String(orderCode) });
           setStatus("paid");
           // Đồng bộ lại thông tin gói tài khoản mới của user trong auth store
           await hydrate();

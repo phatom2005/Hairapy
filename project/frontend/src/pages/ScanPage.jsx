@@ -1,4 +1,5 @@
 import QuotaBadge from "../components/QuotaBadge";
+import { trackEvent } from "../lib/analytics";
 import { useRef, useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { SCAN_PORTRAIT } from "../lib/figmaAssets";
@@ -123,6 +124,7 @@ export default function ScanPage() {
                 "Content-Type": "multipart/form-data",
               }
             });
+            trackEvent("face_scan", { face_shape: result.faceShape });
             queryClient.invalidateQueries({ queryKey: ["usage-summary"] });
           } catch (backendErr) {
             console.error("Lỗi khi lưu lịch sử quét lên backend:", backendErr);

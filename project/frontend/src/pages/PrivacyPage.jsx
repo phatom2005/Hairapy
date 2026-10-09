@@ -74,6 +74,7 @@ export default function PrivacyPage() {
               <ul className="list-disc list-inside space-y-1.5 pl-2">
                 <li><strong className="text-ink">AILabTools:</strong> Cung cấp dịch vụ trí tuệ nhân tạo ghép kiểu tóc. Ảnh bạn tải lên để thử kiểu tóc sẽ được gửi sang AILabTools để xử lý.</li>
                 <li><strong className="text-ink">Cloudinary:</strong> Nền tảng lưu trữ hình ảnh đám mây bảo mật cao cho ảnh quét khuôn mặt và catalog.</li>
+                <li><strong className="text-ink">Google Analytics:</strong> Dịch vụ thống kê truy cập ẩn danh (trang đã xem, thao tác quét/thử tóc/thanh toán). Chúng tôi không gửi email, tên hay ảnh của bạn sang Google Analytics.</li>
                 <li><strong className="text-ink">PayOS:</strong> Cổng thanh toán trực tuyến xử lý giao dịch quét mã VietQR ngân hàng.</li>
                 <li><strong className="text-ink">Railway & Supabase:</strong> Hạ tầng máy chủ lưu trữ backend và cơ sở dữ liệu PostgreSQL.</li>
                 <li><strong className="text-ink">Google Gemini:</strong> Mô hình ngôn ngữ phục vụ tính năng AI Stylist (chỉ nhận thông tin văn bản bạn nhập, không nhận ảnh).</li>

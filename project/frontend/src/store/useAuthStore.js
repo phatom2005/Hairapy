@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { trackEvent } from "../lib/analytics";
 import api from "../lib/api";
 
 /**
@@ -52,6 +53,7 @@ const useAuthStore = create((set, get) => ({
     try {
       // Backend KHÔNG trả JWT khi đăng ký: user phải xác minh email rồi mới đăng nhập được
       await api.post("/auth/register", { email, password, confirmPassword, fullName });
+      trackEvent("sign_up", { method: "email" });
       set({ loading: false });
       return true;
     } catch (err) {

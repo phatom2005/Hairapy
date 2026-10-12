@@ -188,7 +188,7 @@ class ProfileScreen extends ConsumerWidget {
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: swaps.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 10),
+                    separatorBuilder: (_, _) => const SizedBox(width: 10),
                     itemBuilder: (context, i) {
                       final sw = swaps[i];
                       return GestureDetector(
@@ -205,7 +205,7 @@ class ProfileScreen extends ConsumerWidget {
                                   width: 104,
                                   height: 120,
                                   fit: BoxFit.cover,
-                                  errorWidget: (_, __, ___) => Container(
+                                  errorWidget: (_, _, _) => Container(
                                     width: 104, height: 120, color: AppColors.line,
                                     child: const Icon(Icons.broken_image_outlined, color: AppColors.muted),
                                   ),

@@ -31,6 +31,7 @@ public class AccountDeletionService {
     private final FeedbackRepository feedbackRepository;
     private final SwapHistoryRepository swapHistoryRepository;
     private final CloudinaryService cloudinaryService;
+    private final AiContentReportRepository aiContentReportRepository;
 
     /**
      * Xóa các dữ liệu phụ thuộc của user và ẩn danh hoá thông tin người dùng trong CSDL.
@@ -68,6 +69,7 @@ public class AccountDeletionService {
         usageHistoryRepository.deleteByUserId(userId);
         subscriptionRepository.deleteByUserId(userId);
         feedbackRepository.clearCommentsByUserId(userId);
+        aiContentReportRepository.deleteByUserId(userId);
 
         log.info("Đã xóa dữ liệu liên quan của user ID {}. Nếu user có subscription ACTIVE, gói đã bị hủy và không hoàn tiền.", userId);
 

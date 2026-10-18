@@ -72,7 +72,7 @@ Sau khi build thành công, các dịch vụ chạy tại:
 
 | Dịch vụ | URL |
 |---|---|
-| **Frontend** | http://localhost:3000 |
+| **Frontend** | http://localhost:5173 |
 | **Backend API** | http://localhost:8090 |
 | **Health Check** | http://localhost:8090/actuator/health |
 | **PostgreSQL** | localhost:5433 |

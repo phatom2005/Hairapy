@@ -92,6 +92,7 @@ export default function PrivacyPage() {
                 <li><strong className="text-ink">Ảnh kết quả AI (ai-results):</strong> Tự động xóa vĩnh viễn khỏi Cloudinary sau khoảng 24 giờ kể từ thời điểm tạo ra.</li>
                 <li><strong className="text-ink">Ảnh thử tóc đã lưu (Lịch sử):</strong> Ảnh kết quả thử tóc của tài khoản đăng nhập được giữ tối đa 30 ngày và tối đa 20 ảnh gần nhất; bạn có thể xoá bất cứ lúc nào trong Hồ sơ.</li>
                 <li><strong className="text-ink">Ảnh quét khuôn mặt trong Lịch sử:</strong> Được lưu trữ an toàn để hiển thị trong mục Lịch sử quét của tài khoản cho đến khi bạn chủ động xóa tài khoản.</li>
+                <li><strong className="text-ink">Báo cáo nội dung AI:</strong> Khi bạn báo cáo một ảnh do AI tạo ra, chúng tôi lưu lý do, mô tả (nếu có) và đường dẫn ảnh kết quả để xem xét xử lý; các báo cáo này bị xoá cùng tài khoản của bạn.</li>
                 <li><strong className="text-ink">Bản ghi giao dịch thanh toán:</strong> Sau khi tài khoản bị xóa, thông tin cá nhân của bạn sẽ bị ẩn danh hoàn toàn; bản ghi thanh toán được lưu trữ theo nghĩa vụ pháp lý kế toán và thuế.</li>
               </ul>
             </section>

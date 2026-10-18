@@ -12,7 +12,14 @@ class LandingScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.ink,
       body: SafeArea(
-        child: Padding(
+        // Cuộn được khi màn hình thấp / cửa sổ trình duyệt hẹp (Flutter web), tránh RenderFlex overflow;
+        // màn hình bình thường vẫn căn giữa nhờ minHeight = chiều cao khả dụng.
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Padding(
           padding: const EdgeInsets.fromLTRB(28, 24, 28, 28),
           child: Column(
             children: [
@@ -70,6 +77,10 @@ class LandingScreen extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+                ),
+              ),
+            ),
           ),
         ),
       ),

@@ -16,6 +16,7 @@ import '../../providers/scan_state_provider.dart';
 import '../../screens/scan/scan_screen.dart' show usageSummaryProvider;
 import '../../services/share_card_generator.dart';
 import '../../theme.dart';
+import '../../widgets/ai_report_sheet.dart';
 import '../../widgets/feedback_sheet.dart';
 
 enum _Phase { idle, submitting, polling, done, error }
@@ -387,11 +388,41 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
       children: [
         Expanded(
           child: Container(
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: AppShadows.card,
+            ),
             clipBehavior: Clip.antiAlias,
             child: switch (_phase) {
               _Phase.done => _resultImage != null
-                  ? CachedNetworkImage(imageUrl: _resultImage!, fit: BoxFit.cover, width: double.infinity)
+                  ? Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        CachedNetworkImage(imageUrl: _resultImage!, fit: BoxFit.cover, width: double.infinity),
+                        // Nhãn minh bạch: ảnh này do AI tạo ra (chính sách Google Play về nội dung AI)
+                        Positioned(
+                          left: 12,
+                          top: 12,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.55),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.auto_awesome, size: 13, color: AppColors.lime),
+                                SizedBox(width: 5),
+                                Text('Ảnh do AI tạo',
+                                    style: TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w700)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
                   : const Center(child: Text('Không có ảnh kết quả')),
               _Phase.submitting || _Phase.polling => Stack(
                   fit: StackFit.expand,
@@ -486,15 +517,33 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          Center(
-            child: TextButton.icon(
-              onPressed: () => showFeedbackSheet(context, ref, 'HAIR_SWAP'),
-              icon: const Icon(Icons.star_rate_rounded, color: Colors.amber, size: 18),
-              label: const Text(
-                'Đánh giá trải nghiệm thử kiểu tóc',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.mauve),
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 4,
+            children: [
+              TextButton.icon(
+                onPressed: () => showFeedbackSheet(context, ref, 'HAIR_SWAP'),
+                icon: const Icon(Icons.star_rate_rounded, color: Colors.amber, size: 18),
+                label: const Text(
+                  'Đánh giá',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.mauve),
+                ),
               ),
-            ),
+              TextButton.icon(
+                onPressed: () => showAiReportSheet(
+                  context,
+                  imageUrl: _resultImage,
+                  hairstyleId: widget.hairstyle?.id,
+                  feature: 'HAIR_SWAP',
+                ),
+                icon: const Icon(Icons.flag_outlined, color: AppColors.muted, size: 18),
+                label: const Text(
+                  'Báo cáo ảnh này',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+                ),
+              ),
+            ],
           ),
         ]
         else

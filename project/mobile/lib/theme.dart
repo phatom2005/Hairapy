@@ -17,6 +17,37 @@ class AppColors {
   static const canvas = Color(0xFFF9F9F9);
 }
 
+/// Bóng đổ dùng chung cho card/nút để giao diện có chiều sâu thay vì phẳng.
+class AppShadows {
+  /// Bóng nhẹ cho card thường.
+  static List<BoxShadow> get card => [
+        BoxShadow(
+          color: const Color(0xFF1A1A1A).withValues(alpha: 0.06),
+          blurRadius: 18,
+          offset: const Offset(0, 6),
+        ),
+      ];
+
+  /// Bóng màu thương hiệu cho card nổi bật (hero, nút chính).
+  static List<BoxShadow> glow(Color color) => [
+        BoxShadow(
+          color: color.withValues(alpha: 0.32),
+          blurRadius: 24,
+          offset: const Offset(0, 10),
+        ),
+      ];
+}
+
+/// Decoration dựng sẵn: dùng AppDecor.card() thay cho Container trắng + viền lặp lại nhiều nơi.
+class AppDecor {
+  static BoxDecoration card({double radius = 20, Color color = Colors.white}) => BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: AppColors.line.withValues(alpha: 0.7)),
+        boxShadow: AppShadows.card,
+      );
+}
+
 ThemeData buildAppTheme() {
   return ThemeData(
     useMaterial3: true,
@@ -32,16 +63,46 @@ ThemeData buildAppTheme() {
     // ve font he thong (Roboto), khac voi web (dung Be Vietnam Pro that).
     fontFamily: GoogleFonts.beVietnamPro().fontFamily,
     textTheme: GoogleFonts.beVietnamProTextTheme(ThemeData.light().textTheme),
-    appBarTheme: const AppBarTheme(
+    appBarTheme: AppBarTheme(
       backgroundColor: AppColors.canvas,
       foregroundColor: AppColors.ink,
       elevation: 0,
+      scrolledUnderElevation: 0,
+      centerTitle: true,
+      titleTextStyle: AppFonts.display(fontSize: 15, color: AppColors.ink),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: AppColors.ink,
+      contentTextStyle: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      height: 68,
+      elevation: 0,
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      indicatorColor: AppColors.primary.withValues(alpha: 0.12),
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        final selected = states.contains(WidgetState.selected);
+        return TextStyle(
+          fontSize: 11.5,
+          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+          color: selected ? AppColors.primary : AppColors.muted,
+        );
+      }),
+      iconTheme: WidgetStateProperty.resolveWith((states) {
+        return IconThemeData(
+          color: states.contains(WidgetState.selected) ? AppColors.primary : AppColors.muted,
+        );
+      }),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         minimumSize: const Size.fromHeight(52),
+        elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
         textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
       ),

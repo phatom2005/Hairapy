@@ -72,7 +72,7 @@ After a successful build, services are available at:
 
 | Service | URL |
 |---|---|
-| **Frontend** | http://localhost:3000 |
+| **Frontend** | http://localhost:5173 |
 | **Backend API** | http://localhost:8090 |
 | **Health Check** | http://localhost:8090/actuator/health |
 | **PostgreSQL** | localhost:5433 |

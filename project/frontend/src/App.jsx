@@ -35,6 +35,7 @@ import AdminSalonsPage from "./pages/admin/AdminSalonsPage";
 import AdminSubscriptionsPage from "./pages/admin/AdminSubscriptionsPage";
 import AdminPaymentsPage from "./pages/admin/AdminPaymentsPage";
 import AdminFeedbackPage from "./pages/admin/AdminFeedbackPage";
+import AdminAiReportsPage from "./pages/admin/AdminAiReportsPage";
 import AdminUsagePage from "./pages/admin/AdminUsagePage";
 import AdminAnalyticsPage from "./pages/admin/AdminAnalyticsPage";
 
@@ -146,6 +147,7 @@ export default function App() {
             <Route path="/admin/subscriptions" element={<AdminSubscriptionsPage />} />
             <Route path="/admin/payments" element={<AdminPaymentsPage />} />
             <Route path="/admin/feedback" element={<AdminFeedbackPage />} />
+            <Route path="/admin/ai-reports" element={<AdminAiReportsPage />} />
             <Route path="/admin/salons" element={<AdminSalonsPage />} />
             <Route path="/admin/usage" element={<AdminUsagePage />} />
             <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />

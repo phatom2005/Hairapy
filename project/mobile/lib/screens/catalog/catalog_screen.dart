@@ -74,12 +74,30 @@ class CatalogScreen extends ConsumerWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: TextField(
-              decoration: const InputDecoration(
-                hintText: 'Tìm kiểu tóc...',
-                prefixIcon: Icon(Icons.search, size: 20),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                boxShadow: AppShadows.card,
               ),
-              onChanged: (v) => ref.read(_searchProvider.notifier).state = v,
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: 'Tìm kiểu tóc...',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(999),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(999),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(999),
+                    borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                  ),
+                ),
+                onChanged: (v) => ref.read(_searchProvider.notifier).state = v,
+              ),
             ),
           ),
           SizedBox(

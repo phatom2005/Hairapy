@@ -8,6 +8,7 @@ import {
   Crown1,
   ReceiptText,
   Star1,
+  Flag,
   Activity,
   Chart,
   Home2,
@@ -26,6 +27,7 @@ const navItems = [
   { to: "/admin/subscriptions", label: "Gói đăng ký", Icon: Crown1 },
   { to: "/admin/payments", label: "Lịch sử thanh toán", Icon: ReceiptText },
   { to: "/admin/feedback", label: "Đánh giá", Icon: Star1 },
+  { to: "/admin/ai-reports", label: "Báo cáo AI", Icon: Flag },
   { to: "/admin/usage", label: "Nhật ký sử dụng", Icon: Activity },
 ];
 

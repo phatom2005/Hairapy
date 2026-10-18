@@ -12,6 +12,7 @@ import api from "../lib/api";
 import useAuthStore from "../store/useAuthStore";
 import { useScanStore } from "../store/useScanStore";
 import FeedbackWidget from "../components/FeedbackWidget";
+import AiReportButton from "../components/AiReportButton";
 
 // Bản đồ dịch dáng mặt sang tiếng Việt (khớp với ResultsPage)
 const FACE_SHAPE_MAP = {
@@ -405,6 +406,10 @@ export default function SwapPage() {
 
           {resultImage && !error && (
             <FeedbackWidget feature="HAIR_SWAP" />
+          )}
+
+          {resultImage && !error && (
+            <AiReportButton imageUrl={resultImage} hairstyleId={activeStyle?.id} feature="HAIR_SWAP" />
           )}
         </Card>
 

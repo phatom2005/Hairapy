@@ -39,6 +39,8 @@ class AccountDeletionServiceTest {
     private SwapHistoryRepository swapHistoryRepository;
     @Mock
     private CloudinaryService cloudinaryService;
+    @Mock
+    private AiContentReportRepository aiContentReportRepository;
 
     private AccountDeletionService accountDeletionService;
 
@@ -54,7 +56,8 @@ class AccountDeletionServiceTest {
                 emailVerificationTokenRepository,
                 feedbackRepository,
                 swapHistoryRepository,
-                cloudinaryService
+                cloudinaryService,
+                aiContentReportRepository
         );
     }
 

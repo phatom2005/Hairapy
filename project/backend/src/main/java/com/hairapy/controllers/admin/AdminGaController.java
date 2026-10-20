@@ -25,4 +25,10 @@ public class AdminGaController {
             @RequestParam(defaultValue = "false") boolean refresh) {
         return ResponseEntity.ok(gaReportService.getSnapshot(days, refresh));
     }
+
+    /** Số người đang online (30 phút qua), cache 30 giây. */
+    @GetMapping("/realtime")
+    public ResponseEntity<GaReportService.RealtimeSnapshot> realtime() {
+        return ResponseEntity.ok(gaReportService.getRealtime());
+    }
 }

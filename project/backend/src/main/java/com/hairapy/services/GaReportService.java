@@ -49,7 +49,8 @@ public class GaReportService {
     private static final List<String> TRACKED_EVENTS = List.of(
             "page_view", "sign_up", "login", "face_scan", "view_hairstyle", "select_hair_color", "hair_swap",
             "download_result", "save_favorite", "view_plans", "begin_checkout", "purchase",
-            "paywall_view", "quota_exceeded", "scan_error", "swap_error", "ai_report_submit", "feedback_submit");
+            "paywall_view", "quota_exceeded", "scan_error", "swap_error", "ai_report_submit", "feedback_submit",
+            "search", "filter_catalog", "filter_salons", "view_salon", "exception", "page_timing");
 
     /** Từ khoá nhận diện nền tảng MXH trong "nguồn / phương tiện" của GA4. */
     private static final Map<String, String> SOCIAL_KEYWORDS = new LinkedHashMap<>();
@@ -179,15 +180,62 @@ public class GaReportService {
                 report(start, List.of("hour"), List.of("sessions"), 24, null, null),
                 report(start, List.of("city"), sessUsers, 15, "sessions", null),
                 report(start, List.of("firstUserSourceMedium"), List.of("newUsers", "keyEvents"), 15, "newUsers", null)));
+        // Nhóm 3: kỳ trước (để so sánh), ngôn ngữ, doanh thu theo nguồn, trang hay lỗi
+        String prevStart = (days * 2) + "daysAgo";
+        String prevEnd = (days + 1) + "daysAgo";
+        runGroup(out, List.of("prevOverview", "languages", "revenueBySource", "errorPages"), List.of(
+                report(prevStart, prevEnd, List.of(), List.of("activeUsers", "newUsers", "sessions", "screenPageViews",
+                        "engagementRate", "averageSessionDuration", "keyEvents"), 1, null, null),
+                report(start, List.of("language"), sessUsers, 10, "sessions", null),
+                report(start, List.of("sessionSourceMedium"), List.of("purchaseRevenue", "ecommercePurchases"), 15, "purchaseRevenue", null),
+                report(start, List.of("pagePath"), List.of("eventCount"), 10, "eventCount", List.of("exception"))));
         // Custom dimension (chỉ có số liệu sau khi đăng ký trong GA4: Quản trị → Định nghĩa tùy chỉnh)
         runGroup(out, List.of("hairColors"), List.of(
                 report(start, List.of("customEvent:hair_color"), List.of("eventCount"), 25, "eventCount", List.of("hair_swap"))));
         runGroup(out, List.of("faceShapes"), List.of(
                 report(start, List.of("customEvent:face_shape"), List.of("eventCount"), 10, "eventCount", List.of("face_scan"))));
+        runGroup(out, List.of("searchTerms"), List.of(
+                report(start, List.of("customEvent:search_term"), List.of("eventCount"), 20, "eventCount", List.of("search"))));
         runGroup(out, List.of("signupSources"), List.of(
                 report(start, List.of("customEvent:ft_source", "eventName"), List.of("eventCount"), 50, "eventCount",
                         List.of("sign_up", "face_scan", "hair_swap", "purchase"))));
         return out;
+    }
+
+    public record RealtimeSnapshot(boolean configured, String error, double activeUsers, List<Row> countries,
+                                   List<Row> pages, List<Row> devices, LocalDateTime fetchedAt) {}
+
+    private RealtimeSnapshot realtimeCache;
+
+    /** Số người đang dùng web trong 30 phút qua (GA4 realtime). Cache 30 giây để không vượt hạn mức API. */
+    public synchronized RealtimeSnapshot getRealtime() {
+        if (propertyId.isEmpty() || serviceAccountJson.isEmpty()) {
+            return new RealtimeSnapshot(false, "Chưa cấu hình GA_PROPERTY_ID / GA_SERVICE_ACCOUNT_JSON trên server.",
+                    0, List.of(), List.of(), List.of(), LocalDateTime.now());
+        }
+        RealtimeSnapshot c = realtimeCache;
+        if (c != null && c.error() == null && Duration.between(c.fetchedAt(), LocalDateTime.now()).getSeconds() < 30) return c;
+        try {
+            List<Row> countries = realtime("country", 10);
+            List<Row> pages = realtime("unifiedScreenName", 10);
+            List<Row> devices = realtime("deviceCategory", 5);
+            double total = countries.stream().mapToDouble(r -> r.metrics().get(0)).sum();
+            realtimeCache = new RealtimeSnapshot(true, null, total, countries, pages, devices, LocalDateTime.now());
+            return realtimeCache;
+        } catch (Exception e) {
+            log.warn("Không lấy được GA4 realtime: {}", shorten(e.getMessage()));
+            return new RealtimeSnapshot(true, "Không lấy được dữ liệu thời gian thực: " + shorten(e.getMessage()),
+                    0, List.of(), List.of(), List.of(), LocalDateTime.now());
+        }
+    }
+
+    private List<Row> realtime(String dimension, int limit) {
+        Map<String, Object> body = Map.of(
+                "dimensions", List.of(Map.of("name", dimension)),
+                "metrics", List.of(Map.of("name", "activeUsers")),
+                "limit", String.valueOf(limit));
+        JsonNode resp = post("https://analyticsdata.googleapis.com/v1beta/properties/" + propertyId + ":runRealtimeReport", body);
+        return parse(resp);
     }
 
     private void runGroup(Map<String, List<Row>> out, List<String> names, List<Map<String, Object>> requests) {
@@ -226,8 +274,13 @@ public class GaReportService {
 
     private Map<String, Object> report(String start, List<String> dims, List<String> metrics, int limit,
                                        String orderMetric, List<String> eventFilter) {
+        return report(start, "today", dims, metrics, limit, orderMetric, eventFilter);
+    }
+
+    private Map<String, Object> report(String start, String end, List<String> dims, List<String> metrics, int limit,
+                                       String orderMetric, List<String> eventFilter) {
         Map<String, Object> r = new LinkedHashMap<>();
-        r.put("dateRanges", List.of(Map.of("startDate", start, "endDate", "today")));
+        r.put("dateRanges", List.of(Map.of("startDate", start, "endDate", end)));
         r.put("dimensions", dims.stream().map(n -> Map.of("name", n)).toList());
         r.put("metrics", metrics.stream().map(n -> Map.of("name", n)).toList());
         r.put("limit", String.valueOf(limit));

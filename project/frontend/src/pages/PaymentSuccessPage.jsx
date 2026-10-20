@@ -26,10 +26,16 @@ export default function PaymentSuccessPage() {
     const checkStatus = async () => {
       try {
         const response = await api.get(`/payments/status/${orderCode}`);
-        const { status: paymentStatus } = response.data;
+        const { status: paymentStatus, plan, amount } = response.data;
 
         if (paymentStatus === "PAID") {
-          trackEvent("purchase", { transaction_id: String(orderCode) });
+          // value + currency để GA4 tính doanh thu theo nguồn truy cập
+          trackEvent("purchase", {
+            transaction_id: String(orderCode),
+            value: Number(amount) || 0,
+            currency: "VND",
+            items: [{ item_id: String(plan), item_name: String(plan) }],
+          });
           setStatus("paid");
           // Đồng bộ lại thông tin gói tài khoản mới của user trong auth store
           await hydrate();

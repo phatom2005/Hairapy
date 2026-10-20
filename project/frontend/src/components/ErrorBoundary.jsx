@@ -1,4 +1,5 @@
 import { Component } from "react";
+import { trackEvent } from "../lib/analytics";
 
 /**
  * Error Boundary cấp App — bắt lỗi render bất kỳ ở bất kỳ page nào, tránh màn hình
@@ -18,6 +19,8 @@ class ErrorBoundary extends Component {
   componentDidCatch(error, errorInfo) {
     // Log ra console để dev debug — chưa có Sentry ở FE, chỉ backend đang dùng Sentry.
     console.error("[ErrorBoundary] Lỗi không lường trước:", error, errorInfo);
+    // GA4: sự kiện exception chuẩn (chỉ gửi loại lỗi + trang, không gửi nội dung có thể chứa dữ liệu cá nhân)
+    trackEvent("exception", { description: `render: ${error?.name || "Error"}`, fatal: true, page_path: window.location.pathname });
   }
 
   handleReload = () => {

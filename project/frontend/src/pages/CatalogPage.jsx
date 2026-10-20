@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatedContent } from "../components/animated";
 import Footer from "../components/layout/Footer";
@@ -184,6 +184,17 @@ export default function CatalogPage() {
     : 12;
 
   const hasFilters = !!(q || genderFilter || face || lengthFilter || tagFilter);
+
+  // GA4: từ khoá tìm kiếm (chờ 800ms để không gửi từng ký tự) và bộ lọc đang dùng
+  useEffect(() => {
+    if (!q.trim()) return;
+    const t = setTimeout(() => trackEvent("search", { search_term: q.trim().toLowerCase().slice(0, 60), source: "catalog" }), 800);
+    return () => clearTimeout(t);
+  }, [q]);
+  useEffect(() => {
+    if (!(genderFilter || face || lengthFilter || tagFilter)) return;
+    trackEvent("filter_catalog", { gender: genderFilter || "all", face_shape: face || "all", length: lengthFilter || "all", trend: tagFilter || "all" });
+  }, [genderFilter, face, lengthFilter, tagFilter]);
 
   const setParam = useCallback(
     (key, value, resetPage = true) => {

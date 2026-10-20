@@ -2,8 +2,38 @@ import { useState } from "react";
 import { Columns, List, Section, Stat } from "../../components/admin/GaWidgets";
 import {
   CHANNEL_LABEL, DEVICE_LABEL, EVENT_LABEL, FACE_SHAPE_LABEL, FUNNEL, HAIR_COLOR_LABEL, PERIODS, VISITOR_LABEL,
-  fmtDuration, fmtGaDate, nf, toRows, useGaData,
+  deltaText, fmtDuration, fmtGaDate, nf, toRows, useGaData, useGaRealtime,
 } from "../../components/admin/gaUtils";
+
+const LANG_LABEL = { vi: "Tiếng Việt", en: "Tiếng Anh", "en-us": "Tiếng Anh (Mỹ)", "vi-vn": "Tiếng Việt (VN)" };
+const PREV_KEYS = ["activeUsers", "newUsers", "sessions", "screenPageViews", "engagementRate", "averageSessionDuration", "keyEvents"];
+
+/** Khối "Đang online" (GA4 realtime, 30 phút qua), tự làm mới mỗi 30 giây. */
+function RealtimeCard() {
+  const { data, isLoading } = useGaRealtime();
+  const countries = toRows(data?.countries, { limit: 5 });
+  const pages = toRows(data?.pages, { limit: 5 });
+  const devices = toRows(data?.devices, { labelMap: DEVICE_LABEL });
+  return (
+    <Section title="Đang online" subtitle="Người dùng trong 30 phút qua, tự cập nhật mỗi 30 giây">
+      {isLoading ? (
+        <div className="h-20 animate-pulse rounded-2xl bg-line" />
+      ) : data?.error ? (
+        <p className="text-xs font-semibold text-muted">{data.error}</p>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-4">
+          <div className="rounded-2xl bg-canvas px-4 py-3">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-muted">Người dùng đang hoạt động</p>
+            <p className="mt-1 text-3xl font-extrabold text-ink">{nf.format(data?.activeUsers || 0)}</p>
+          </div>
+          <List title="Quốc gia" rows={countries} empty="Không có ai đang online." />
+          <List title="Trang đang xem" rows={pages} empty="Không có ai đang online." />
+          <List title="Thiết bị" rows={devices} empty="Không có ai đang online." />
+        </div>
+      )}
+    </Section>
+  );
+}
 
 const NEED_DIM = "Chưa có dữ liệu. Cần đăng ký custom dimension trong GA4 (Quản trị → Định nghĩa tùy chỉnh) và đợi khoảng 24 giờ.";
 
@@ -15,6 +45,28 @@ export default function AdminGaPage() {
   const x = data?.extra || {};
   const eventCount = (name) => data?.events?.find((r) => r.dims[0] === name)?.metrics[0] ?? 0;
   const fetchedAt = data?.fetchedAt ? new Date(data.fetchedAt) : null;
+  const prevRow = x.prevOverview?.[0]?.metrics;
+  const prev = (key) => prevRow?.[PREV_KEYS.indexOf(key)];
+  const hint = (key) => deltaText(o[key] || 0, prev(key));
+
+  // Chuyển đổi theo kênh: sự kiện chính / phiên
+  const conversion = (data?.channels || [])
+    .map((r) => ({
+      label: CHANNEL_LABEL[r.dims[0]] || r.dims[0],
+      value: r.metrics[0] > 0 ? Math.round((r.metrics[2] / r.metrics[0]) * 100) : 0,
+      unit: "%",
+      note: `· ${nf.format(r.metrics[2])} sự kiện chính / ${nf.format(r.metrics[0])} phiên`,
+      color: "#2f9e5e",
+    }))
+    .sort((a, b) => b.value - a.value);
+  const topPages = (x.topPages || []).slice(0, 15).map((r) => ({
+    label: r.dims[0],
+    value: r.metrics[0],
+    note: `· ${nf.format(r.metrics[1])} người · TB ${fmtDuration(r.metrics[2])}`,
+  }));
+  const revenue = (x.revenueBySource || [])
+    .filter((r) => r.metrics[0] > 0)
+    .map((r) => ({ label: r.dims[0], value: r.metrics[0], unit: " đ", note: `· ${nf.format(r.metrics[1])} giao dịch`, color: "#2f9e5e" }));
 
   const funnel = FUNNEL.map((name, i) => {
     const value = eventCount(name);
@@ -27,7 +79,7 @@ export default function AdminGaPage() {
     };
   });
   const otherEvents = (data?.events || [])
-    .filter((r) => !FUNNEL.includes(r.dims[0]))
+    .filter((r) => !FUNNEL.includes(r.dims[0]) && r.dims[0] !== "page_timing" && r.dims[0] !== "page_view")
     .map((r) => ({ label: EVENT_LABEL[r.dims[0]] || r.dims[0], value: r.metrics[0], note: `· ${nf.format(r.metrics[1])} người`, color: "#8e949b" }));
   const social = (data?.social || []).map((r) => ({
     label: r.platform, value: r.sessions, note: `· ${nf.format(r.users)} người · ${nf.format(r.keyEvents)} sự kiện chính`, color: "#e0457b",
@@ -103,14 +155,16 @@ export default function AdminGaPage() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
-            <Stat label="Người dùng" value={nf.format(o.activeUsers || 0)} />
-            <Stat label="Người dùng mới" value={nf.format(o.newUsers || 0)} />
-            <Stat label="Phiên" value={nf.format(o.sessions || 0)} />
-            <Stat label="Lượt xem trang" value={nf.format(o.screenPageViews || 0)} />
-            <Stat label="Tỷ lệ tương tác" value={`${Math.round((o.engagementRate || 0) * 100)}%`} />
-            <Stat label="TB mỗi phiên" value={fmtDuration(o.averageSessionDuration)} />
-            <Stat label="Sự kiện chính" value={nf.format(o.keyEvents || 0)} />
+            <Stat label="Người dùng" value={nf.format(o.activeUsers || 0)} hint={hint("activeUsers")} />
+            <Stat label="Người dùng mới" value={nf.format(o.newUsers || 0)} hint={hint("newUsers")} />
+            <Stat label="Phiên" value={nf.format(o.sessions || 0)} hint={hint("sessions")} />
+            <Stat label="Lượt xem trang" value={nf.format(o.screenPageViews || 0)} hint={hint("screenPageViews")} />
+            <Stat label="Tỷ lệ tương tác" value={`${Math.round((o.engagementRate || 0) * 100)}%`} hint={hint("engagementRate")} />
+            <Stat label="TB mỗi phiên" value={fmtDuration(o.averageSessionDuration)} hint={hint("averageSessionDuration")} />
+            <Stat label="Sự kiện chính" value={nf.format(o.keyEvents || 0)} hint={hint("keyEvents")} />
           </div>
+
+          <RealtimeCard />
 
           <Section title="Xu hướng theo ngày" subtitle="Số phiên truy cập mỗi ngày">
             {daily.length === 0 ? (
@@ -130,6 +184,12 @@ export default function AdminGaPage() {
             <Section title="Nguồn / phương tiện" subtitle="Chi tiết từng nguồn (nên dùng UTM để phân biệt chiến dịch)">
               <List rows={toRows(data.sources, { noteMetric: 1, limit: 15 })} empty="Chưa có dữ liệu." />
             </Section>
+            <Section title="Chuyển đổi theo kênh" subtitle="Tỷ lệ sự kiện chính trên số phiên của từng kênh (kênh nào chất lượng nhất)">
+              <List rows={conversion} empty="Chưa có dữ liệu." />
+            </Section>
+            <Section title="Doanh thu theo nguồn" subtitle="Doanh thu mua gói gắn với nguồn truy cập (cần sự kiện purchase có giá trị)">
+              <List rows={revenue} empty="Chưa có giao dịch nào được GA4 ghi nhận kèm doanh thu." />
+            </Section>
             <Section title="Nguồn của người dùng mới" subtitle="Người dùng mới đến lần đầu từ đâu">
               <List rows={toRows(x.firstUserSources, { noteMetric: 1, noteSuffix: "sự kiện chính" })} empty="Chưa có dữ liệu." />
             </Section>
@@ -143,7 +203,7 @@ export default function AdminGaPage() {
               <List rows={otherEvents} empty="Chưa có dữ liệu." />
             </Section>
             <Section title="Trang được xem nhiều" subtitle="Số lượt xem trang">
-              <List rows={toRows(x.topPages, { noteMetric: 1, limit: 15 })} empty="Chưa có dữ liệu." />
+              <List rows={topPages} empty="Chưa có dữ liệu." />
             </Section>
             <Section title="Trang đích" subtitle="Trang người dùng vào đầu tiên (số phiên)">
               <List rows={toRows(x.landingPages, { noteMetric: 1, noteSuffix: "người", limit: 15 })} empty="Chưa có dữ liệu." />
@@ -158,6 +218,7 @@ export default function AdminGaPage() {
               <List title="Thiết bị" rows={toRows(x.devices, { labelMap: DEVICE_LABEL, noteMetric: 1 })} empty="Chưa có dữ liệu." />
               <List title="Trình duyệt" rows={toRows(x.browsers, { noteMetric: 1 })} empty="Chưa có dữ liệu." />
               <List title="Hệ điều hành" rows={toRows(x.os, { noteMetric: 1 })} empty="Chưa có dữ liệu." />
+              <List title="Ngôn ngữ trình duyệt" rows={toRows(x.languages, { labelMap: LANG_LABEL, noteMetric: 1 })} empty="Chưa có dữ liệu." />
             </div>
             <div className="mt-6">
               <p className="mb-2 text-xs font-bold uppercase tracking-wide text-mauve">Phiên theo giờ trong ngày</p>
@@ -178,7 +239,12 @@ export default function AdminGaPage() {
                 empty={NEED_DIM}
               />
               <List title="Đăng ký theo nguồn đầu tiên" rows={signupRows} empty={NEED_DIM} />
+              <List title="Từ khoá tìm kiếm kiểu tóc" rows={toRows(x.searchTerms)} empty={NEED_DIM} />
             </div>
+          </Section>
+
+          <Section title="Sức khoẻ trang web" subtitle="Lỗi giao diện được ghi nhận (không có nghĩa là lỗi thật nếu ít)">
+            <List title="Trang có lỗi" rows={toRows(x.errorPages, { limit: 10 })} empty="Không ghi nhận lỗi nào. Tốt." />
           </Section>
 
           <p className="text-[11px] text-muted">

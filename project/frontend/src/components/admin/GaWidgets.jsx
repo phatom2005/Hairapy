@@ -35,6 +35,7 @@ export function List({ title, rows, empty }) {
                 <span className="min-w-0 truncate font-semibold text-ink" title={r.label}>{r.label}</span>
                 <span className="shrink-0 font-bold text-ink">
                   {nf.format(r.value)}
+                  {r.unit || ""}
                   {r.note && <span className="ml-1 font-normal text-muted">{r.note}</span>}
                 </span>
               </div>

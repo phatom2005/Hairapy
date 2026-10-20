@@ -30,6 +30,12 @@ export const EVENT_LABEL = {
   swap_error: "Lỗi thử tóc",
   ai_report_submit: "Báo cáo nội dung AI",
   feedback_submit: "Gửi đánh giá",
+  search: "Tìm kiếm kiểu tóc",
+  filter_catalog: "Lọc kho kiểu tóc",
+  filter_salons: "Lọc salon",
+  view_salon: "Xem salon trên bản đồ",
+  exception: "Lỗi giao diện",
+  page_timing: "Đo thời gian tải trang",
 };
 
 // Phễu sử dụng chính, theo thứ tự
@@ -61,6 +67,13 @@ export const fmtDuration = (sec) => {
   return `${Math.floor(s / 60)}p ${String(s % 60).padStart(2, "0")}s`;
 };
 
+/** "+12%" / "-5%" so với kỳ trước; trả chuỗi rỗng nếu chưa có dữ liệu kỳ trước. */
+export function deltaText(current, previous) {
+  if (previous == null || previous === 0) return current > 0 && previous === 0 ? "mới so với kỳ trước" : "";
+  const pct = Math.round(((current - previous) / previous) * 100);
+  return `${pct >= 0 ? "+" : ""}${pct}% so với kỳ trước`;
+}
+
 /** Chuyển "20261020" của GA4 thành "20/10". */
 export const fmtGaDate = (d) => (d && d.length === 8 ? `${d.slice(6, 8)}/${d.slice(4, 6)}` : d);
 
@@ -72,6 +85,16 @@ export function toRows(rows = [], { labelMap, metric = 0, noteMetric, noteSuffix
     note: noteMetric != null && r.metrics[noteMetric] != null ? `· ${nf.format(r.metrics[noteMetric])} ${noteSuffix}` : "",
   }));
   return limit ? list.slice(0, limit) : list;
+}
+
+/** Số người đang online (30 phút qua), tự làm mới mỗi 30 giây. */
+export function useGaRealtime() {
+  return useQuery({
+    queryKey: ["admin-ga-realtime"],
+    queryFn: async () => (await api.get("/admin/ga/realtime")).data,
+    refetchInterval: 30_000,
+    staleTime: 20_000,
+  });
 }
 
 /** Tải số liệu GA4 từ backend (cache 10 phút) kèm nút làm mới. */

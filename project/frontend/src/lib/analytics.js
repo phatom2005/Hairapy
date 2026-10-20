@@ -83,6 +83,36 @@ export function initAnalytics() {
   // Thuộc tính người dùng: nguồn đầu tiên + app MXH đang dùng để mở link
   setUserProps({ ...firstTouch(), social_app: detectSocialApp() });
   ready = true;
+  trackRuntimeErrors();
+  trackPageTiming();
+}
+
+/** Gửi sự kiện exception khi có lỗi JS không bắt (chỉ loại lỗi, không gửi nội dung). Giới hạn 5 lần/phiên. */
+function trackRuntimeErrors() {
+  let sent = 0;
+  const send = (description) => {
+    if (sent >= 5) return;
+    sent += 1;
+    trackEvent("exception", { description, fatal: false, page_path: window.location.pathname });
+  };
+  window.addEventListener("error", (e) => send(`js: ${e.error?.name || "Error"}`));
+  window.addEventListener("unhandledrejection", (e) => send(`promise: ${e.reason?.name || "Error"}`));
+}
+
+/** Gửi thời gian tải trang (làm tròn, đơn vị ms) 1 lần sau khi trang tải xong. */
+function trackPageTiming() {
+  const send = () => {
+    const nav = performance.getEntriesByType?.("navigation")?.[0];
+    if (!nav) return;
+    trackEvent("page_timing", {
+      ttfb_ms: Math.round(nav.responseStart),
+      dom_ready_ms: Math.round(nav.domContentLoadedEventEnd),
+      load_ms: Math.round(nav.loadEventEnd),
+      connection: navigator.connection?.effectiveType || "unknown",
+    });
+  };
+  if (document.readyState === "complete") setTimeout(send, 0);
+  else window.addEventListener("load", () => setTimeout(send, 0), { once: true });
 }
 
 /** Gửi page_view khi đổi route (bỏ qua khu vực admin). Giữ lại tham số UTM để GA ghi nhận chiến dịch. */

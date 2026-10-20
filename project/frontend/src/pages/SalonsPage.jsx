@@ -21,6 +21,7 @@ import Footer from "../components/layout/Footer";
 import { StarIcon } from "../components/icons";
 import { AnimatedContent, SpotlightCard } from "../components/animated";
 import api from "../lib/api";
+import { trackEvent } from "../lib/analytics";
 
 const DISTRICT_OPTS = ["Quận 1", "Quận 3", "Quận 7", "Bình Thạnh", "Gò Vấp", "Phú Nhuận"];
 const SERVICE_OPTS = ["Cắt tóc", "Nhuộm tóc", "Uốn/Duỗi tóc", "Phục hồi tóc", "Combo trọn gói"];
@@ -121,6 +122,17 @@ export default function SalonsPage() {
   });
 
   const hasFilters = !!(district || serviceType || priceRange || debouncedQ);
+
+  // GA4: bộ lọc / từ khoá tìm salon (debouncedQ đã chờ 300ms)
+  useEffect(() => {
+    if (!hasFilters) return;
+    trackEvent("filter_salons", {
+      district: district || "all",
+      service_type: serviceType || "all",
+      price_range: priceRange || "all",
+      search_term: debouncedQ ? debouncedQ.toLowerCase().slice(0, 60) : "",
+    });
+  }, [district, serviceType, priceRange, debouncedQ, hasFilters]);
   const clearFilters = () => {
     setQ("");
     setDistrict("");
@@ -244,7 +256,11 @@ export default function SalonsPage() {
             {list
               .filter((sl) => sl.latitude != null && sl.longitude != null)
               .map((sl) => (
-                <Marker key={sl.id} position={[sl.latitude, sl.longitude]}>
+                <Marker
+                  key={sl.id}
+                  position={[sl.latitude, sl.longitude]}
+                  eventHandlers={{ click: () => trackEvent("view_salon", { salon_id: sl.id, salon_name: sl.name }) }}
+                >
                   <Popup>
                     <div className="p-1">
                       <p className="text-sm font-bold text-ink">{sl.name}</p>

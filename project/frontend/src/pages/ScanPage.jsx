@@ -130,6 +130,7 @@ export default function ScanPage() {
             console.error("Lỗi khi lưu lịch sử quét lên backend:", backendErr);
             if (backendErr.response?.status === 429) {
               const msg = backendErr.response?.data?.error || "Bạn đã hết lượt quét khuôn mặt hôm nay.";
+              trackEvent("quota_exceeded", { feature: "face_scan" });
               setError(msg);
               setAnalyzing(false);
               URL.revokeObjectURL(objectUrl);
@@ -147,6 +148,7 @@ export default function ScanPage() {
         }
       } catch (err) {
         console.error("Lỗi phân tích khuôn mặt:", err);
+        trackEvent("scan_error", { reason: "analyze_failed" });
         setError(err.message || "Không thể phân tích khuôn mặt. Hãy chắc chắn ảnh rõ mặt.");
         setAnalyzing(false);
         URL.revokeObjectURL(objectUrl);

@@ -6,6 +6,7 @@ import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/Navbar";
 import { Badge, Button, Card } from "../components/ui";
 import api from "../lib/api";
+import { trackEvent } from "../lib/analytics";
 import { useScanStore } from "../store/useScanStore";
 
 const GENDER_OPTS = ["Nam", "Nữ", "Unisex"];
@@ -249,6 +250,7 @@ export default function CatalogPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const handleDetail = async (hairstyle) => {
+    trackEvent("view_hairstyle", { hairstyle_id: hairstyle.id, hairstyle_name: hairstyle.name });
     const token = localStorage.getItem("token");
     if (!token) {
       navigate("/login", { state: { from: "/catalog" } });
@@ -305,8 +307,10 @@ export default function CatalogPage() {
     try {
       if (isSaved) {
         await api.delete("/profile/saved-styles", { params: { hairstyleId } });
+        trackEvent("unsave_favorite", { hairstyle_id: hairstyleId, source: "catalog" });
       } else {
         await api.post("/profile/saved-styles", null, { params: { hairstyleId } });
+        trackEvent("save_favorite", { hairstyle_id: hairstyleId, source: "catalog" });
       }
       queryClient.invalidateQueries({ queryKey: ["profile-saved-styles"] });
     } catch (err) {

@@ -22,6 +22,7 @@ const useAuthStore = create((set, get) => ({
       const res = await api.post("/auth/login", { email, password });
       const { token, email: userEmail, role, fullName } = res.data;
       localStorage.setItem("token", token);
+      trackEvent("login", { method: "email" });
       set({ token, user: { email: userEmail, role, fullName }, loading: false, hydrated: true });
       // Tải đầy đủ thông tin chi tiết (phone, dateOfBirth, v.v.) từ /auth/me
       try {

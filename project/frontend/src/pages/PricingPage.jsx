@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { trackEvent } from "../lib/analytics";
 import { Button, Card, Badge } from "../components/ui";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
@@ -43,6 +45,11 @@ const PLANS = [
 
 export default function PricingPage() {
   const { user } = useAuthStore();
+
+  // GA4: người dùng xem bảng giá (đầu phễu mua gói)
+  useEffect(() => {
+    trackEvent("view_plans");
+  }, []);
 
   return (
     <div className="min-h-screen">

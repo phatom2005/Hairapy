@@ -16,22 +16,26 @@ import AiReportButton from "../components/AiReportButton";
 
 // Màu tóc gửi cho AILab (tham số color) — value phải trùng whitelist ở HairSwapService.SUPPORTED_COLORS
 const HAIR_COLORS = [
-  { value: "black", label: "Đen", swatch: "#1a1a1a" },
-  { value: "brown", label: "Nâu", swatch: "#6b4226" },
-  { value: "lightBrown", label: "Nâu sáng", swatch: "#a67c52" },
-  { value: "blonde", label: "Vàng", swatch: "#e6c27a" },
-  { value: "platinumBlonde", label: "Bạch kim", swatch: "#efe6cf" },
-  { value: "red", label: "Đỏ", swatch: "#c0392b" },
-  { value: "burgundy", label: "Đỏ rượu", swatch: "#6d1a36" },
-  { value: "orange", label: "Cam", swatch: "#e67e22" },
-  { value: "pink", label: "Hồng", swatch: "#f48fb1" },
-  { value: "purple", label: "Tím", swatch: "#7e57c2" },
-  { value: "blue", label: "Xanh dương", swatch: "#2f6fdb" },
-  { value: "green", label: "Xanh lá", swatch: "#2e9e5b" },
-  { value: "grey", label: "Xám", swatch: "#9aa0a6" },
-  { value: "silver", label: "Bạc", swatch: "#cfd4d9" },
-  { value: "white", label: "Trắng", swatch: "#ffffff" },
+  { value: "black", label: "Đen", tones: ["#4a4a52", "#1b1b20", "#050507"] },
+  { value: "brown", label: "Nâu", tones: ["#9a6b45", "#5b3a22", "#2e1a0e"] },
+  { value: "lightBrown", label: "Nâu sáng", tones: ["#cfa57a", "#9b7048", "#6a4a2c"] },
+  { value: "blonde", label: "Vàng", tones: ["#f6dd9a", "#d9b25f", "#a9812f"] },
+  { value: "platinumBlonde", label: "Bạch kim", tones: ["#fbf6e8", "#e6dcc3", "#c4b896"] },
+  { value: "red", label: "Đỏ", tones: ["#e0624f", "#b3321f", "#6e170c"] },
+  { value: "burgundy", label: "Đỏ rượu", tones: ["#9a3558", "#6a1634", "#36081a"] },
+  { value: "orange", label: "Cam", tones: ["#f5a45d", "#dd7a1f", "#a55410"] },
+  { value: "pink", label: "Hồng", tones: ["#fcc3d8", "#f08fb3", "#c9608a"] },
+  { value: "purple", label: "Tím", tones: ["#ae92e8", "#7852c4", "#46298a"] },
+  { value: "blue", label: "Xanh dương", tones: ["#7fb0f5", "#3571d6", "#1c418f"] },
+  { value: "green", label: "Xanh lá", tones: ["#79d49e", "#2f9e5e", "#16603a"] },
+  { value: "grey", label: "Xám", tones: ["#c3c8ce", "#8e949b", "#585d63"] },
+  { value: "silver", label: "Bạc", tones: ["#f1f3f5", "#cdd2d8", "#9aa1a9"] },
+  { value: "white", label: "Trắng", tones: ["#ffffff", "#f1f1f1", "#d6d6d6"] },
 ];
+
+// Ô màu mô phỏng ánh tóc: dải sáng chéo + chuyển sắc sáng → tối
+const swatchBg = ([light, base, dark]) =>
+  `linear-gradient(120deg, ${dark} 0%, ${base} 35%, ${light} 50%, ${base} 65%, ${dark} 100%)`;
 
 // Bản đồ dịch dáng mặt sang tiếng Việt (khớp với ResultsPage)
 const FACE_SHAPE_MAP = {
@@ -224,6 +228,7 @@ export default function SwapPage() {
       const link = document.createElement("a");
       link.href = blobUrl;
       link.download = `hairapy-ket-qua-${Date.now()}.jpg`;
+      trackEvent("download_result", { hairstyle_id: activeStyle?.id, hair_color: hairColor || "default" });
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -264,7 +269,7 @@ export default function SwapPage() {
         timeout: 20000, // Bước submit giờ nhanh (không còn chờ AI xử lý xong ở đây)
       });
 
-      trackEvent("hair_swap", { hairstyle_id: activeStyle.id });
+      trackEvent("hair_swap", { hairstyle_id: activeStyle.id, hair_color: hairColor || "default" });
       const taskId = response.data.taskId;
       if (!taskId) {
         throw new Error("Không nhận được mã tác vụ từ máy chủ.");
@@ -279,6 +284,16 @@ export default function SwapPage() {
       console.error("Lỗi khi submit Hair Swap Pro API:", err);
       queryClient.invalidateQueries({ queryKey: ["usage-summary"] });
       const errorData = err.response?.data;
+      // GA4: phân loại lý do lỗi để biết điểm nghẽn (hết lượt, premium, ảnh xấu, timeout…)
+      if (errorData?.requiresPremium) {
+        trackEvent("paywall_view", { feature: "hair_swap", hairstyle_id: activeStyle?.id });
+      } else if (err.response?.status === 429) {
+        trackEvent("quota_exceeded", { feature: "hair_swap" });
+      } else {
+        trackEvent("swap_error", {
+          reason: errorData?.code || (err.response?.status === 504 ? "timeout" : String(err.response?.status || "network")),
+        });
+      }
 
       // Ảnh không đạt yêu cầu AI (không thấy mặt...) — hiển thị đúng thông điệp từ backend
       if (errorData?.code === "INVALID_IMAGE") {
@@ -393,7 +408,12 @@ export default function SwapPage() {
           )}
 
           <div className="flex flex-col gap-2">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted">Màu tóc</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-muted">
+              Màu tóc
+              <span className="ml-2 normal-case tracking-normal text-ink">
+                {hairColor ? HAIR_COLORS.find((c) => c.value === hairColor)?.label : "Mặc định"}
+              </span>
+            </p>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -410,9 +430,12 @@ export default function SwapPage() {
                   title={c.label}
                   aria-label={c.label}
                   aria-pressed={hairColor === c.value}
-                  onClick={() => setHairColor(c.value)}
-                  style={{ background: c.swatch }}
-                  className={`size-8 rounded-full border-2 transition ${
+                  onClick={() => {
+                    setHairColor(c.value);
+                    trackEvent("select_hair_color", { hair_color: c.value });
+                  }}
+                  style={{ background: swatchBg(c.tones) }}
+                  className={`size-9 rounded-full border-2 shadow-inner transition hover:scale-110 ${
                     hairColor === c.value ? "border-ink ring-2 ring-ink/30" : "border-line"
                   }`}
                 />

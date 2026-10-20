@@ -28,6 +28,7 @@ import {
 } from "iconsax-reactjs";
 import api from "../../lib/api";
 import QuotaPanel from "../../components/admin/QuotaPanel";
+import GaPanel from "../../components/admin/GaPanel";
 
 // Màu dùng cho chart — hardcode hex vì Tailwind 4 có thể bỏ CSS var không dùng
 const C = {
@@ -266,6 +267,9 @@ export default function AdminDashboardPage() {
 
       {/* Hạn mức dịch vụ (AILabTools, Cloudinary) */}
       <QuotaPanel />
+
+      {/* Google Analytics: nguồn truy cập, MXH, phễu */}
+      <GaPanel />
 
       {/* Doanh thu + đánh giá */}
       <div className="grid gap-4 xl:grid-cols-3">

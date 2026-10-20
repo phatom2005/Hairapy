@@ -7,6 +7,7 @@ import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/Navbar";
 import { Badge, Button, Card, DragScroll, Section, SectionHeading } from "../components/ui";
 import api from "../lib/api";
+import { trackEvent } from "../lib/analytics";
 import { useScanStore } from "../store/useScanStore";
 import useAuthStore from "../store/useAuthStore";
 import FeedbackWidget from "../components/FeedbackWidget";
@@ -149,10 +150,12 @@ export default function ResultsPage() {
         await api.delete("/profile/saved-styles", {
           params: { hairstyleId }
         });
+        trackEvent("unsave_favorite", { hairstyle_id: hairstyleId, source: "results" });
       } else {
         await api.post("/profile/saved-styles", null, {
           params: { hairstyleId }
         });
+        trackEvent("save_favorite", { hairstyle_id: hairstyleId, source: "results" });
       }
       queryClient.invalidateQueries({ queryKey: ["profile-saved-styles"] });
     } catch (err) {

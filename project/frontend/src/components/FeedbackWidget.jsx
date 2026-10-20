@@ -1,6 +1,7 @@
 import { useState } from "react";
 import useAuthStore from "../store/useAuthStore";
 import api from "../lib/api";
+import { trackEvent } from "../lib/analytics";
 import { Card, Button } from "./ui";
 
 export default function FeedbackWidget({ feature }) {
@@ -41,6 +42,7 @@ export default function FeedbackWidget({ feature }) {
         feature,
       });
       setSubmitted(true);
+      trackEvent("feedback_submit", { rating, feature });
     } catch (err) {
       if (err.response?.status === 429) {
         setErrorMessage(err.response.data?.error || "Bạn đã gửi quá nhiều đánh giá hôm nay.");

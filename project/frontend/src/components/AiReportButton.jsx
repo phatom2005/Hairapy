@@ -1,6 +1,7 @@
 import { useState } from "react";
 import useAuthStore from "../store/useAuthStore";
 import api from "../lib/api";
+import { trackEvent } from "../lib/analytics";
 import { Button } from "./ui";
 
 // Các lý do báo cáo — khớp enum AiReportReason ở backend
@@ -59,6 +60,7 @@ export default function AiReportButton({ imageUrl, hairstyleId, feature = "HAIR_
         feature,
       });
       setSent(true);
+      trackEvent("ai_report_submit", { reason, feature });
     } catch (err) {
       setErrorMessage(
         err.response?.status === 429

@@ -1,6 +1,6 @@
 import { lazy, useEffect, useState } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { trackPageView } from "./lib/analytics";
+import { trackPageView, setUserProps, markInternalTraffic } from "./lib/analytics";
 import { SoftAurora } from "./components/animated";
 import useAuthStore from "./store/useAuthStore";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -46,6 +46,14 @@ export default function App() {
   const loginWithFacebook = useAuthStore((state) => state.loginWithFacebook);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // GA4: gắn thuộc tính người dùng + đánh dấu lưu lượng nội bộ (Admin/Tester) khi user thay đổi
+  const gaUser = useAuthStore((state) => state.user);
+  useEffect(() => {
+    const role = gaUser?.role ? String(gaUser.role).toLowerCase() : "";
+    setUserProps({ user_role: role || "guest" });
+    markInternalTraffic(role === "admin" || role === "tester");
+  }, [gaUser?.role]);
 
   // GA4: gửi page_view mỗi lần đổi route
   useEffect(() => {

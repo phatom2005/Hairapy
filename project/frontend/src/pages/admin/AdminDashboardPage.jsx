@@ -227,7 +227,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* KPI */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <Kpi
           label="Doanh thu trong kỳ"
           value={formatVND(stats.revenueInPeriod)}
@@ -263,6 +263,9 @@ export default function AdminDashboardPage() {
           tone={C.primary}
         />
       </div>
+
+      {/* Hạn mức dịch vụ (AILabTools, Cloudinary) */}
+      <QuotaPanel />
 
       {/* Doanh thu + đánh giá */}
       <div className="grid gap-4 xl:grid-cols-3">
@@ -493,8 +496,6 @@ export default function AdminDashboardPage() {
         </Panel>
       </div>
 
-      {/* Hạn mức dịch vụ bên thứ 3 */}
-      <QuotaPanel />
     </div>
   );
 }

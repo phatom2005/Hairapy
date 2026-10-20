@@ -14,6 +14,25 @@ import { useScanStore } from "../store/useScanStore";
 import FeedbackWidget from "../components/FeedbackWidget";
 import AiReportButton from "../components/AiReportButton";
 
+// Màu tóc gửi cho AILab (tham số color) — value phải trùng whitelist ở HairSwapService.SUPPORTED_COLORS
+const HAIR_COLORS = [
+  { value: "black", label: "Đen", swatch: "#1a1a1a" },
+  { value: "brown", label: "Nâu", swatch: "#6b4226" },
+  { value: "lightBrown", label: "Nâu sáng", swatch: "#a67c52" },
+  { value: "blonde", label: "Vàng", swatch: "#e6c27a" },
+  { value: "platinumBlonde", label: "Bạch kim", swatch: "#efe6cf" },
+  { value: "red", label: "Đỏ", swatch: "#c0392b" },
+  { value: "burgundy", label: "Đỏ rượu", swatch: "#6d1a36" },
+  { value: "orange", label: "Cam", swatch: "#e67e22" },
+  { value: "pink", label: "Hồng", swatch: "#f48fb1" },
+  { value: "purple", label: "Tím", swatch: "#7e57c2" },
+  { value: "blue", label: "Xanh dương", swatch: "#2f6fdb" },
+  { value: "green", label: "Xanh lá", swatch: "#2e9e5b" },
+  { value: "grey", label: "Xám", swatch: "#9aa0a6" },
+  { value: "silver", label: "Bạc", swatch: "#cfd4d9" },
+  { value: "white", label: "Trắng", swatch: "#ffffff" },
+];
+
 // Bản đồ dịch dáng mặt sang tiếng Việt (khớp với ResultsPage)
 const FACE_SHAPE_MAP = {
   Oval: "Trái xoan",
@@ -38,6 +57,7 @@ export default function SwapPage() {
   const [selectedStyle, setSelectedStyle] = useState(selectedHairstyle);
 
   const [loading, setLoading] = useState(false);
+  const [hairColor, setHairColor] = useState(""); // "" = không đổi màu
   const [resultImage, setResultImage] = useState(null);
   const [error, setError] = useState(null);
   const [downloading, setDownloading] = useState(false);
@@ -236,6 +256,7 @@ export default function SwapPage() {
     formData.append("image", uploadFile);
     formData.append("hairStyle", activeStyle.ailabProStyle);
     formData.append("hairstyleId", activeStyle.id);
+    if (hairColor) formData.append("hairColor", hairColor);
 
     try {
       const response = await api.post("/swap/submit", formData, {
@@ -370,6 +391,34 @@ export default function SwapPage() {
               {error}
             </div>
           )}
+
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-bold uppercase tracking-wider text-muted">Màu tóc</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setHairColor("")}
+                className={`rounded-full border-2 px-3 py-1 text-xs font-semibold transition ${
+                  hairColor === "" ? "border-ink bg-ink text-white" : "border-line text-mauve hover:text-ink"
+                }`}>
+                Mặc định
+              </button>
+              {HAIR_COLORS.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  title={c.label}
+                  aria-label={c.label}
+                  aria-pressed={hairColor === c.value}
+                  onClick={() => setHairColor(c.value)}
+                  style={{ background: c.swatch }}
+                  className={`size-8 rounded-full border-2 transition ${
+                    hairColor === c.value ? "border-ink ring-2 ring-ink/30" : "border-line"
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
 
           <QuotaBadge feature="HAIR_SWAP" />
           <div className="relative group w-full">

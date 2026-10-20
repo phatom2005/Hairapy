@@ -81,6 +81,8 @@ const useAuthStore = create((set, get) => ({
       const { token, email: userEmail, role, fullName } = res.data;
       localStorage.setItem("token", token);
       set({ token, user: { email: userEmail, role, fullName }, loading: false, hydrated: true });
+      // GA4: backend không báo user mới hay cũ nên dùng event "login" (method google)
+      trackEvent("login", { method: "google" });
       // Tải đầy đủ thông tin chi tiết từ /auth/me
       try {
         const meRes = await api.get("/auth/me");

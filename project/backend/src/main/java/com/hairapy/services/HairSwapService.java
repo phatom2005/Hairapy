@@ -50,6 +50,21 @@ public class HairSwapService {
      * @return task_id để poll kết quả sau qua checkStatus().
      */
     public String submitTask(MultipartFile image, String hairStyle) {
+        return submitTask(image, hairStyle, null);
+    }
+
+    /** Các màu tóc AILab Pro API hỗ trợ (tham số "color"). Dùng làm whitelist, không tin giá trị client gửi. */
+    public static final java.util.Set<String> SUPPORTED_COLORS = java.util.Set.of(
+            "blonde", "platinumBlonde", "brown", "lightBrown", "blue", "lightBlue", "purple", "lightPurple",
+            "pink", "black", "white", "grey", "silver", "red", "orange", "green", "gradient", "multicolored",
+            "darkBlue", "burgundy", "darkGreen");
+
+    /**
+     * Như submitTask nhưng có thể đổi màu tóc.
+     *
+     * @param hairColor mã màu AILab (xem SUPPORTED_COLORS); null/rỗng = không gửi, để AILab dùng mặc định.
+     */
+    public String submitTask(MultipartFile image, String hairStyle, String hairColor) {
         if (image.isEmpty()) {
             throw new IllegalArgumentException("Ảnh không được để trống.");
         }
@@ -88,12 +103,18 @@ public class HairSwapService {
         body.add("auto", "1");
         body.add("hair_style", hairStyle);
         body.add("image_size", "1"); // Chỉ trả 1 ảnh để tiết kiệm credit
+        if (hairColor != null && !hairColor.isBlank()) {
+            if (!SUPPORTED_COLORS.contains(hairColor)) {
+                throw new IllegalArgumentException("Màu tóc không được hỗ trợ.");
+            }
+            body.add("color", hairColor);
+        }
 
         HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
         // Log an toàn
         String maskedKey = maskApiKey(aiLabConfig.getApiKey());
-        log.info("Gửi Pro Hair Swap request (submit): hairStyle={}, apiKey={}", hairStyle, maskedKey);
+        log.info("Gửi Pro Hair Swap request (submit): hairStyle={}, color={}, apiKey={}", hairStyle, hairColor, maskedKey);
 
         ResponseEntity<Map> response;
         try {

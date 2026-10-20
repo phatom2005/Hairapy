@@ -59,7 +59,8 @@ public class HairSwapController {
     public ResponseEntity<?> submit(
             @RequestParam("image") MultipartFile image,
             @RequestParam(value = "hairStyle", required = false) String clientHairStyle,
-            @RequestParam(value = "hairstyleId", required = false) Long hairstyleId) {
+            @RequestParam(value = "hairstyleId", required = false) Long hairstyleId,
+            @RequestParam(value = "hairColor", required = false) String hairColor) {
 
         log.info("Nhận yêu cầu submit thử kiểu tóc Pro: hairstyleId={}", hairstyleId);
 
@@ -95,13 +96,18 @@ public class HairSwapController {
             ));
         }
         final String hairStyle = style.getAilabProStyle(); // luôn dùng mã style từ DB
+        // Màu tóc (tuỳ chọn): chỉ nhận mã nằm trong whitelist, chặn trước khi trừ lượt
+        final String color = (hairColor == null || hairColor.isBlank()) ? null : hairColor;
+        if (color != null && !HairSwapService.SUPPORTED_COLORS.contains(color)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Màu tóc không được hỗ trợ."));
+        }
 
         try {
             // 1. Kiểm tra + ghi nhận lượt dùng ngay (atomic)
             reservation = usageService.reserveUsage(currentUser, "HAIR_SWAP", style.getId());
 
             // 2. Submit task lên AILab Pro API — nhanh, không chờ xử lý xong
-            String taskId = hairSwapService.submitTask(image, hairStyle);
+            String taskId = hairSwapService.submitTask(image, hairStyle, color);
 
             // 3. Đăng ký task để FE poll status sau — lưu reservation để hoàn lượt nếu cần
             HairSwapTask task = new HairSwapTask(taskId, currentUser.getId(), reservation, isPaidUser,

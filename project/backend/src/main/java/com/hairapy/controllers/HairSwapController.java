@@ -76,7 +76,10 @@ public class HairSwapController {
             return ResponseEntity.badRequest().body(Map.of("error", com.hairapy.utils.ImageValidator.INVALID_MESSAGE));
         }
 
-        boolean isPaidUser = subscriptionService.isPaidUser(currentUser.getId());
+        // Admin/Tester được coi như Premium (không giới hạn lượt, thử được kiểu premiumOnly, không watermark)
+        boolean isPaidUser = currentUser.getRole() == com.hairapy.models.Role.ADMIN
+                || currentUser.getRole() == com.hairapy.models.Role.TESTER
+                || subscriptionService.isPaidUser(currentUser.getId());
         com.hairapy.models.UsageHistory reservation = null;
 
         // Bắt buộc có hairstyleId: kiểu tóc được tra ở SERVER, KHÔNG tin giá trị hairStyle

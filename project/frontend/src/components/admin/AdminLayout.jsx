@@ -91,7 +91,7 @@ export default function AdminLayout() {
   // Icon luôn đứng yên ở vị trí cố định (aside p-3 + link px-3.5 → icon cách mép 26px),
   // chỉ có chiều rộng aside và nhãn chữ thay đổi → không bị giật/nhảy chữ khi animate.
   const linkCls =
-    "flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-semibold whitespace-nowrap transition-colors duration-200";
+    "flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-semibold whitespace-nowrap transition-colors duration-200 [@media(max-height:900px)]:py-2.5";
   // Nhãn: thu gọn → mờ dần + rộng 0 (dưới lg luôn thu gọn)
   const labelCls = `overflow-hidden transition-all duration-300 ${
     collapsed ? "w-0 opacity-0" : "w-40 opacity-100 max-lg:w-0 max-lg:opacity-0"
@@ -105,7 +105,7 @@ export default function AdminLayout() {
         }`}
       >
         <div className="flex h-full flex-col overflow-hidden rounded-3xl border border-line bg-white p-3 shadow-sm">
-          <div className="mb-6 flex flex-col items-center">
+          <div className="mb-6 flex shrink-0 flex-col items-center [@media(max-height:900px)]:mb-3">
             <img
               src={logoStack}
               alt="Hairapy"
@@ -122,7 +122,7 @@ export default function AdminLayout() {
             </p>
           </div>
 
-          <nav className="flex flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden">
+          <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {navItems.map(({ to, label, Icon, end }) => (
               <NavLink
                 key={to}
@@ -146,7 +146,7 @@ export default function AdminLayout() {
             ))}
           </nav>
 
-          <div className="mt-3 flex flex-col gap-1 border-t border-line pt-3">
+          <div className="mt-3 flex shrink-0 flex-col gap-1 border-t border-line pt-3">
             <NavLink
               to="/"
               title="Về trang chính"

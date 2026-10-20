@@ -27,6 +27,7 @@ import {
   ReceiptText,
 } from "iconsax-reactjs";
 import api from "../../lib/api";
+import QuotaPanel from "../../components/admin/QuotaPanel";
 
 // Màu dùng cho chart — hardcode hex vì Tailwind 4 có thể bỏ CSS var không dùng
 const C = {
@@ -491,6 +492,9 @@ export default function AdminDashboardPage() {
           )}
         </Panel>
       </div>
+
+      {/* Hạn mức dịch vụ bên thứ 3 */}
+      <QuotaPanel />
     </div>
   );
 }

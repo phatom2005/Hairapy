@@ -58,6 +58,12 @@ public class AdminAnalyticsController {
             String triedTrackingSince // ISO date-time hoặc null nếu chưa có dữ liệu
     ) {}
 
+    /** Một kiểu tóc trong bảng xếp hạng của 1 dáng mặt: số lượt lưu yêu thích + số lượt thử AI. */
+    public record FaceShapeHairstyle(Long id, String name, String imageUrl, boolean premiumOnly,
+                                     long saved, long tried) {}
+
+    public record FaceShapeRanking(String faceShape, List<FaceShapeHairstyle> items) {}
+
     @GetMapping("/users")
     public ResponseEntity<UserAnalytics> userAnalytics() {
         LocalDateTime now = LocalDateTime.now();
@@ -109,6 +115,51 @@ public class AdminAnalyticsController {
                 toStats(triedRaw, byId),
                 first != null ? first.toString() : null
         ));
+    }
+
+    /**
+     * Top kiểu tóc theo từng dáng mặt. Dáng mặt lấy từ catalog (cột face_shape, có thể nhiều giá trị
+     * ngăn bằng dấu phẩy); điểm xếp hạng = lượt lưu yêu thích (toàn thời gian) + lượt thử AI trong N ngày.
+     * Kiểu tóc chưa có lượt nào thì không đưa vào bảng.
+     */
+    @GetMapping("/hairstyles-by-face-shape")
+    public ResponseEntity<List<FaceShapeRanking>> hairstylesByFaceShape(
+            @RequestParam(defaultValue = "5") int limit,
+            @RequestParam(defaultValue = "30") int days) {
+        int top = Math.min(Math.max(limit, 1), 20);
+        LocalDateTime since = LocalDate.now().minusDays(Math.max(days, 1)).atStartOfDay();
+
+        // Lấy số lượt của toàn bộ kiểu tóc (catalog nhỏ) rồi nhóm theo dáng mặt ở bộ nhớ
+        PageRequest all = PageRequest.of(0, 1000);
+        Map<Long, Long> savedById = toCountMap(savedHairstyleRepository.topSaved(all));
+        Map<Long, Long> triedById = toCountMap(usageHistoryRepository.topTriedSince(since, all));
+
+        Set<Long> ids = new HashSet<>(savedById.keySet());
+        ids.addAll(triedById.keySet());
+        Map<String, List<FaceShapeHairstyle>> byShape = new TreeMap<>();
+        for (HairstyleCatalog h : hairstyleCatalogRepository.findAllById(ids)) {
+            if (h.getFaceShape() == null) continue;
+            FaceShapeHairstyle item = new FaceShapeHairstyle(h.getId(), h.getName(), h.getImageUrl(),
+                    h.isPremiumOnly(), savedById.getOrDefault(h.getId(), 0L), triedById.getOrDefault(h.getId(), 0L));
+            for (String shape : h.getFaceShape().split(",")) {
+                String key = shape.trim();
+                if (!key.isEmpty()) byShape.computeIfAbsent(key, k -> new ArrayList<>()).add(item);
+            }
+        }
+
+        List<FaceShapeRanking> result = new ArrayList<>();
+        byShape.forEach((shape, items) -> {
+            items.sort(Comparator.comparingLong((FaceShapeHairstyle i) -> i.saved() + i.tried()).reversed()
+                    .thenComparing(FaceShapeHairstyle::name, Comparator.nullsLast(Comparator.naturalOrder())));
+            result.add(new FaceShapeRanking(shape, items.size() > top ? new ArrayList<>(items.subList(0, top)) : items));
+        });
+        return ResponseEntity.ok(result);
+    }
+
+    private Map<Long, Long> toCountMap(List<Object[]> raw) {
+        Map<Long, Long> out = new HashMap<>();
+        for (Object[] r : raw) out.put(((Number) r[0]).longValue(), ((Number) r[1]).longValue());
+        return out;
     }
 
     private List<HairstyleStat> toStats(List<Object[]> raw, Map<Long, HairstyleCatalog> byId) {

@@ -22,6 +22,14 @@ const C = {
 
 const nf = new Intl.NumberFormat("vi-VN");
 const PROVIDER_LABEL = { LOCAL: "Email / mật khẩu", GOOGLE: "Google", FACEBOOK: "Facebook" };
+const FACE_SHAPE_LABEL = {
+  Oval: "Trái xoan",
+  Round: "Tròn",
+  Square: "Vuông",
+  Heart: "Trái tim",
+  Oblong: "Dài",
+  Diamond: "Kim cương",
+};
 const DAY_OPTIONS = [
   { label: "7 ngày", value: 7 },
   { label: "30 ngày", value: 30 },
@@ -132,6 +140,31 @@ function TopList({ items, color, emptyText }) {
   );
 }
 
+// Top kiểu tóc của từng dáng mặt: lượt lưu yêu thích (♥) + lượt thử AI
+function FaceShapeCard({ ranking }) {
+  const label = FACE_SHAPE_LABEL[ranking.faceShape] ?? ranking.faceShape;
+  return (
+    <div className="rounded-2xl border border-line p-4">
+      <h4 className="mb-3 text-sm font-bold text-ink">Dáng mặt {label}</h4>
+      <ol className="space-y-2.5">
+        {ranking.items.map((h, idx) => (
+          <li key={h.id} className="flex items-center gap-3">
+            <span className="w-4 text-center text-xs font-bold text-muted">{idx + 1}</span>
+            <img src={h.imageUrl} alt={h.name} loading="lazy" className="size-9 shrink-0 rounded-lg bg-canvas object-cover" />
+            <p className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">
+              {h.name}
+              {h.premiumOnly && <span className="ml-1.5 text-[10px] font-bold text-magenta">PREMIUM</span>}
+            </p>
+            <span className="shrink-0 text-xs text-mauve" title="Lượt lưu yêu thích · lượt thử AI">
+              ♥ <b className="text-ink">{nf.format(h.saved)}</b> · AI <b className="text-ink">{nf.format(h.tried)}</b>
+            </span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 export default function AdminAnalyticsPage() {
   const [days, setDays] = useState(30);
 
@@ -142,6 +175,12 @@ export default function AdminAnalyticsPage() {
   const styles = useQuery({
     queryKey: ["admin-analytics-hairstyles", days],
     queryFn: async () => (await api.get("/admin/analytics/hairstyles", { params: { days, limit: 10 } })).data,
+    placeholderData: (prev) => prev,
+  });
+
+  const byShape = useQuery({
+    queryKey: ["admin-analytics-by-face-shape", days],
+    queryFn: async () => (await api.get("/admin/analytics/hairstyles-by-face-shape", { params: { days, limit: 5 } })).data,
     placeholderData: (prev) => prev,
   });
 
@@ -259,6 +298,26 @@ export default function AdminAnalyticsPage() {
           </Panel>
         </div>
       )}
+
+      {/* ===== Kiểu tóc theo dáng mặt ===== */}
+      <Panel
+        title="Kiểu tóc được ưa chuộng theo dáng mặt"
+        subtitle={`Xếp hạng theo lượt lưu yêu thích (toàn thời gian) + lượt thử AI ${days} ngày gần nhất`}
+      >
+        {byShape.isLoading ? (
+          <div className="h-40 animate-pulse rounded-2xl bg-line" />
+        ) : byShape.error || !byShape.data ? (
+          <Empty text="Không thể tải phân tích theo dáng mặt" />
+        ) : byShape.data.length === 0 ? (
+          <Empty text="Chưa có kiểu tóc nào được lưu hoặc thử" />
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {byShape.data.map((r) => (
+              <FaceShapeCard key={r.faceShape} ranking={r} />
+            ))}
+          </div>
+        )}
+      </Panel>
     </div>
   );
 }

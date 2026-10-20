@@ -38,6 +38,7 @@ import AdminFeedbackPage from "./pages/admin/AdminFeedbackPage";
 import AdminAiReportsPage from "./pages/admin/AdminAiReportsPage";
 import AdminUsagePage from "./pages/admin/AdminUsagePage";
 import AdminAnalyticsPage from "./pages/admin/AdminAnalyticsPage";
+import AdminGaPage from "./pages/admin/AdminGaPage";
 
 // Luồng chính: / -> /scan -> /results -> /swap
 export default function App() {
@@ -159,6 +160,7 @@ export default function App() {
             <Route path="/admin/salons" element={<AdminSalonsPage />} />
             <Route path="/admin/usage" element={<AdminUsagePage />} />
             <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
+            <Route path="/admin/ga" element={<AdminGaPage />} />
           </Route>
         </Route>
 

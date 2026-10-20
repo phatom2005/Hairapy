@@ -78,6 +78,7 @@ public class GaReportService {
             List<SocialRow> social,
             List<Row> events,
             List<Row> daily,
+            Map<String, List<Row>> extra,
             LocalDateTime fetchedAt) {}
 
     private final RestTemplate restTemplate;
@@ -154,7 +155,52 @@ public class GaReportService {
         daily.sort((a, b) -> a.dims().get(0).compareTo(b.dims().get(0)));
 
         return new GaSnapshot(true, null, days, overview, parse(reports.get(1)), sources, socialFrom(sources),
-                parse(reports.get(3)), daily, LocalDateTime.now());
+                parse(reports.get(3)), daily, fetchExtra(start, days), LocalDateTime.now());
+    }
+
+    /**
+     * Các báo cáo chi tiết cho trang GA4 riêng. Mỗi nhóm gọi riêng và bọc try/catch:
+     * một nhóm lỗi (vd custom dimension chưa đăng ký trong GA4) chỉ làm nhóm đó rỗng.
+     */
+    private Map<String, List<Row>> fetchExtra(String start, int days) {
+        Map<String, List<Row>> out = new LinkedHashMap<>();
+        List<String> sessUsers = List.of("sessions", "activeUsers");
+        // Nhóm 1: trang, quốc gia, thiết bị, trình duyệt
+        runGroup(out, List.of("topPages", "landingPages", "countries", "devices", "browsers"), List.of(
+                report(start, List.of("pagePath"), List.of("screenPageViews", "activeUsers", "averageSessionDuration"), 15, "screenPageViews", null),
+                report(start, List.of("landingPage"), List.of("sessions", "activeUsers", "keyEvents"), 15, "sessions", null),
+                report(start, List.of("country"), sessUsers, 15, "sessions", null),
+                report(start, List.of("deviceCategory"), sessUsers, 10, "sessions", null),
+                report(start, List.of("browser"), sessUsers, 10, "sessions", null)));
+        // Nhóm 2: hệ điều hành, người dùng mới/cũ, giờ trong ngày, thành phố, nguồn đầu tiên của người dùng mới
+        runGroup(out, List.of("os", "newVsReturning", "hours", "cities", "firstUserSources"), List.of(
+                report(start, List.of("operatingSystem"), sessUsers, 10, "sessions", null),
+                report(start, List.of("newVsReturning"), sessUsers, 5, "sessions", null),
+                report(start, List.of("hour"), List.of("sessions"), 24, null, null),
+                report(start, List.of("city"), sessUsers, 15, "sessions", null),
+                report(start, List.of("firstUserSourceMedium"), List.of("newUsers", "keyEvents"), 15, "newUsers", null)));
+        // Custom dimension (chỉ có số liệu sau khi đăng ký trong GA4: Quản trị → Định nghĩa tùy chỉnh)
+        runGroup(out, List.of("hairColors"), List.of(
+                report(start, List.of("customEvent:hair_color"), List.of("eventCount"), 25, "eventCount", List.of("hair_swap"))));
+        runGroup(out, List.of("faceShapes"), List.of(
+                report(start, List.of("customEvent:face_shape"), List.of("eventCount"), 10, "eventCount", List.of("face_scan"))));
+        runGroup(out, List.of("signupSources"), List.of(
+                report(start, List.of("customEvent:ft_source", "eventName"), List.of("eventCount"), 50, "eventCount",
+                        List.of("sign_up", "face_scan", "hair_swap", "purchase"))));
+        return out;
+    }
+
+    private void runGroup(Map<String, List<Row>> out, List<String> names, List<Map<String, Object>> requests) {
+        try {
+            JsonNode resp = post("https://analyticsdata.googleapis.com/v1beta/properties/" + propertyId + ":batchRunReports",
+                    Map.of("requests", requests));
+            for (int i = 0; i < names.size(); i++) {
+                out.put(names.get(i), parse(resp.path("reports").get(i)));
+            }
+        } catch (Exception e) {
+            log.warn("Nhóm báo cáo GA4 {} bị bỏ qua: {}", names, shorten(e.getMessage()));
+            names.forEach(n -> out.put(n, List.of()));
+        }
     }
 
     /** Gộp các dòng nguồn truy cập theo nền tảng MXH (Facebook, TikTok, Zalo...). */
@@ -254,7 +300,7 @@ public class GaReportService {
 
     private GaSnapshot empty(int days, boolean configured, String error) {
         return new GaSnapshot(configured, error, days, Map.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
-                LocalDateTime.now());
+                Map.of(), LocalDateTime.now());
     }
 
     private static String shorten(String s) {

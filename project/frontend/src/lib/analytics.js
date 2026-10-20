@@ -21,7 +21,7 @@ function detectSocialApp() {
 /** Phân loại referrer thành tên nền tảng MXH (nếu có). */
 function socialFromReferrer(ref) {
   if (!ref) return "";
-  let host = "";
+  let host;
   try {
     host = new URL(ref).hostname;
   } catch {

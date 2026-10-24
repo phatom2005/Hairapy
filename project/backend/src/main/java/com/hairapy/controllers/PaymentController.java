@@ -78,6 +78,29 @@ public class PaymentController {
     }
 
     /**
+     * Lịch sử thanh toán của chính user đang đăng nhập (mới nhất trước).
+     * Endpoint: GET /api/payments/my?page=0&size=10
+     */
+    @GetMapping("/my")
+    public ResponseEntity<?> getMyPayments(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        User currentUser = usageService.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                    "error", "Yêu cầu không hợp lệ. Vui lòng đăng nhập."
+            ));
+        }
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+                Math.max(page, 0), Math.min(Math.max(size, 1), 50),
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
+        return ResponseEntity.ok(paymentRepository.findByUserId(currentUser.getId(), pageable)
+                .map(p -> new com.hairapy.dto.MyPaymentResponse(
+                        p.getOrderCode(), p.getPlan().name(), p.getAmount(), p.getStatus().name(),
+                        p.getCreatedAt(), p.getPaidAt())));
+    }
+
+    /**
      * API lấy trạng thái hóa đơn thanh toán để cập nhật UI realtime (yêu cầu Auth).
      * Endpoint: GET /api/payments/status/{orderCode}
      */

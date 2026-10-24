@@ -52,11 +52,21 @@ class AuthControllerTest {
     @org.springframework.boot.test.mock.mockito.MockBean
     private com.hairapy.services.EmailService emailService;
 
+    @Autowired
+    private com.hairapy.repositories.SubscriptionRepository subscriptionRepository;
+
     @BeforeEach
     void setUp() {
-        // Dọn dẹp database trước mỗi test case (token xác minh trước vì có FK tới users)
+        // Dọn dẹp database trước mỗi test case (token xác minh + subscription trước vì có FK tới users)
         emailVerificationTokenRepository.deleteAll();
+        subscriptionRepository.deleteAll();
         userRepository.deleteAll();
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void tearDown() {
+        // Không để lại subscription làm hỏng deleteAll(users) của các test class khác
+        subscriptionRepository.deleteAll();
     }
 
     /** Tạo user đã xác minh email rồi đăng nhập để lấy JWT thật. */
@@ -193,6 +203,40 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.email").value("test@example.com"))
                 .andExpect(jsonPath("$.role").value("USER"))
                 .andExpect(jsonPath("$.fullName").value("Nguyễn Anh"));
+    }
+
+    @Test
+    void getCurrentUser_NoSubscription_ReturnsFreePlan() throws Exception {
+        String token = createVerifiedUserAndLogin("test@example.com", "password123", "Nguyễn Anh");
+
+        mockMvc.perform(get("/api/auth/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.plan").value("FREE"))
+                .andExpect(jsonPath("$.planEndDate").doesNotExist())
+                .andExpect(jsonPath("$.provider").value("LOCAL"))
+                .andExpect(jsonPath("$.hasPassword").value(true));
+    }
+
+    @Test
+    void getCurrentUser_ActivePremium_ReturnsPlanAndEndDate() throws Exception {
+        String token = createVerifiedUserAndLogin("test@example.com", "password123", "Nguyễn Anh");
+        User user = userRepository.findByEmail("test@example.com").orElseThrow();
+        java.time.LocalDateTime end = java.time.LocalDateTime.now().plusDays(20).withNano(0);
+        subscriptionRepository.save(com.hairapy.models.Subscription.builder()
+                .user(user)
+                .plan(com.hairapy.models.SubscriptionPlan.PREMIUM)
+                .status(com.hairapy.models.SubscriptionStatus.ACTIVE)
+                .startDate(java.time.LocalDateTime.now().minusDays(10))
+                .endDate(end)
+                .build());
+
+        mockMvc.perform(get("/api/auth/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("PREMIUM"))
+                .andExpect(jsonPath("$.plan").value("PREMIUM"))
+                .andExpect(jsonPath("$.planEndDate").value(end.toString()));
     }
 
     @Test

@@ -129,9 +129,29 @@ public class AuthService {
         user.setDateOfBirth(request.dateOfBirth());
         userRepository.save(user);
 
+        return buildMe(user);
+    }
+
+    /**
+     * Dựng UserMeResponse dùng chung cho GET /auth/me và PUT /auth/me.
+     * Admin/Tester được coi như hưởng quyền cao nhất (plan=PREMIUM, không có ngày hết hạn).
+     */
+    public com.hairapy.dto.auth.UserMeResponse buildMe(User user) {
         String effectiveRole = resolveEffectiveRole(user);
+        String plan;
+        java.time.LocalDateTime planEndDate = null;
+        if (user.getRole() == Role.ADMIN || user.getRole() == Role.TESTER) {
+            plan = "PREMIUM";
+        } else {
+            var sub = subscriptionService.getActivePaidSubscription(user.getId());
+            plan = sub.map(s -> s.getPlan().name()).orElse("FREE");
+            planEndDate = sub.map(com.hairapy.models.Subscription::getEndDate).orElse(null);
+        }
         return new com.hairapy.dto.auth.UserMeResponse(
-                user.getEmail(), effectiveRole, user.getFullName(), user.getPhone(), user.getDateOfBirth());
+                user.getEmail(), effectiveRole, user.getFullName(), user.getPhone(), user.getDateOfBirth(),
+                plan, planEndDate,
+                user.getProvider() == null ? "LOCAL" : user.getProvider().name(),
+                user.getPasswordHash() != null);
     }
 
     /**

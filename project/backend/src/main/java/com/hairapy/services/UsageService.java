@@ -63,10 +63,8 @@ public class UsageService {
         } else if ("FACE_SCAN".equals(feature)) {
             return 5;
         } else if ("AI_STYLIST".equals(feature)) {
-            // AI Stylist chi danh Premium (xem PremiumRequiredException o
-            // AiStylistController) -- Free luon bi chan truoc khi toi day,
-            // nhung van tra ve 0 cho ro rang neu co goi nham.
-            return plan.isPaid() ? 5 : 0;
+            // AI Stylist chỉ dành riêng cho Gói Tháng (PREMIUM)
+            return plan == SubscriptionPlan.PREMIUM ? 5 : 0;
         }
         return Integer.MAX_VALUE;
     }
@@ -156,13 +154,16 @@ public class UsageService {
 
         long faceScanUsed = usageHistoryRepository.countTodayUsage(user.getId(), "FACE_SCAN", startOfDay);
         long hairSwapUsed = usageHistoryRepository.countTodayUsage(user.getId(), "HAIR_SWAP", startOfDay);
+        long aiStylistUsed = usageHistoryRepository.countTodayUsage(user.getId(), "AI_STYLIST", startOfDay);
 
         int faceScanLimit = unlimited ? Integer.MAX_VALUE : getDailyLimit("FACE_SCAN", plan);
         int hairSwapLimit = unlimited ? Integer.MAX_VALUE : getDailyLimit("HAIR_SWAP", plan);
+        int aiStylistLimit = unlimited ? Integer.MAX_VALUE : getDailyLimit("AI_STYLIST", plan);
 
         return new UsageSummaryResponse(
                 new UsageSummaryResponse.FeatureUsage(faceScanUsed, faceScanLimit, unlimited),
-                new UsageSummaryResponse.FeatureUsage(hairSwapUsed, hairSwapLimit, unlimited)
+                new UsageSummaryResponse.FeatureUsage(hairSwapUsed, hairSwapLimit, unlimited),
+                new UsageSummaryResponse.FeatureUsage(aiStylistUsed, aiStylistLimit, unlimited)
         );
     }
 }

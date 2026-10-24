@@ -6,6 +6,7 @@ import com.hairapy.exceptions.AiTimeoutException;
 import com.hairapy.exceptions.PremiumRequiredException;
 import com.hairapy.exceptions.QuotaExceededException;
 import com.hairapy.models.HairstyleCatalog;
+import com.hairapy.models.SubscriptionPlan;
 import com.hairapy.models.User;
 import com.hairapy.repositories.HairstyleCatalogRepository;
 import com.hairapy.services.AiStylistService;
@@ -54,12 +55,13 @@ public class AiStylistController {
 
         com.hairapy.models.UsageHistory reservation = null;
         try {
-            // 0. Chan Free/Guest ngay tu dau -- AI Stylist la quyen loi rieng cua
-            // Premium, khong phai chi la "gioi han thap hon" nhu Face Scan/Hair Swap.
-            boolean isPaidUser = subscriptionService.isPaidUser(currentUser.getId());
-            if (!isPaidUser) {
+            // 0. AI Stylist chỉ cho Gói Tháng (PREMIUM) — Admin/Tester bypass
+            boolean bypass = currentUser.getRole() == com.hairapy.models.Role.ADMIN
+                    || currentUser.getRole() == com.hairapy.models.Role.TESTER;
+            SubscriptionPlan plan = subscriptionService.getEffectivePlan(currentUser.getId());
+            if (!bypass && plan != SubscriptionPlan.PREMIUM) {
                 throw new PremiumRequiredException(
-                        "AI Stylist là tính năng dành riêng cho gói Premium. Nâng cấp để được tư vấn 1:1 cùng AI!");
+                        "AI Stylist là quyền lợi của Gói Tháng. Nâng cấp để được tư vấn cùng AI!");
             }
 
             // 1. Kiem tra + ghi nhan luot dung ngay (atomic) -- tai su dung dung

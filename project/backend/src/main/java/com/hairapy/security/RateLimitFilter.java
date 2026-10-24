@@ -33,12 +33,49 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private boolean enabled;
 
     @Value("${app.ratelimit.login.capacity:30}")
-    private int capacity;
+    private int loginCapacity;
 
     @Value("${app.ratelimit.login.refill-minutes:1}")
-    private int refillMinutes;
+    private int loginRefillMinutes;
+
+    @Value("${app.ratelimit.register.capacity:10}")
+    private int registerCapacity;
+
+    @Value("${app.ratelimit.register.refill-minutes:10}")
+    private int registerRefillMinutes;
+
+    @Value("${app.ratelimit.forgot.capacity:5}")
+    private int forgotCapacity;
+
+    @Value("${app.ratelimit.forgot.refill-minutes:10}")
+    private int forgotRefillMinutes;
+
+    @Value("${app.ratelimit.resend.capacity:5}")
+    private int resendCapacity;
+
+    @Value("${app.ratelimit.resend.refill-minutes:10}")
+    private int resendRefillMinutes;
+
+    @Value("${app.ratelimit.payment.capacity:10}")
+    private int paymentCapacity;
+
+    @Value("${app.ratelimit.payment.refill-minutes:10}")
+    private int paymentRefillMinutes;
 
     private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
+
+    private record RouteLimit(int capacity, int refillMinutes, String errorMessage) {}
+
+    private RouteLimit getRouteLimit(String path) {
+        return switch (path) {
+            case "/api/auth/login" -> new RouteLimit(loginCapacity, loginRefillMinutes, "Quá nhiều lần thử đăng nhập, vui lòng đợi 1 phút.");
+            case "/api/auth/register" -> new RouteLimit(registerCapacity, registerRefillMinutes, "Bạn đã đăng ký quá nhiều lần, vui lòng thử lại sau ít phút.");
+            case "/api/auth/forgot-password" -> new RouteLimit(forgotCapacity, forgotRefillMinutes, "Bạn đã yêu cầu đặt lại mật khẩu quá nhiều lần, vui lòng thử lại sau ít phút.");
+            case "/api/auth/resend-verification" -> new RouteLimit(resendCapacity, resendRefillMinutes, "Bạn đã yêu cầu gửi mã xác minh quá nhiều lần, vui lòng thử lại sau ít phút.");
+            case "/api/payments/create" -> new RouteLimit(paymentCapacity, paymentRefillMinutes, "Bạn tạo giao dịch quá nhanh, vui lòng thử lại sau ít phút.");
+            default -> null;
+        };
+    }
 
     @Override
     protected void doFilterInternal(
@@ -47,26 +84,31 @@ public class RateLimitFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
-        boolean isLoginRequest = "POST".equalsIgnoreCase(request.getMethod())
-                && "/api/auth/login".equals(request.getRequestURI());
+        if (!enabled || !"POST".equalsIgnoreCase(request.getMethod())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
-        if (!enabled || !isLoginRequest) {
+        String path = request.getRequestURI();
+        RouteLimit limit = getRouteLimit(path);
+        if (limit == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
         String clientIp = resolveClientIp(request);
-        Bucket bucket = buckets.computeIfAbsent(clientIp, ip -> Bucket.builder()
-                .addLimit(Bandwidth.classic(capacity, Refill.intervally(capacity, Duration.ofMinutes(refillMinutes))))
+        String bucketKey = path + "|" + clientIp;
+        Bucket bucket = buckets.computeIfAbsent(bucketKey, k -> Bucket.builder()
+                .addLimit(Bandwidth.classic(limit.capacity(), Refill.intervally(limit.capacity(), Duration.ofMinutes(limit.refillMinutes()))))
                 .build());
 
         if (bucket.tryConsume(1)) {
             filterChain.doFilter(request, response);
         } else {
-            log.warn("Rate limit chặn login từ IP: {}", clientIp);
+            log.warn("Rate limit chặn request {} từ IP: {}", path, clientIp);
             response.setStatus(429);
             response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"error\":\"Quá nhiều lần thử đăng nhập, vui lòng đợi 1 phút.\"}");
+            response.getWriter().write(String.format("{\"error\":\"%s\"}", limit.errorMessage()));
         }
     }
 

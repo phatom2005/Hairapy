@@ -3,7 +3,7 @@ package com.hairapy.controllers;
 import com.hairapy.exceptions.AiTimeoutException;
 import com.hairapy.exceptions.QuotaExceededException;
 import com.hairapy.exceptions.PremiumRequiredException;
-import com.hairapy.dto.HairSwapPollResult;
+import com.hairapy.services.HairSwapFinalizer;
 import com.hairapy.models.User;
 import com.hairapy.services.HairSwapService;
 import com.hairapy.services.SwapHistoryService;
@@ -44,11 +44,13 @@ public class HairSwapController {
     private final SubscriptionService subscriptionService;
     private final HairstyleCatalogRepository hairstyleCatalogRepository;
     private final SwapHistoryService swapHistoryService;
+    private final HairSwapFinalizer hairSwapFinalizer;
 
     // Trần thời gian chờ tối đa cho 1 task (tính từ lúc submit) — xấp xỉ ceiling cũ
     // (MAX_POLL_ATTEMPTS=12 * POLL_INTERVAL_MS=5000 = 60s ở bản blocking cũ), nới thêm
     // buffer vì giờ có thêm độ trễ round-trip giữa các lần FE gọi status.
-    private static final Duration TASK_TIMEOUT = Duration.ofSeconds(75);
+    // Public để HairSwapTaskCleanupScheduler dùng chung (chốt sổ task bị bỏ dở).
+    public static final Duration TASK_TIMEOUT = Duration.ofSeconds(75);
 
     /**
      * API bắt đầu 1 lượt ghép kiểu tóc mới (Pro API — hair-only). Trả về NGAY taskId,
@@ -192,47 +194,18 @@ public class HairSwapController {
 
         // Task vẫn PENDING — kiểm tra đã quá hạn timeout tổng thể chưa (trước khi tốn thêm 1 lần gọi AILab)
         if (Duration.between(task.getCreatedAt(), Instant.now()).compareTo(TASK_TIMEOUT) > 0) {
-            task.markError("AI xử lý quá lâu, lượt của bạn đã được hoàn lại.");
-            refundIfNeeded(task);
+            hairSwapFinalizer.failAndRefund(task, "AI xử lý quá lâu, lượt của bạn đã được hoàn lại.");
             log.warn("Task hair-swap timeout: taskId={}, userId={}", taskId, currentUser.getEmail());
             return ResponseEntity.ok(Map.of("status", "ERROR", "error", task.getErrorMessage(), "refunded", true));
         }
 
-        // Còn trong hạn — thực hiện ĐÚNG 1 lần check với AILab
-        HairSwapPollResult result = hairSwapService.checkStatus(taskId);
-
-        switch (result.status()) {
-            case DONE -> {
-                // Chống double-upload Cloudinary nếu 2 request poll trùng thời điểm (vd 2 tab)
-                if (task.tryMarkUploaded()) {
-                    String cloudinaryUrl = hairSwapService.uploadResult(result.imageUrl(), task.isPaidUser());
-                    task.markDone(cloudinaryUrl);
-                    // Lưu vào lịch sử thử tóc (lỗi lưu chỉ ghi log, không ảnh hưởng kết quả trả cho user)
-                    swapHistoryService.record(task.getUserId(), task.getHairstyleId(), task.getHairstyleName(), cloudinaryUrl);
-                    return ResponseEntity.ok(Map.of("status", "DONE", "image", cloudinaryUrl));
-                } else {
-                    // Một request khác đang/đã upload — trả PENDING, lần poll kế tiếp sẽ thấy DONE đã cache
-                    return ResponseEntity.ok(Map.of("status", "PENDING"));
-                }
-            }
-            case ERROR -> {
-                task.markError(result.errorMessage());
-                refundIfNeeded(task);
-                return ResponseEntity.ok(Map.of("status", "ERROR", "error", result.errorMessage(), "refunded", true));
-            }
-            default -> {
-                return ResponseEntity.ok(Map.of("status", "PENDING"));
-            }
-        }
-    }
-
-    /**
-     * Hoàn lượt đúng 1 lần cho task (dùng AtomicBoolean guard trong HairSwapTask để
-     * chống hoàn lượt 2 lần nếu 2 request poll trùng thời điểm cùng phát hiện lỗi/timeout).
-     */
-    private void refundIfNeeded(HairSwapTask task) {
-        if (task.tryMarkRefunded()) {
-            usageService.releaseUsage(task.getReservation());
-        }
+        // Còn trong hạn — thực hiện ĐÚNG 1 lần check với AILab (logic DONE/ERROR/refund nằm trong HairSwapFinalizer)
+        HairSwapTask.Status after = hairSwapFinalizer.pollOnce(task);
+        return switch (after) {
+            case DONE -> ResponseEntity.ok(Map.of("status", "DONE", "image", task.getResultImageUrl()));
+            case ERROR -> ResponseEntity.ok(Map.of("status", "ERROR", "error", task.getErrorMessage(), "refunded", true));
+            // PENDING (kể cả khi luồng khác đang upload): lần poll kế tiếp sẽ thấy DONE đã cache
+            default -> ResponseEntity.ok(Map.of("status", "PENDING"));
+        };
     }
 }

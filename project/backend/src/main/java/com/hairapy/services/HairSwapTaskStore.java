@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -37,6 +38,14 @@ public class HairSwapTaskStore {
         int before = tasks.size();
         tasks.entrySet().removeIf(e -> e.getValue().getCreatedAt().isBefore(cutoff));
         return before - tasks.size();
+    }
+
+    /** Danh sách task còn PENDING đã quá maxAge (để scheduler chốt sổ trước khi xoá). */
+    public List<HairSwapTask> findStalePending(Duration maxAge) {
+        Instant cutoff = Instant.now().minus(maxAge);
+        return tasks.values().stream()
+                .filter(t -> t.getStatus() == HairSwapTask.Status.PENDING && t.getCreatedAt().isBefore(cutoff))
+                .toList();
     }
 
     public int size() {

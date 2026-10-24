@@ -24,12 +24,21 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
+import com.hairapy.dto.admin.MarkPaidRequest;
+import com.hairapy.exceptions.ResourceNotFoundException;
+import com.hairapy.services.PaymentService;
+import jakarta.validation.Valid;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,6 +54,7 @@ import java.util.Map;
 public class AdminPaymentController {
 
     private final PaymentRepository paymentRepository;
+    private final PaymentService paymentService;
     private final EntityManager entityManager;
 
     /**
@@ -101,22 +111,53 @@ public class AdminPaymentController {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size), Sort.by(Sort.Direction.DESC, "createdAt"));
 
         Page<Payment> paymentPage = paymentRepository.findAll(spec, pageable);
-        Page<AdminPaymentResponse> responsePage = paymentPage.map(p -> new AdminPaymentResponse(
-                p.getId(),
-                p.getOrderCode(),
-                p.getUser() != null ? p.getUser().getId() : null,
-                p.getUser() != null ? p.getUser().getEmail() : null,
-                p.getUser() != null ? p.getUser().getFullName() : null,
-                p.getPlan(),
-                p.getAmount(),
-                p.getStatus(),
-                p.getPayosTransactionId(),
-                p.getCreatedAt(),
-                p.getPaidAt(),
-                p.isSubscriptionGranted()
-        ));
+        Page<AdminPaymentResponse> responsePage = paymentPage.map(this::toResponse);
 
         return ResponseEntity.ok(responsePage);
+    }
+
+    /**
+     * Đối soát thủ công giao dịch với PayOS.
+     */
+    @PostMapping("/{id}/reconcile")
+    @Transactional
+    public ResponseEntity<AdminPaymentResponse> reconcile(@PathVariable Long id) throws Exception {
+        Payment payment = paymentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giao dịch thanh toán với id: " + id));
+        Payment synced = paymentService.syncWithPayos(payment);
+        return ResponseEntity.ok(toResponse(synced));
+    }
+
+    /**
+     * Xác nhận thanh toán thủ công cho giao dịch PENDING hoặc CANCELLED (kèm ghi chú đối soát).
+     */
+    @PostMapping("/{id}/mark-paid")
+    @Transactional
+    public ResponseEntity<AdminPaymentResponse> markPaid(
+            @PathVariable Long id,
+            @Valid @RequestBody MarkPaidRequest request) {
+        Payment payment = paymentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giao dịch thanh toán với id: " + id));
+        if (payment.getStatus() == PaymentStatus.PAID) {
+            throw new IllegalArgumentException("Giao dịch này đã ở trạng thái PAID");
+        }
+        payment.setStatus(PaymentStatus.PAID);
+        payment.setPaidAt(LocalDateTime.now());
+        if (payment.getPayosTransactionId() == null) {
+            payment.setPayosTransactionId("MANUAL");
+        }
+        paymentRepository.save(payment);
+        paymentService.grantSubscriptionIfNeeded(payment);
+
+        String adminEmail = SecurityContextHolder.getContext().getAuthentication() != null
+                ? SecurityContextHolder.getContext().getAuthentication().getName()
+                : "unknown";
+        log.info("Admin {} đánh dấu PAID cho payment id={}, orderCode={}, user={}, note: {}",
+                adminEmail, id, payment.getOrderCode(),
+                payment.getUser() != null ? payment.getUser().getEmail() : "?",
+                request.note());
+
+        return ResponseEntity.ok(toResponse(payment));
     }
 
     /**
@@ -221,5 +262,22 @@ public class AdminPaymentController {
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    private AdminPaymentResponse toResponse(Payment p) {
+        return new AdminPaymentResponse(
+                p.getId(),
+                p.getOrderCode(),
+                p.getUser() != null ? p.getUser().getId() : null,
+                p.getUser() != null ? p.getUser().getEmail() : null,
+                p.getUser() != null ? p.getUser().getFullName() : null,
+                p.getPlan(),
+                p.getAmount(),
+                p.getStatus(),
+                p.getPayosTransactionId(),
+                p.getCreatedAt(),
+                p.getPaidAt(),
+                p.isSubscriptionGranted()
+        );
     }
 }

@@ -20,6 +20,12 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 
+import com.hairapy.repositories.SubscriptionRepository;
+import org.springframework.http.MediaType;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -37,6 +43,9 @@ class AdminPaymentControllerTest {
     private PaymentRepository paymentRepository;
 
     @Autowired
+    private SubscriptionRepository subscriptionRepository;
+
+    @Autowired
     private FeedbackRepository feedbackRepository;
 
     @Autowired
@@ -47,6 +56,7 @@ class AdminPaymentControllerTest {
     @BeforeEach
     void setUp() {
         feedbackRepository.deleteAll();
+        subscriptionRepository.deleteAll();
         paymentRepository.deleteAll();
         userRepository.deleteAll();
 
@@ -77,6 +87,7 @@ class AdminPaymentControllerTest {
 
     @AfterEach
     void tearDown() {
+        subscriptionRepository.deleteAll();
         paymentRepository.deleteAll();
         feedbackRepository.deleteAll();
         userRepository.deleteAll();
@@ -126,5 +137,27 @@ class AdminPaymentControllerTest {
                 .andExpect(jsonPath("$.paidCount").value(1))
                 .andExpect(jsonPath("$.pendingCount").value(1))
                 .andExpect(jsonPath("$.cancelledCount").value(0));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void markPaid_PendingPayment_SuccessAndGrantsSubscription() throws Exception {
+        Payment pending = paymentRepository.findByOrderCode(2002L).orElseThrow();
+
+        mockMvc.perform(post("/api/admin/payments/" + pending.getId() + "/mark-paid")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"note\": \"Khách chuyển khoản trực tiếp VietQR\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PAID"))
+                .andExpect(jsonPath("$.subscriptionGranted").value(true));
+
+        Payment updated = paymentRepository.findById(pending.getId()).orElseThrow();
+        assertEquals(PaymentStatus.PAID, updated.getStatus());
+        assertTrue(updated.isSubscriptionGranted());
+
+        // Kiểm tra subscription đã được cấp đúng 1 bản ghi
+        var subs = subscriptionRepository.findByUserId(testUser.getId());
+        assertEquals(1, subs.size());
+        assertEquals(SubscriptionPlan.PRO, subs.get(0).getPlan());
     }
 }

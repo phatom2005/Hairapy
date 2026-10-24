@@ -23,6 +23,17 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     // Tìm danh sách subscription theo userId
     List<Subscription> findByUserId(Long userId);
 
+    // Tìm theo email/họ tên user (kw đã lower-case và bọc %...%); kết hợp được với status
+    @org.springframework.data.jpa.repository.Query("SELECT s FROM Subscription s JOIN s.user u WHERE "
+            + "LOWER(u.email) LIKE :kw OR LOWER(COALESCE(u.fullName, '')) LIKE :kw")
+    Page<Subscription> searchByKeyword(@org.springframework.data.repository.query.Param("kw") String kw, Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Query("SELECT s FROM Subscription s JOIN s.user u WHERE s.status = :status AND "
+            + "(LOWER(u.email) LIKE :kw OR LOWER(COALESCE(u.fullName, '')) LIKE :kw)")
+    Page<Subscription> searchByKeywordAndStatus(@org.springframework.data.repository.query.Param("kw") String kw,
+                                                @org.springframework.data.repository.query.Param("status") SubscriptionStatus status,
+                                                Pageable pageable);
+
     // Tìm subscription theo userId và trạng thái
     Optional<Subscription> findByUserIdAndStatus(Long userId, SubscriptionStatus status);
 

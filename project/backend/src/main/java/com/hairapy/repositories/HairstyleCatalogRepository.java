@@ -24,4 +24,9 @@ public interface HairstyleCatalogRepository extends JpaRepository<HairstyleCatal
     List<HairstyleCatalog> findByFaceShape(String faceShape);
 
     List<HairstyleCatalog> findByFaceShapeAndPremiumOnlyFalse(String faceShape);
+
+    List<HairstyleCatalog> findByBaseStyleId(Long baseStyleId);
+
+    @Query("SELECT h FROM HairstyleCatalog h WHERE h.ailabProStyle = :style AND ((:color IS NULL AND h.ailabColor IS NULL) OR h.ailabColor = :color)")
+    java.util.Optional<HairstyleCatalog> findByStyleAndColor(@Param("style") String style, @Param("color") String color);
 }

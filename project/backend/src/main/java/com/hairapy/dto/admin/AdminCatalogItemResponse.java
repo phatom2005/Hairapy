@@ -16,5 +16,8 @@ public record AdminCatalogItemResponse(
     String ailabProStyle,
     boolean active,
     long savedCount,
+    boolean sampleByAi,
+    String ailabColor,
+    Long baseStyleId,
     LocalDateTime createdAt
 ) {}

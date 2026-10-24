@@ -57,6 +57,7 @@ public class HairstyleCatalogController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String gender,
             @RequestParam(required = false) String sort,
+            @RequestParam(required = false) String color,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         // Chuẩn hóa gender để tránh lỗi font/mojibake giữa FE và BE (ví dụ Nữ -> NÃ¹ hay nu)
@@ -130,6 +131,13 @@ public class HairstyleCatalogController {
                 .filter(h -> finalGender == null
                         || "Unisex".equalsIgnoreCase(h.getGender())
                         || finalGender.equalsIgnoreCase(h.getGender()))
+                .filter(h -> {
+                    if (color == null || color.isBlank()) return true;
+                    if ("original".equalsIgnoreCase(color.trim())) {
+                        return h.getAilabColor() == null || h.getAilabColor().isBlank();
+                    }
+                    return color.trim().equalsIgnoreCase(h.getAilabColor());
+                })
                 .toList();
 
         if ("popular".equalsIgnoreCase(sort)) {

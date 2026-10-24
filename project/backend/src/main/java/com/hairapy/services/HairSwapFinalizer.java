@@ -39,7 +39,8 @@ public class HairSwapFinalizer {
                     } catch (Exception e) {
                         // Upload lỗi: bản cũ để task kẹt PENDING và mất lượt → giờ hoàn lượt luôn
                         log.error("Lỗi lưu ảnh kết quả hair-swap taskId={}", task.getTaskId(), e);
-                        failAndRefund(task, "Không thể lưu ảnh kết quả. Lượt của bạn đã được hoàn lại.");
+                        // Luồng này đang giữ quyền upload nên bỏ qua kiểm tra isUploading()
+                        forceFailAndRefund(task, "Không thể lưu ảnh kết quả. Lượt của bạn đã được hoàn lại.");
                     }
                 }
             }
@@ -49,8 +50,20 @@ public class HairSwapFinalizer {
         return task.getStatus();
     }
 
-    /** Đánh lỗi + hoàn lượt đúng 1 lần (dùng AtomicBoolean trong task). */
+    /**
+     * Đánh lỗi + hoàn lượt đúng 1 lần (dùng AtomicBoolean trong task).
+     * Bỏ qua nếu task đã DONE hoặc đang được luồng khác upload ảnh kết quả — tránh trường hợp
+     * scheduler/poll khác thấy quá 75s đúng lúc đang upload → vừa hoàn lượt vừa trả ảnh cho khách.
+     */
     public void failAndRefund(HairSwapTask task, String message) {
+        if (task.isUploading()) {
+            return; // luồng đang upload sẽ tự markDone (hoặc tự hoàn lượt nếu upload lỗi)
+        }
+        forceFailAndRefund(task, message);
+    }
+
+    /** Như failAndRefund nhưng không kiểm tra isUploading() — chỉ dùng cho chính luồng đang upload khi upload lỗi. */
+    private void forceFailAndRefund(HairSwapTask task, String message) {
         if (task.getStatus() == HairSwapTask.Status.DONE) {
             return; // đã có kết quả thì không đè lỗi / không hoàn lượt
         }

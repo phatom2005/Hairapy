@@ -29,6 +29,9 @@ public interface PaymentRepository extends JpaRepository<Payment, Long>, JpaSpec
     // Đếm số lượng hóa đơn theo trạng thái thanh toán
     long countByStatus(PaymentStatus status);
 
+    // Đơn theo trạng thái tạo trước mốc before (scheduler tự huỷ đơn PENDING treo quá 24h)
+    List<Payment> findByStatusAndCreatedAtBefore(PaymentStatus status, LocalDateTime before);
+
     // 1. Tổng doanh thu mọi thời gian (VND, chỉ tính PAID)
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.status = com.hairapy.models.PaymentStatus.PAID")
     long sumPaidAmount();

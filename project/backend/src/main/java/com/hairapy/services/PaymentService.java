@@ -47,12 +47,19 @@ public class PaymentService {
     @Value("${app.frontend.url}")
     private String frontendUrl;
 
+    private final SubscriptionService subscriptionService;
+    private final AlertService alertService;
+
     public PaymentService(PaymentRepository paymentRepository,
                           SubscriptionRepository subscriptionRepository,
+                          SubscriptionService subscriptionService,
+                          AlertService alertService,
                           ObjectMapper objectMapper,
                           org.springframework.boot.web.client.RestTemplateBuilder restTemplateBuilder) {
         this.paymentRepository = paymentRepository;
         this.subscriptionRepository = subscriptionRepository;
+        this.subscriptionService = subscriptionService;
+        this.alertService = alertService;
         this.objectMapper = objectMapper;
         this.restTemplate = restTemplateBuilder
                 .connectTimeout(java.time.Duration.ofSeconds(10))
@@ -74,6 +81,13 @@ public class PaymentService {
             amount = 99000; // Gói tháng 99,000 VNĐ
         } else {
             throw new IllegalArgumentException("Gói dịch vụ không hợp lệ");
+        }
+
+        // Đang hưởng Gói Tháng (PREMIUM) còn hạn mà mua Gói Tuần (PRO) → chặn, tránh tụt quyền lợi ngay lập tức
+        // (grantSubscriptionIfNeeded thay gói cũ bằng gói mới). Mua gói cao hơn / cùng gói = nâng cấp / gia hạn.
+        if (plan == SubscriptionPlan.PRO
+                && subscriptionService.getEffectivePlan(user.getId()) == SubscriptionPlan.PREMIUM) {
+            throw new IllegalArgumentException("Bạn đang dùng Gói Tháng. Hãy gia hạn Gói Tháng để giữ nguyên quyền lợi.");
         }
 
         // PayOS giới hạn orderCode tối đa 15 chữ số
@@ -195,6 +209,17 @@ public class PaymentService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Không tìm thấy giao dịch thanh toán với orderCode: " + orderCode));
 
+        // Giao dịch đã PAID: webhook lặp / PayOS gửi lại → chỉ đảm bảo đã cấp gói (idempotent), KHÔNG ghi đè trạng thái.
+        // (Trước đây webhook code != "00" đến muộn có thể đổi PAID -> CANCELLED.)
+        if (payment.getStatus() == PaymentStatus.PAID) {
+            if ("00".equals(code)) {
+                grantSubscriptionIfNeeded(payment);
+            } else {
+                log.warn("Bỏ qua webhook code={} cho giao dịch đã PAID: orderCode={}", code, orderCode);
+            }
+            return;
+        }
+
         if ("00".equals(code)) {
             // Đối chiếu số tiền PayOS báo đã thu với số tiền ta tạo cho đơn này (chống nâng gói khi trả thiếu).
             // Lệch → KHÔNG cấp gói, để PENDING để admin kiểm tra tay; trả 200 để PayOS không gửi lại vô ích.
@@ -202,6 +227,7 @@ public class PaymentService {
             if (!(paidAmountObj instanceof Number paidAmount) || paidAmount.longValue() != payment.getAmount().longValue()) {
                 log.error("Webhook PayOS lệch số tiền, KHÔNG cấp gói: orderCode={}, expected={}, received={}",
                         orderCode, payment.getAmount(), paidAmountObj);
+                alertMismatch(payment, paidAmountObj);
                 return;
             }
 
@@ -213,10 +239,59 @@ public class PaymentService {
 
             grantSubscriptionIfNeeded(payment);
         } else {
-            payment.setStatus(PaymentStatus.CANCELLED);
-            paymentRepository.save(payment);
+            // Chỉ huỷ đơn đang PENDING (đơn đã CANCELLED thì giữ nguyên)
+            if (payment.getStatus() == PaymentStatus.PENDING) {
+                payment.setStatus(PaymentStatus.CANCELLED);
+                paymentRepository.save(payment);
+            }
             log.warn("Giao dịch thất bại/hủy: orderCode={}, code={}", orderCode, code);
         }
+    }
+
+    /**
+     * Đồng bộ trạng thái 1 giao dịch với PayOS (dùng chung cho FE poll và admin đối soát).
+     * Chỉ hỏi PayOS khi đơn chưa PAID. PayOS báo PAID mà đơn đang PENDING/CANCELLED (vd thanh toán muộn sau khi
+     * đơn bị tự huỷ) → chuyển PAID + cấp gói, giống nhánh webhook code "00".
+     *
+     * @return Payment sau khi cập nhật.
+     */
+    @Transactional
+    public Payment syncWithPayos(Payment payment) throws Exception {
+        Payment current = paymentRepository.findById(payment.getId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy giao dịch thanh toán với id: " + payment.getId()));
+        if (current.getStatus() == PaymentStatus.PAID) {
+            return current;
+        }
+
+        PayosInfo payosInfo = getPaymentInfo(current.getOrderCode());
+        String payosStatus = payosInfo.status();
+
+        if ("PAID".equals(payosStatus)) {
+            if (current.getAmount() == null || payosInfo.amountPaid() != current.getAmount().longValue()) {
+                // Số tiền PayOS ghi nhận lệch hóa đơn: KHÔNG cấp gói, chờ admin kiểm tra
+                log.error("PayOS lệch số tiền orderCode={}, hóa đơn={}, đã thanh toán={}. KHÔNG cấp gói.",
+                        current.getOrderCode(), current.getAmount(), payosInfo.amountPaid());
+                alertMismatch(current, payosInfo.amountPaid());
+            } else {
+                current.setStatus(PaymentStatus.PAID);
+                current.setPaidAt(LocalDateTime.now());
+                paymentRepository.save(current);
+                grantSubscriptionIfNeeded(current);
+            }
+        } else if ("CANCELLED".equals(payosStatus) && current.getStatus() == PaymentStatus.PENDING) {
+            current.setStatus(PaymentStatus.CANCELLED);
+            paymentRepository.save(current);
+        }
+        return current;
+    }
+
+    /** Cảnh báo admin (email, có cooldown) khi số tiền thu về lệch hóa đơn. */
+    private void alertMismatch(Payment payment, Object paid) {
+        // Key theo orderCode (yêu cầu nghiệp vụ): mỗi đơn lệch chỉ báo tối đa 1 mail/cooldown
+        alertService.alert("PAYMENT_MISMATCH_" + payment.getOrderCode(), "Giao dịch lệch số tiền",
+                "orderCode=" + payment.getOrderCode() + ", hóa đơn=" + payment.getAmount()
+                        + ", đã thu=" + paid + ", user=" + payment.getUser().getEmail());
     }
 
     /**

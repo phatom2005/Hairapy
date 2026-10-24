@@ -123,4 +123,27 @@ class HairSwapFinalizerTest {
         verify(swapHistoryService).record(7L, 3L, "Kiểu A", "c");
         verify(usageService, never()).releaseUsage(any());
     }
+
+    @Test
+    void failAndRefund_khiDangUpload_khongDanhLoiKhongHoanLuot() {
+        HairSwapTask task = newTask();
+        task.tryMarkUploaded(); // luồng khác đã giành quyền upload, chưa markDone
+
+        finalizer.failAndRefund(task, "AI xử lý quá lâu");
+
+        assertEquals(HairSwapTask.Status.PENDING, task.getStatus());
+        verify(usageService, never()).releaseUsage(any());
+    }
+
+    @Test
+    void uploadLoi_vanHoanLuotDungMotLan() {
+        when(hairSwapService.checkStatus("t1")).thenReturn(HairSwapPollResult.done("http://ailab/x.jpg"));
+        when(hairSwapService.uploadResult("http://ailab/x.jpg", false)).thenThrow(new RuntimeException("cloudinary down"));
+        HairSwapTask task = newTask();
+
+        assertEquals(HairSwapTask.Status.ERROR, finalizer.pollOnce(task));
+        finalizer.failAndRefund(task, "lần 2");
+
+        verify(usageService, times(1)).releaseUsage(reservation);
+    }
 }

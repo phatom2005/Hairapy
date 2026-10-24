@@ -70,6 +70,12 @@ public class HairSwapTask {
         return refunded.compareAndSet(false, true);
     }
 
+    /** true khi task đang được 1 luồng khác upload ảnh kết quả (không được đánh lỗi/hoàn lượt lúc này). */
+    public boolean isUploading() {
+        // Đã giành quyền upload (tryMarkUploaded) nhưng chưa markDone — đang lưu ảnh kết quả lên Cloudinary
+        return uploaded.get() && status == Status.PENDING;
+    }
+
     /** true nếu ĐÂY LÀ lần đầu gọi (dùng để quyết định có nên thực sự upload Cloudinary hay không). */
     public boolean tryMarkUploaded() {
         return uploaded.compareAndSet(false, true);

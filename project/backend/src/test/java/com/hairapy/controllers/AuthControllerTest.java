@@ -52,11 +52,29 @@ class AuthControllerTest {
     @org.springframework.boot.test.mock.mockito.MockBean
     private com.hairapy.services.EmailService emailService;
 
+    @Autowired
+    private com.hairapy.repositories.SubscriptionRepository subscriptionRepository;
+
+    @Autowired
+    private com.hairapy.repositories.PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @Autowired
+    private com.hairapy.security.JwtService jwtService;
+
     @BeforeEach
     void setUp() {
-        // Dọn dẹp database trước mỗi test case (token xác minh trước vì có FK tới users)
+        // Dọn dẹp database trước mỗi test case (token xác minh + subscription trước vì có FK tới users)
         emailVerificationTokenRepository.deleteAll();
+        passwordResetTokenRepository.deleteAll();
+        subscriptionRepository.deleteAll();
         userRepository.deleteAll();
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void tearDown() {
+        // Không để lại subscription làm hỏng deleteAll(users) của các test class khác
+        passwordResetTokenRepository.deleteAll();
+        subscriptionRepository.deleteAll();
     }
 
     /** Tạo user đã xác minh email rồi đăng nhập để lấy JWT thật. */
@@ -193,6 +211,40 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.email").value("test@example.com"))
                 .andExpect(jsonPath("$.role").value("USER"))
                 .andExpect(jsonPath("$.fullName").value("Nguyễn Anh"));
+    }
+
+    @Test
+    void getCurrentUser_NoSubscription_ReturnsFreePlan() throws Exception {
+        String token = createVerifiedUserAndLogin("test@example.com", "password123", "Nguyễn Anh");
+
+        mockMvc.perform(get("/api/auth/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.plan").value("FREE"))
+                .andExpect(jsonPath("$.planEndDate").doesNotExist())
+                .andExpect(jsonPath("$.provider").value("LOCAL"))
+                .andExpect(jsonPath("$.hasPassword").value(true));
+    }
+
+    @Test
+    void getCurrentUser_ActivePremium_ReturnsPlanAndEndDate() throws Exception {
+        String token = createVerifiedUserAndLogin("test@example.com", "password123", "Nguyễn Anh");
+        User user = userRepository.findByEmail("test@example.com").orElseThrow();
+        java.time.LocalDateTime end = java.time.LocalDateTime.now().plusDays(20).withNano(0);
+        subscriptionRepository.save(com.hairapy.models.Subscription.builder()
+                .user(user)
+                .plan(com.hairapy.models.SubscriptionPlan.PREMIUM)
+                .status(com.hairapy.models.SubscriptionStatus.ACTIVE)
+                .startDate(java.time.LocalDateTime.now().minusDays(10))
+                .endDate(end)
+                .build());
+
+        mockMvc.perform(get("/api/auth/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("PREMIUM"))
+                .andExpect(jsonPath("$.plan").value("PREMIUM"))
+                .andExpect(jsonPath("$.planEndDate").value(end.toString()));
     }
 
     @Test
@@ -412,4 +464,146 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(java.util.Map.of("token", oldToken))))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void resetPassword_SetsEmailVerifiedTrue_AndMarksAllTokensUsed() throws Exception {
+        User user = userRepository.save(User.builder()
+                .email("unverified@example.com")
+                .passwordHash(passwordEncoder.encode("oldPassword1"))
+                .role(Role.USER)
+                .fullName("Unverified User")
+                .emailVerified(false)
+                .build());
+
+        // Tạo 2 token reset mật khẩu cho user này
+        com.hairapy.models.PasswordResetToken t1 = passwordResetTokenRepository.save(
+                com.hairapy.models.PasswordResetToken.builder()
+                        .tokenHash(sha256Hex("token-old-123"))
+                        .user(user)
+                        .expiresAt(java.time.LocalDateTime.now().plusHours(1))
+                        .used(false)
+                        .build()
+        );
+        com.hairapy.models.PasswordResetToken t2 = passwordResetTokenRepository.save(
+                com.hairapy.models.PasswordResetToken.builder()
+                        .tokenHash(sha256Hex("token-active-456"))
+                        .user(user)
+                        .expiresAt(java.time.LocalDateTime.now().plusHours(1))
+                        .used(false)
+                        .build()
+        );
+
+        // Reset mật khẩu dùng token 2
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(java.util.Map.of(
+                                "token", "token-active-456",
+                                "newPassword", "brandNewPassword123",
+                                "confirmPassword", "brandNewPassword123"
+                        ))))
+                .andExpect(status().isOk());
+
+        // User phải được set emailVerified = true
+        User updated = userRepository.findByEmail("unverified@example.com").orElseThrow();
+        org.junit.jupiter.api.Assertions.assertTrue(updated.isEmailVerified());
+        org.junit.jupiter.api.Assertions.assertTrue(passwordEncoder.matches("brandNewPassword123", updated.getPasswordHash()));
+
+        // Cả 2 token đều phải bị đánh dấu used = true
+        var tokens = passwordResetTokenRepository.findAll();
+        for (var t : tokens) {
+            org.junit.jupiter.api.Assertions.assertTrue(t.isUsed(), "Token ID " + t.getId() + " should be marked used");
+        }
+    }
+
+    private String sha256Hex(String input) {
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] digest = md.digest(input.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(digest);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    void changePassword_Success_UpdatesPassword() throws Exception {
+        String token = createVerifiedUserAndLogin("change-pass@example.com", "currentPass123", "User Change Pass");
+
+        mockMvc.perform(put("/api/auth/me/password")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(java.util.Map.of(
+                                "currentPassword", "currentPass123",
+                                "newPassword", "newSuperPass123",
+                                "confirmPassword", "newSuperPass123"
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Đổi mật khẩu thành công."));
+
+        // Đăng nhập lại bằng mật khẩu mới thành công
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest("change-pass@example.com", "newSuperPass123"))))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void changePassword_WrongCurrentPassword_Returns400() throws Exception {
+        String token = createVerifiedUserAndLogin("wrong-curr@example.com", "currentPass123", "Wrong Curr");
+
+        mockMvc.perform(put("/api/auth/me/password")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(java.util.Map.of(
+                                "currentPassword", "incorrectPass123",
+                                "newPassword", "newSuperPass123",
+                                "confirmPassword", "newSuperPass123"
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Mật khẩu hiện tại không đúng."));
+    }
+
+    @Test
+    void changePassword_MismatchedConfirmPassword_Returns400() throws Exception {
+        String token = createVerifiedUserAndLogin("mismatch@example.com", "currentPass123", "Mismatch");
+
+        mockMvc.perform(put("/api/auth/me/password")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(java.util.Map.of(
+                                "currentPassword", "currentPass123",
+                                "newPassword", "newSuperPass123",
+                                "confirmPassword", "differentPass123"
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Mật khẩu xác nhận không khớp."));
+    }
+
+    @Test
+    void changePassword_OAuthUserWithoutPassword_CanSetNewPasswordWithoutCurrent() throws Exception {
+        User oauthUser = userRepository.save(User.builder()
+                .email("oauth-user@example.com")
+                .passwordHash(null)
+                .provider(com.hairapy.models.AuthProvider.GOOGLE)
+                .role(Role.USER)
+                .fullName("OAuth User")
+                .emailVerified(true)
+                .build());
+
+        String jwt = jwtService.generateToken(oauthUser);
+
+        mockMvc.perform(put("/api/auth/me/password")
+                        .header("Authorization", "Bearer " + jwt)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(java.util.Map.of(
+                                "newPassword", "createdPassword123",
+                                "confirmPassword", "createdPassword123"
+                        ))))
+                .andExpect(status().isOk());
+
+        User updated = userRepository.findByEmail("oauth-user@example.com").orElseThrow();
+        org.junit.jupiter.api.Assertions.assertNotNull(updated.getPasswordHash());
+        org.junit.jupiter.api.Assertions.assertTrue(passwordEncoder.matches("createdPassword123", updated.getPasswordHash()));
+    }
 }
+

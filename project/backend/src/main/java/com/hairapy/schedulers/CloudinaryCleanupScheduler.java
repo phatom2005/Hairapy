@@ -23,6 +23,7 @@ import java.time.Duration;
 public class CloudinaryCleanupScheduler {
 
     private static final String AI_RESULTS_PREFIX = "hairapy/ai-results/";
+    private static final String CATALOG_CANDIDATES_PREFIX = "hairapy/catalog-candidates/";
 
     private final CloudinaryService cloudinaryService;
 
@@ -36,4 +37,15 @@ public class CloudinaryCleanupScheduler {
         int deleted = cloudinaryService.deleteExpiredResources(AI_RESULTS_PREFIX, Duration.ofHours(24));
         log.info("Hoàn thành dọn ảnh AI hair-swap: đã xoá {} ảnh.", deleted);
     }
+
+    /**
+     * Dọn ảnh ứng viên catalog (hairapy/catalog-candidates/) quá 48h (ảnh không được duyệt chọn).
+     */
+    @Scheduled(cron = "0 30 * * * *")
+    public void cleanupExpiredCatalogCandidates() {
+        log.info("Bắt đầu dọn ảnh ứng viên catalog quá 48h...");
+        int deleted = cloudinaryService.deleteExpiredResources(CATALOG_CANDIDATES_PREFIX, Duration.ofHours(48));
+        log.info("Hoàn thành dọn ảnh ứng viên catalog: đã xoá {} ảnh.", deleted);
+    }
 }
+

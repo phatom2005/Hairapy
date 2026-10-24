@@ -49,6 +49,9 @@ public class PaymentController {
         try {
             String checkoutUrl = paymentService.createPaymentLink(currentUser, plan);
             return ResponseEntity.ok(Map.of("checkoutUrl", checkoutUrl));
+        } catch (IllegalArgumentException e) {
+            // Lỗi nghiệp vụ (vd đang Gói Tháng mà mua Gói Tuần) → 400 kèm lý do cho FE
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             log.error("Lỗi khi khởi tạo link thanh toán PayOS cho user {}: ", currentUser.getEmail(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
@@ -75,6 +78,29 @@ public class PaymentController {
                     "error", "Không thể xử lý webhook."
             ));
         }
+    }
+
+    /**
+     * Lịch sử thanh toán của chính user đang đăng nhập (mới nhất trước).
+     * Endpoint: GET /api/payments/my?page=0&size=10
+     */
+    @GetMapping("/my")
+    public ResponseEntity<?> getMyPayments(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        User currentUser = usageService.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                    "error", "Yêu cầu không hợp lệ. Vui lòng đăng nhập."
+            ));
+        }
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+                Math.max(page, 0), Math.min(Math.max(size, 1), 50),
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
+        return ResponseEntity.ok(paymentRepository.findByUserId(currentUser.getId(), pageable)
+                .map(p -> new com.hairapy.dto.MyPaymentResponse(
+                        p.getOrderCode(), p.getPlan().name(), p.getAmount(), p.getStatus().name(),
+                        p.getCreatedAt(), p.getPaidAt())));
     }
 
     /**
@@ -107,26 +133,8 @@ public class PaymentController {
                 ));
             }
 
-            // Lấy trạng thái realtime từ PayOS SDK và đồng bộ cục bộ nếu thanh toán thành công
-            var payosInfo = paymentService.getPaymentInfo(orderCode);
-            String payosStatus = payosInfo.status();
-            
-            // Đồng bộ nếu PayOS trả về thành công hoặc đã bị hủy mà trạng thái cục bộ đang là PENDING
-            if (payment.getStatus() == PaymentStatus.PENDING) {
-                if ("PAID".equals(payosStatus) && (payment.getAmount() == null || payosInfo.amountPaid() != payment.getAmount().longValue())) {
-                    // Số tiền PayOS ghi nhận lệch hóa đơn: KHÔNG cấp gói, chờ admin kiểm tra
-                    log.error("PayOS lệch số tiền orderCode={}, hóa đơn={}, đã thanh toán={}. KHÔNG cấp gói.",
-                            orderCode, payment.getAmount(), payosInfo.amountPaid());
-                } else if ("PAID".equals(payosStatus)) {
-                    payment.setStatus(PaymentStatus.PAID);
-                    payment.setPaidAt(java.time.LocalDateTime.now());
-                    paymentRepository.save(payment);
-                    paymentService.grantSubscriptionIfNeeded(payment);
-                } else if ("CANCELLED".equals(payosStatus)) {
-                    payment.setStatus(PaymentStatus.CANCELLED);
-                    paymentRepository.save(payment);
-                }
-            }
+            // Đồng bộ với PayOS nếu đơn chưa PAID (logic dùng chung với admin đối soát)
+            payment = paymentService.syncWithPayos(payment);
 
             return ResponseEntity.ok(Map.of(
                     "status", payment.getStatus().name(),

@@ -11,6 +11,7 @@ import com.hairapy.repositories.PaymentRepository;
 import com.hairapy.repositories.SubscriptionRepository;
 import com.hairapy.repositories.UsageHistoryRepository;
 import com.hairapy.repositories.UserRepository;
+import com.hairapy.utils.VnTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -51,7 +52,7 @@ public class AdminDashboardController {
         long totalScans = usageHistoryRepository.countByFeature("FACE_SCAN");
         long totalSwaps = usageHistoryRepository.countByFeature("HAIR_SWAP");
 
-        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        LocalDateTime todayStart = VnTime.startOfTodayVn();
         long scansToday = usageHistoryRepository.countByFeatureSince("FACE_SCAN", todayStart);
         long swapsToday = usageHistoryRepository.countByFeatureSince("HAIR_SWAP", todayStart);
 
@@ -59,14 +60,14 @@ public class AdminDashboardController {
         LocalDateTime since;
         boolean isDaily = true;
         if ("7d".equalsIgnoreCase(period)) {
-            since = LocalDate.now().minusDays(7).atStartOfDay();
+            since = VnTime.startOfDayVn(VnTime.todayVn().minusDays(7));
         } else if ("90d".equalsIgnoreCase(period)) {
-            since = LocalDate.now().minusDays(90).atStartOfDay();
+            since = VnTime.startOfDayVn(VnTime.todayVn().minusDays(90));
         } else if ("1y".equalsIgnoreCase(period)) {
-            since = LocalDate.now().minusYears(1).atStartOfDay();
+            since = VnTime.startOfDayVn(VnTime.todayVn().minusYears(1));
             isDaily = false;
         } else { // mặc định 30d
-            since = LocalDate.now().minusDays(30).atStartOfDay();
+            since = VnTime.startOfDayVn(VnTime.todayVn().minusDays(30));
         }
 
         List<Object[]> rawUsage;

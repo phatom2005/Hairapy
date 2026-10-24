@@ -81,10 +81,12 @@ public class PasswordResetService {
 
         User user = entity.getUser();
         user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setEmailVerified(true);
         userRepository.save(user);
 
         entity.setUsed(true);
         passwordResetTokenRepository.save(entity);
+        passwordResetTokenRepository.markAllUsedByUserId(user.getId());
 
         // NOTE: Khi triển khai Đợt 1 (Refresh Token), thêm refreshTokenService.revokeAllForUser(user.getId()) tại đây
         // để bắt buộc đăng nhập lại trên mọi thiết bị sau khi đổi mật khẩu.

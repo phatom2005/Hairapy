@@ -13,7 +13,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.hairapy.repositories.UsageHistoryRepository;
+import com.hairapy.utils.VnTime;
+import org.springframework.data.domain.PageRequest;
+
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Controller cung cấp danh sách kiểu tóc cho người dùng đã đăng nhập.
@@ -26,6 +33,7 @@ public class HairstyleCatalogController {
 
     private final HairstyleCatalogRepository hairstyleCatalogRepository;
     private final SubscriptionService subscriptionService;
+    private final UsageHistoryRepository usageHistoryRepository;
 
     /**
      * Lấy danh sách kiểu tóc với bộ lọc tùy chọn.
@@ -37,6 +45,7 @@ public class HairstyleCatalogController {
      * @param tag        lọc theo tag (tùy chọn).
      * @param search     tìm kiếm theo tên (tùy chọn).
      * @param gender     lọc theo giới tính: "Nam", "Nữ" (tùy chọn, bao gồm cả Unisex).
+     * @param sort       "popular" để sắp theo số lượt thử 30 ngày gần nhất (tùy chọn).
      * @param userDetails thông tin người dùng đang đăng nhập từ JWT.
      * @return danh sách kiểu tóc phù hợp.
      */
@@ -47,6 +56,8 @@ public class HairstyleCatalogController {
             @RequestParam(required = false) String tag,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String gender,
+            @RequestParam(required = false) String sort,
+            @RequestParam(required = false) String color,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         // Chuẩn hóa gender để tránh lỗi font/mojibake giữa FE và BE (ví dụ Nữ -> NÃ¹ hay nu)
@@ -100,6 +111,7 @@ public class HairstyleCatalogController {
 
         // Lọc theo các tiêu chí tìm kiếm (cho phép tất cả người dùng xem toàn bộ kiểu tóc, kể cả Premium)
         List<HairstyleCatalog> result = all.stream()
+                .filter(HairstyleCatalog::isActive)
                 // face_shape lưu comma-separated (vd: "Oval,Round") → check xem có chứa dáng mặt cần lọc không
                 .filter(h -> {
                     if (finalFaceShape == null) return true;
@@ -119,7 +131,33 @@ public class HairstyleCatalogController {
                 .filter(h -> finalGender == null
                         || "Unisex".equalsIgnoreCase(h.getGender())
                         || finalGender.equalsIgnoreCase(h.getGender()))
+                .filter(h -> {
+                    if (color == null || color.isBlank()) return true;
+                    if ("original".equalsIgnoreCase(color.trim())) {
+                        return h.getAilabColor() == null || h.getAilabColor().isBlank();
+                    }
+                    return color.trim().equalsIgnoreCase(h.getAilabColor());
+                })
                 .toList();
+
+        if ("popular".equalsIgnoreCase(sort)) {
+            LocalDateTime since = VnTime.startOfDayVn(VnTime.todayVn().minusDays(30));
+            List<Object[]> topTried = usageHistoryRepository.topTriedSince(since, PageRequest.of(0, 1000));
+            Map<Long, Long> counts = new HashMap<>();
+            for (Object[] row : topTried) {
+                if (row != null && row.length >= 2 && row[0] != null && row[1] != null) {
+                    counts.put(((Number) row[0]).longValue(), ((Number) row[1]).longValue());
+                }
+            }
+            result = result.stream().sorted((a, b) -> {
+                long countA = counts.getOrDefault(a.getId(), 0L);
+                long countB = counts.getOrDefault(b.getId(), 0L);
+                if (countB != countA) {
+                    return Long.compare(countB, countA);
+                }
+                return Long.compare(a.getId(), b.getId());
+            }).toList();
+        }
 
         return ResponseEntity.ok(result);
     }

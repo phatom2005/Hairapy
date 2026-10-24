@@ -64,6 +64,24 @@ public class HairstyleCatalog {
     @Column(name = "ailab_pro_style", length = 50)
     private String ailabProStyle;
 
+    // Trạng thái hiển thị trong catalog (false = đã ẩn nhưng giữ lại cho người đã lưu yêu thích)
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean active = true;
+
+    // Đánh dấu ảnh mẫu đã được tạo bằng AI đúng mã kiểu
+    @Builder.Default
+    @Column(name = "sample_by_ai", nullable = false)
+    private boolean sampleByAi = false;
+
+    // Biến thể màu: màu AILab mặc định của mục (null = màu tóc gốc)
+    @Column(name = "ailab_color", length = 30)
+    private String ailabColor;
+
+    // Trỏ về kiểu gốc nếu là biến thể màu (id thô, không map entity quan hệ để tránh lồng JSON)
+    @Column(name = "base_style_id")
+    private Long baseStyleId;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

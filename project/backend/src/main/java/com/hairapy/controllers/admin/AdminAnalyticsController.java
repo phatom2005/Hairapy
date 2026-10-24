@@ -8,6 +8,7 @@ import com.hairapy.repositories.SavedHairstyleRepository;
 import com.hairapy.repositories.SubscriptionRepository;
 import com.hairapy.repositories.UsageHistoryRepository;
 import com.hairapy.repositories.UserRepository;
+import com.hairapy.utils.VnTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
@@ -97,7 +98,7 @@ public class AdminAnalyticsController {
             @RequestParam(defaultValue = "10") int limit,
             @RequestParam(defaultValue = "30") int days) {
         int top = Math.min(Math.max(limit, 1), 50);
-        LocalDateTime since = LocalDate.now().minusDays(Math.max(days, 1)).atStartOfDay();
+        LocalDateTime since = VnTime.startOfDayVn(VnTime.todayVn().minusDays(Math.max(days, 1)));
 
         List<Object[]> savedRaw = savedHairstyleRepository.topSaved(PageRequest.of(0, top));
         List<Object[]> triedRaw = usageHistoryRepository.topTriedSince(since, PageRequest.of(0, top));
@@ -127,7 +128,7 @@ public class AdminAnalyticsController {
             @RequestParam(defaultValue = "5") int limit,
             @RequestParam(defaultValue = "30") int days) {
         int top = Math.min(Math.max(limit, 1), 20);
-        LocalDateTime since = LocalDate.now().minusDays(Math.max(days, 1)).atStartOfDay();
+        LocalDateTime since = VnTime.startOfDayVn(VnTime.todayVn().minusDays(Math.max(days, 1)));
 
         // Lấy số lượt của toàn bộ kiểu tóc (catalog nhỏ) rồi nhóm theo dáng mặt ở bộ nhớ
         PageRequest all = PageRequest.of(0, 1000);

@@ -32,16 +32,7 @@ public class SubscriptionService {
      * @return true nếu người dùng có subscription ACTIVE với plan trả phí VÀ chưa hết hạn (endDate).
      */
     public boolean isPaidUser(Long userId) {
-        Optional<Subscription> activeSubOpt =
-                subscriptionRepository.findByUserIdAndStatus(userId, SubscriptionStatus.ACTIVE);
-
-        if (activeSubOpt.isEmpty()) {
-            return false;
-        }
-
-        Subscription sub = activeSubOpt.get();
-        boolean notExpired = sub.getEndDate() == null || sub.getEndDate().isAfter(LocalDateTime.now());
-        return notExpired && sub.getPlan().isPaid();
+        return getActivePaidSubscription(userId).isPresent();
     }
 
     /**
@@ -49,13 +40,16 @@ public class SubscriptionService {
      * Dùng cho việc tính hạn mức theo từng gói; cùng điều kiện "chưa hết hạn" với isPaidUser().
      */
     public SubscriptionPlan getEffectivePlan(Long userId) {
-        Optional<Subscription> activeSubOpt =
-                subscriptionRepository.findByUserIdAndStatus(userId, SubscriptionStatus.ACTIVE);
-        if (activeSubOpt.isEmpty()) {
-            return SubscriptionPlan.FREE;
-        }
-        Subscription sub = activeSubOpt.get();
-        boolean notExpired = sub.getEndDate() == null || sub.getEndDate().isAfter(LocalDateTime.now());
-        return (notExpired && sub.getPlan().isPaid()) ? sub.getPlan() : SubscriptionPlan.FREE;
+        return getActivePaidSubscription(userId).map(Subscription::getPlan).orElse(SubscriptionPlan.FREE);
+    }
+
+    /**
+     * Subscription trả phí đang THỰC SỰ hoạt động (ACTIVE + chưa hết hạn + plan trả phí), nếu có.
+     * Nguồn duy nhất cho isPaidUser/getEffectivePlan và cho FE hiển thị gói + ngày hết hạn.
+     */
+    public Optional<Subscription> getActivePaidSubscription(Long userId) {
+        return subscriptionRepository.findByUserIdAndStatus(userId, SubscriptionStatus.ACTIVE)
+                .filter(sub -> sub.getEndDate() == null || sub.getEndDate().isAfter(LocalDateTime.now()))
+                .filter(sub -> sub.getPlan().isPaid());
     }
 }

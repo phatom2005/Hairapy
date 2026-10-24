@@ -5,7 +5,8 @@ package com.hairapy.dto;
  */
 public record UsageSummaryResponse(
         FeatureUsage faceScan,
-        FeatureUsage hairSwap
+        FeatureUsage hairSwap,
+        FeatureUsage aiStylist
 ) {
     public record FeatureUsage(long used, long limit, boolean unlimited) {}
 }

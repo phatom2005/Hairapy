@@ -1,6 +1,7 @@
 package com.hairapy.services;
 
 import com.hairapy.dto.auth.AuthResponse;
+import com.hairapy.dto.auth.ChangePasswordRequest;
 import com.hairapy.dto.auth.LoginRequest;
 import com.hairapy.dto.auth.RegisterRequest;
 import com.hairapy.dto.auth.RegisterResponse;
@@ -10,6 +11,7 @@ import com.hairapy.models.User;
 import com.hairapy.repositories.UserRepository;
 import com.hairapy.security.JwtService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,8 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Service xử lý các nghiệp vụ liên quan đến xác thực người dùng (Đăng ký, Đăng nhập).
+ * Service xử lý các nghiệp vụ liên quan đến xác thực người dùng (Đăng ký, Đăng nhập, Đổi mật khẩu).
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -129,9 +132,29 @@ public class AuthService {
         user.setDateOfBirth(request.dateOfBirth());
         userRepository.save(user);
 
+        return buildMe(user);
+    }
+
+    /**
+     * Dựng UserMeResponse dùng chung cho GET /auth/me và PUT /auth/me.
+     * Admin/Tester được coi như hưởng quyền cao nhất (plan=PREMIUM, không có ngày hết hạn).
+     */
+    public com.hairapy.dto.auth.UserMeResponse buildMe(User user) {
         String effectiveRole = resolveEffectiveRole(user);
+        String plan;
+        java.time.LocalDateTime planEndDate = null;
+        if (user.getRole() == Role.ADMIN || user.getRole() == Role.TESTER) {
+            plan = "PREMIUM";
+        } else {
+            var sub = subscriptionService.getActivePaidSubscription(user.getId());
+            plan = sub.map(s -> s.getPlan().name()).orElse("FREE");
+            planEndDate = sub.map(com.hairapy.models.Subscription::getEndDate).orElse(null);
+        }
         return new com.hairapy.dto.auth.UserMeResponse(
-                user.getEmail(), effectiveRole, user.getFullName(), user.getPhone(), user.getDateOfBirth());
+                user.getEmail(), effectiveRole, user.getFullName(), user.getPhone(), user.getDateOfBirth(),
+                plan, planEndDate,
+                user.getProvider() == null ? "LOCAL" : user.getProvider().name(),
+                user.getPasswordHash() != null);
     }
 
     /**
@@ -215,5 +238,26 @@ public class AuthService {
         String effectiveRole = resolveEffectiveRole(user);
 
         return new AuthResponse(token, user.getEmail(), effectiveRole, user.getFullName());
+    }
+
+    /**
+     * Đổi mật khẩu cho người dùng đang đăng nhập:
+     * - Nếu user có passwordHash -> bắt buộc currentPassword khớp.
+     * - Nếu user OAuth chưa có mật khẩu -> cho phép đặt mới không cần currentPassword.
+     * - Kiểm tra mật khẩu xác nhận khớp.
+     */
+    @Transactional
+    public void changePassword(User user, ChangePasswordRequest request) {
+        if (user.getPasswordHash() != null && !user.getPasswordHash().isBlank()) {
+            if (request.currentPassword() == null || !passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+                throw new IllegalArgumentException("Mật khẩu hiện tại không đúng.");
+            }
+        }
+        if (request.confirmPassword() == null || !request.confirmPassword().equals(request.newPassword())) {
+            throw new IllegalArgumentException("Mật khẩu xác nhận không khớp.");
+        }
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+        log.info("Người dùng {} đổi mật khẩu thành công.", user.getEmail());
     }
 }

@@ -1,6 +1,7 @@
 package com.hairapy.controllers;
 
 import com.hairapy.dto.auth.AuthResponse;
+import com.hairapy.dto.auth.ChangePasswordRequest;
 import com.hairapy.dto.auth.LoginRequest;
 import com.hairapy.dto.auth.RegisterRequest;
 import com.hairapy.dto.auth.RegisterResponse;
@@ -80,10 +81,7 @@ public class AuthController {
         User user = userRepository.findByEmail(userDetails.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin người dùng"));
 
-        // Trả về role hiệu lực (bạo gồm cả PREMIUM nếu có subscription đang hoạt động)
-        String effectiveRole = authService.resolveEffectiveRole(user);
-        return ResponseEntity.ok(new UserMeResponse(
-                user.getEmail(), effectiveRole, user.getFullName(), user.getPhone(), user.getDateOfBirth()));
+        return ResponseEntity.ok(authService.buildMe(user));
     }
 
     /**
@@ -191,5 +189,27 @@ public class AuthController {
         }
 
         return ResponseEntity.ok(Map.of("message", "Đã xoá tài khoản."));
+    }
+
+    @PutMapping("/me/password")
+    public ResponseEntity<?> changePassword(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody ChangePasswordRequest request
+    ) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Chưa xác thực."));
+        }
+
+        User user = userRepository.findByEmail(userDetails.getUsername()).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Người dùng không tồn tại."));
+        }
+
+        try {
+            authService.changePassword(user, request);
+            return ResponseEntity.ok(Map.of("message", "Đổi mật khẩu thành công."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 }

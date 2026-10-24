@@ -53,11 +53,52 @@ public class HairSwapService {
         return submitTask(image, hairStyle, null);
     }
 
+    public static final List<String> MALE_STYLES = List.of(
+            "BuzzCut", "UnderCut", "Pompadour", "SlickBack", "CurlyShag", "WavyShag", "FauxHawk", "Spiky",
+            "CombOver", "HighTightFade", "ManBun", "Afro", "LowFade", "UndercutLongHair", "TwoBlockHaircut",
+            "TexturedFringe", "BluntBowlCut", "LongWavyCurtainBangs", "MessyTousled", "CornrowBraids",
+            "LongHairTiedUp", "Middle-parted"
+    );
+
+    public static final List<String> FEMALE_STYLES = List.of(
+            "ShortPixieWithShavedSides", "ShortNeatBob", "DoubleBun", "Updo", "Spiked", "bowlCut", "Chignon",
+            "PixieCut", "SlickedBack", "LongCurly", "CurlyBob", "StackedCurlsInShortBob",
+            "SidePartCombOverHairstyleWithHighFade", "WavyFrenchBobVibesfrom1920", "BobCut", "ShortTwintails",
+            "ShortCurlyPixie", "LongStraight", "LongWavy", "FishtailBraid", "TwinBraids", "Ponytail",
+            "Dreadlocks", "Cornrows", "ShoulderLengthHair", "LooseCurlyAfro", "LongTwintails", "LongHimeCut",
+            "BoxBraids"
+    );
+
+    public static final List<String> SUPPORTED_STYLES = java.util.stream.Stream.concat(
+            MALE_STYLES.stream(), FEMALE_STYLES.stream()
+    ).toList();
+
+    public static final Map<String, String> COLOR_LABELS_VI = Map.ofEntries(
+            Map.entry("black", "Đen"),
+            Map.entry("brown", "Nâu"),
+            Map.entry("lightBrown", "Nâu Sáng"),
+            Map.entry("blonde", "Vàng"),
+            Map.entry("platinumBlonde", "Bạch Kim"),
+            Map.entry("red", "Đỏ"),
+            Map.entry("burgundy", "Đỏ Rượu"),
+            Map.entry("orange", "Cam"),
+            Map.entry("pink", "Hồng"),
+            Map.entry("purple", "Tím"),
+            Map.entry("blue", "Xanh Dương"),
+            Map.entry("green", "Xanh Lá"),
+            Map.entry("grey", "Xám"),
+            Map.entry("silver", "Bạc"),
+            Map.entry("white", "Trắng"),
+            Map.entry("lightBlue", "Xanh Nhạt"),
+            Map.entry("lightPurple", "Tím Nhạt"),
+            Map.entry("darkBlue", "Xanh Đậm"),
+            Map.entry("darkGreen", "Xanh Rêu"),
+            Map.entry("gradient", "Ombre"),
+            Map.entry("multicolored", "Nhiều Màu")
+    );
+
     /** Các màu tóc AILab Pro API hỗ trợ (tham số "color"). Dùng làm whitelist, không tin giá trị client gửi. */
-    public static final java.util.Set<String> SUPPORTED_COLORS = java.util.Set.of(
-            "blonde", "platinumBlonde", "brown", "lightBrown", "blue", "lightBlue", "purple", "lightPurple",
-            "pink", "black", "white", "grey", "silver", "red", "orange", "green", "gradient", "multicolored",
-            "darkBlue", "burgundy", "darkGreen");
+    public static final java.util.Set<String> SUPPORTED_COLORS = COLOR_LABELS_VI.keySet();
 
     /**
      * Như submitTask nhưng có thể đổi màu tóc.

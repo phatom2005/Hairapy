@@ -24,6 +24,18 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     Page<User> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
+    // Tìm kiếm user nâng cao cho trang quản trị: từ khoá (email/họ tên), lọc đã xác minh email, tuỳ chọn bao gồm tài khoản đã xoá
+    @Query("SELECT u FROM User u WHERE "
+            + "(:keyword IS NULL OR :keyword = '' OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(COALESCE(u.fullName, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND "
+            + "(:includeDeleted = true OR u.email NOT LIKE '%@deleted.hairapy.invalid') AND "
+            + "(:verified IS NULL OR u.emailVerified = :verified)")
+    Page<User> searchAdmin(
+            @Param("keyword") String keyword,
+            @Param("includeDeleted") boolean includeDeleted,
+            @Param("verified") Boolean verified,
+            Pageable pageable
+    );
+
     // Đếm theo role (cho dashboard)
     long countByRole(Role role);
 

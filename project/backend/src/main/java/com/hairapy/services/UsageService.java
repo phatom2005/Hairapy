@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
+import com.hairapy.utils.VnTime;
 import java.time.LocalDateTime;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,10 +63,8 @@ public class UsageService {
         } else if ("FACE_SCAN".equals(feature)) {
             return 5;
         } else if ("AI_STYLIST".equals(feature)) {
-            // AI Stylist chi danh Premium (xem PremiumRequiredException o
-            // AiStylistController) -- Free luon bi chan truoc khi toi day,
-            // nhung van tra ve 0 cho ro rang neu co goi nham.
-            return plan.isPaid() ? 5 : 0;
+            // AI Stylist chỉ dành riêng cho Gói Tháng (PREMIUM)
+            return plan == SubscriptionPlan.PREMIUM ? 5 : 0;
         }
         return Integer.MAX_VALUE;
     }
@@ -101,7 +99,7 @@ public class UsageService {
 
                 int limit = getDailyLimit(feature, plan);
 
-                LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+                LocalDateTime startOfDay = VnTime.startOfTodayVn();
                 long todayCount = usageHistoryRepository.countTodayUsage(user.getId(), feature, startOfDay);
 
                 log.info("Kiểm tra giới hạn dùng cho user [{}]: feature={}, used={}, limit={}, isPaid={}",
@@ -152,17 +150,20 @@ public class UsageService {
 
         SubscriptionPlan plan = unlimited ? SubscriptionPlan.FREE : subscriptionService.getEffectivePlan(user.getId());
 
-        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime startOfDay = VnTime.startOfTodayVn();
 
         long faceScanUsed = usageHistoryRepository.countTodayUsage(user.getId(), "FACE_SCAN", startOfDay);
         long hairSwapUsed = usageHistoryRepository.countTodayUsage(user.getId(), "HAIR_SWAP", startOfDay);
+        long aiStylistUsed = usageHistoryRepository.countTodayUsage(user.getId(), "AI_STYLIST", startOfDay);
 
         int faceScanLimit = unlimited ? Integer.MAX_VALUE : getDailyLimit("FACE_SCAN", plan);
         int hairSwapLimit = unlimited ? Integer.MAX_VALUE : getDailyLimit("HAIR_SWAP", plan);
+        int aiStylistLimit = unlimited ? Integer.MAX_VALUE : getDailyLimit("AI_STYLIST", plan);
 
         return new UsageSummaryResponse(
                 new UsageSummaryResponse.FeatureUsage(faceScanUsed, faceScanLimit, unlimited),
-                new UsageSummaryResponse.FeatureUsage(hairSwapUsed, hairSwapLimit, unlimited)
+                new UsageSummaryResponse.FeatureUsage(hairSwapUsed, hairSwapLimit, unlimited),
+                new UsageSummaryResponse.FeatureUsage(aiStylistUsed, aiStylistLimit, unlimited)
         );
     }
 }

@@ -21,6 +21,8 @@ public interface SavedHairstyleRepository extends JpaRepository<SavedHairstyle, 
 
     boolean existsByUserAndHairstyle(User user, HairstyleCatalog hairstyle);
 
+    long countByHairstyleId(Long hairstyleId);
+
     void deleteByUserId(Long userId);
 
     // Top kiểu tóc được lưu yêu thích: [hairstyleId, số lượt lưu]

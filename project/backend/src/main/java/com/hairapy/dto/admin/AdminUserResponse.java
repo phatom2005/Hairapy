@@ -8,5 +8,10 @@ public record AdminUserResponse(
     String fullName,
     String role,
     LocalDateTime createdAt,
-    LocalDateTime updatedAt
+    LocalDateTime updatedAt,
+    boolean emailVerified,
+    String provider,
+    String plan,
+    LocalDateTime planEndDate,
+    boolean deleted
 ) {}

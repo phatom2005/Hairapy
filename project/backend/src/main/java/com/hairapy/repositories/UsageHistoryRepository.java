@@ -10,12 +10,17 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface UsageHistoryRepository extends JpaRepository<UsageHistory, Long> {
 
     // Tìm lịch sử của một user cụ thể có phân trang
     Page<UsageHistory> findByUserId(Long userId, Pageable pageable);
+
+    // Bản ghi dùng mới nhất của user cho feature trong hôm nay (để admin hoàn lượt)
+    Optional<UsageHistory> findFirstByUserIdAndFeatureAndUsedAtGreaterThanEqualOrderByUsedAtDesc(
+            Long userId, String feature, LocalDateTime since);
 
     // Đếm lượt dùng theo feature (cho dashboard stats)
     long countByFeature(String feature);

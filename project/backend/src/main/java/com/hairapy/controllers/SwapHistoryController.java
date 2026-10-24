@@ -26,7 +26,7 @@ public class SwapHistoryController {
     private final UsageService usageService;
 
     public record SwapHistoryItem(Long id, Long hairstyleId, String hairstyleName, String imageUrl, String createdAt) {
-        static SwapHistoryItem from(SwapHistory s) {
+        public static SwapHistoryItem from(SwapHistory s) {
             return new SwapHistoryItem(s.getId(), s.getHairstyleId(), s.getHairstyleName(), s.getImageUrl(),
                     s.getCreatedAt() != null ? s.getCreatedAt().toString() : null);
         }

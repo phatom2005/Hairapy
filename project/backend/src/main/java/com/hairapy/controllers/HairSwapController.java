@@ -93,6 +93,9 @@ public class HairSwapController {
         if (style == null || style.getAilabProStyle() == null || style.getAilabProStyle().isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Kiểu tóc không tồn tại hoặc chưa hỗ trợ thử."));
         }
+        if (!style.isActive()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Kiểu tóc này đã ngừng hỗ trợ."));
+        }
         // Chặn Free user thử style premiumOnly (trước khi trừ lượt)
         if (style.isPremiumOnly() && !isPaidUser) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(

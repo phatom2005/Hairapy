@@ -64,6 +64,11 @@ public class HairstyleCatalog {
     @Column(name = "ailab_pro_style", length = 50)
     private String ailabProStyle;
 
+    // Trạng thái hiển thị trong catalog (false = đã ẩn nhưng giữ lại cho người đã lưu yêu thích)
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean active = true;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

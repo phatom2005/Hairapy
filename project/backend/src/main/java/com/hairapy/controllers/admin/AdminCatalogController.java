@@ -1,8 +1,10 @@
 package com.hairapy.controllers.admin;
 
+import com.hairapy.dto.admin.AdminCatalogItemResponse;
 import com.hairapy.exceptions.ResourceNotFoundException;
 import com.hairapy.models.HairstyleCatalog;
 import com.hairapy.repositories.HairstyleCatalogRepository;
+import com.hairapy.repositories.SavedHairstyleRepository;
 import com.hairapy.services.CloudinaryService;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -17,10 +19,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Controller quản trị CRUD cho danh mục kiểu tóc.
- * Hỗ trợ upload ảnh trực tiếp lên Cloudinary (không cần paste URL).
+ * Hỗ trợ upload ảnh trực tiếp lên Cloudinary (không cần paste URL), ẩn kiểu tóc, đếm lượt lưu.
  */
 @Slf4j
 @RestController
@@ -29,17 +32,15 @@ import java.util.List;
 public class AdminCatalogController {
 
     private final HairstyleCatalogRepository hairstyleCatalogRepository;
+    private final SavedHairstyleRepository savedHairstyleRepository;
     private final CloudinaryService cloudinaryService;
 
     /**
      * Lấy danh sách kiểu tóc có phân trang + bộ lọc (tất cả tham số lọc đều tùy chọn).
-     * - keyword: tìm theo tên hoặc tag (không phân biệt hoa thường)
-     * - faceShape: dáng mặt (cột lưu dạng "Oval,Round" nên dùng LIKE)
-     * - hairLength / gender: khớp chính xác
-     * - premiumOnly: true = chỉ Premium, false = chỉ Free
+     * Trả về kèm số lượng người dùng đã lưu (savedCount) và trạng thái active.
      */
     @GetMapping
-    public ResponseEntity<Page<HairstyleCatalog>> getCatalog(
+    public ResponseEntity<Page<AdminCatalogItemResponse>> getCatalog(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String faceShape,
             @RequestParam(required = false) String hairLength,
@@ -70,14 +71,36 @@ public class AdminCatalogController {
             }
             return cb.and(predicates.toArray(new Predicate[0]));
         };
-        return ResponseEntity.ok(hairstyleCatalogRepository.findAll(spec, pageable));
+        Page<HairstyleCatalog> page = hairstyleCatalogRepository.findAll(spec, pageable);
+        return ResponseEntity.ok(page.map(this::toAdminResponse));
+    }
+
+    /**
+     * Bật/tắt trạng thái hiển thị của kiểu tóc trong catalog (ẩn thay vì xoá).
+     */
+    @PatchMapping("/{id}/active")
+    public ResponseEntity<AdminCatalogItemResponse> updateActive(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body
+    ) {
+        HairstyleCatalog hairstyle = hairstyleCatalogRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy kiểu tóc với ID: " + id));
+
+        if (body.containsKey("active")) {
+            boolean active = Boolean.parseBoolean(String.valueOf(body.get("active")));
+            hairstyle.setActive(active);
+            hairstyle = hairstyleCatalogRepository.save(hairstyle);
+            log.info("Admin cập nhật trạng thái active cho kiểu tóc id={}: active={}", id, active);
+        }
+
+        return ResponseEntity.ok(toAdminResponse(hairstyle));
     }
 
     /**
      * Thêm mới kiểu tóc — nhận multipart form (ảnh file + metadata).
      */
     @PostMapping(consumes = "multipart/form-data")
-    public ResponseEntity<HairstyleCatalog> createHairstyle(
+    public ResponseEntity<AdminCatalogItemResponse> createHairstyle(
             @RequestParam("name") String name,
             @RequestParam(value = "image", required = false) MultipartFile image,
             @RequestParam(value = "imageUrl", required = false) String imageUrl,
@@ -88,7 +111,6 @@ public class AdminCatalogController {
             @RequestParam(value = "description", required = false) String description,
             @RequestParam(value = "premiumOnly", required = false, defaultValue = "false") boolean premiumOnly
     ) {
-        // Upload ảnh lên Cloudinary nếu có file, nếu không dùng URL truyền vào
         String finalImageUrl;
         if (image != null && !image.isEmpty()) {
             finalImageUrl = cloudinaryService.uploadFile(image, "catalog");
@@ -108,17 +130,18 @@ public class AdminCatalogController {
                 .description(description)
                 .imageUrl(finalImageUrl)
                 .premiumOnly(premiumOnly)
+                .active(true)
                 .build();
 
         HairstyleCatalog saved = hairstyleCatalogRepository.save(hairstyle);
-        return new ResponseEntity<>(saved, HttpStatus.CREATED);
+        return new ResponseEntity<>(toAdminResponse(saved), HttpStatus.CREATED);
     }
 
     /**
      * Cập nhật kiểu tóc — nhận multipart form (ảnh mới tùy chọn).
      */
     @PutMapping(value = "/{id}", consumes = "multipart/form-data")
-    public ResponseEntity<HairstyleCatalog> updateHairstyle(
+    public ResponseEntity<AdminCatalogItemResponse> updateHairstyle(
             @PathVariable Long id,
             @RequestParam(value = "name", required = false) String name,
             @RequestParam(value = "image", required = false) MultipartFile image,
@@ -141,28 +164,81 @@ public class AdminCatalogController {
         if (description != null) hairstyle.setDescription(description);
         if (premiumOnly != null) hairstyle.setPremiumOnly(premiumOnly);
 
-        // Nếu có ảnh mới → upload Cloudinary, không thì giữ ảnh cũ
+        String oldImageUrl = hairstyle.getImageUrl();
+        String newUrl = null;
         if (image != null && !image.isEmpty()) {
-            String newUrl = cloudinaryService.uploadFile(image, "catalog");
+            newUrl = cloudinaryService.uploadFile(image, "catalog");
             hairstyle.setImageUrl(newUrl);
             log.info("Admin cập nhật ảnh catalog: id={}, newUrl={}", id, newUrl);
         } else if (imageUrl != null && !imageUrl.isBlank()) {
+            newUrl = imageUrl;
             hairstyle.setImageUrl(imageUrl);
         }
 
+        // Xoá ảnh cũ nếu đổi ảnh và ảnh cũ thuộc folder catalog
+        if (newUrl != null && !newUrl.equals(oldImageUrl)) {
+            String oldPublicId = cloudinaryService.extractPublicId(oldImageUrl);
+            if (oldPublicId != null && oldPublicId.contains("catalog")) {
+                try {
+                    cloudinaryService.delete(oldPublicId);
+                } catch (Exception e) {
+                    log.warn("Không thể xoá ảnh catalog cũ trên Cloudinary: {}", e.getMessage());
+                }
+            }
+        }
+
         HairstyleCatalog updated = hairstyleCatalogRepository.save(hairstyle);
-        return ResponseEntity.ok(updated);
+        return ResponseEntity.ok(toAdminResponse(updated));
     }
 
     /**
-     * Xóa kiểu tóc khỏi hệ thống.
+     * Xóa kiểu tóc khỏi hệ thống. Chặn xoá nếu có khách lưu yêu thích (yêu cầu ẩn thay vì xoá).
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteHairstyle(@PathVariable Long id) {
+    public ResponseEntity<?> deleteHairstyle(@PathVariable Long id) {
         HairstyleCatalog hairstyle = hairstyleCatalogRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy kiểu tóc với ID: " + id));
 
+        long savedCount = savedHairstyleRepository.countByHairstyleId(id);
+        if (savedCount > 0) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "error", "Có " + savedCount + " người đang lưu kiểu này. Hãy ẩn thay vì xoá.",
+                    "savedCount", savedCount
+            ));
+        }
+
+        String oldImageUrl = hairstyle.getImageUrl();
         hairstyleCatalogRepository.delete(hairstyle);
+
+        String publicId = cloudinaryService.extractPublicId(oldImageUrl);
+        if (publicId != null && publicId.contains("catalog")) {
+            try {
+                cloudinaryService.delete(publicId);
+            } catch (Exception e) {
+                log.warn("Không thể xóa ảnh catalog trên Cloudinary: {}", e.getMessage());
+            }
+        }
+
         return ResponseEntity.noContent().build();
+    }
+
+    private AdminCatalogItemResponse toAdminResponse(HairstyleCatalog h) {
+        long savedCount = savedHairstyleRepository.countByHairstyleId(h.getId());
+        return new AdminCatalogItemResponse(
+                h.getId(),
+                h.getName(),
+                h.getTag(),
+                h.getFaceShape(),
+                h.getHairLength(),
+                h.getDescription(),
+                h.getImageUrl(),
+                h.isPremiumOnly(),
+                h.getGender(),
+                h.getAilabHairType(),
+                h.getAilabProStyle(),
+                h.isActive(),
+                savedCount,
+                h.getCreatedAt()
+        );
     }
 }

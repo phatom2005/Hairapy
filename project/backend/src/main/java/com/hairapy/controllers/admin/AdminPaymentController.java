@@ -2,6 +2,7 @@ package com.hairapy.controllers.admin;
 
 import com.hairapy.dto.admin.AdminPaymentResponse;
 import com.hairapy.dto.admin.AdminPaymentSummaryResponse;
+import com.hairapy.utils.VnTime;
 import com.hairapy.models.Payment;
 import com.hairapy.models.PaymentStatus;
 import com.hairapy.models.SubscriptionPlan;
@@ -189,11 +190,11 @@ public class AdminPaymentController {
             }
 
             if (from != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), from.atStartOfDay()));
+                predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), VnTime.startOfDayVn(from)));
             }
 
             if (to != null) {
-                predicates.add(cb.lessThan(root.get("createdAt"), to.plusDays(1).atStartOfDay()));
+                predicates.add(cb.lessThan(root.get("createdAt"), VnTime.startOfDayVn(to.plusDays(1))));
             }
 
             if (keyword != null && !keyword.trim().isEmpty()) {

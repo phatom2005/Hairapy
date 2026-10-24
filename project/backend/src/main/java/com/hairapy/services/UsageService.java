@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
+import com.hairapy.utils.VnTime;
 import java.time.LocalDateTime;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.transaction.annotation.Transactional;
@@ -101,7 +101,7 @@ public class UsageService {
 
                 int limit = getDailyLimit(feature, plan);
 
-                LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+                LocalDateTime startOfDay = VnTime.startOfTodayVn();
                 long todayCount = usageHistoryRepository.countTodayUsage(user.getId(), feature, startOfDay);
 
                 log.info("Kiểm tra giới hạn dùng cho user [{}]: feature={}, used={}, limit={}, isPaid={}",
@@ -152,7 +152,7 @@ public class UsageService {
 
         SubscriptionPlan plan = unlimited ? SubscriptionPlan.FREE : subscriptionService.getEffectivePlan(user.getId());
 
-        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime startOfDay = VnTime.startOfTodayVn();
 
         long faceScanUsed = usageHistoryRepository.countTodayUsage(user.getId(), "FACE_SCAN", startOfDay);
         long hairSwapUsed = usageHistoryRepository.countTodayUsage(user.getId(), "HAIR_SWAP", startOfDay);

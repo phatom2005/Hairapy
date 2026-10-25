@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { trackEvent } from "../lib/analytics";
 import api from "../lib/api";
+import { useScanStore } from "./useScanStore";
 
 /**
  * Zustand Store quản lý trạng thái xác thực người dùng.
@@ -130,10 +131,21 @@ const useAuthStore = create((set, get) => ({
   },
 
   /**
-   * Đăng xuất, xóa toàn bộ thông tin xác thực khỏi store và localStorage.
+   * Đăng xuất, gọi backend huỷ phiên, xóa toàn bộ thông tin xác thực khỏi store và localStorage.
    */
-  logout: () => {
+  logout: async () => {
+    try {
+      await api.post("/auth/logout", null, { timeout: 3000 });
+    } catch {
+      /* ignore network error on logout */
+    }
     localStorage.removeItem("token");
+    try {
+      useScanStore.getState().reset();
+      sessionStorage.removeItem("hairapy-scan");
+    } catch (e) {
+      console.warn("Lỗi xoá session scan khi logout:", e);
+    }
     set({ token: null, user: null, error: null });
     // Chuyển hướng về trang chủ và tải lại trang để xóa sạch cache/state cũ
     window.location.href = "/";

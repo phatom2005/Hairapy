@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useState, useMemo } from "react";
+import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { AnimatedContent, BorderGlow, GlareHover, SpotlightCard } from "../components/animated";
 import { ArrowRight, CheckIcon, StarIcon } from "../components/icons";
 import Footer from "../components/layout/Footer";
@@ -8,9 +8,12 @@ import Navbar from "../components/layout/Navbar";
 import { Badge, Button, Card, DragScroll, Section, SectionHeading } from "../components/ui";
 import api from "../lib/api";
 import { trackEvent } from "../lib/analytics";
-import { useScanStore } from "../store/useScanStore";
+import { useScanStore, useHasHydrated } from "../store/useScanStore";
 import useAuthStore from "../store/useAuthStore";
 import FeedbackWidget from "../components/FeedbackWidget";
+import PremiumGateModal from "../components/PremiumGateModal";
+import AiStylistPanel from "../components/AiStylistPanel";
+import { COLOR_BY_VALUE, swatchBg } from "../lib/hairColors";
 
 // Bản đồ dịch dáng mặt sang tiếng Việt
 const FACE_SHAPE_TRANSLATION = {
@@ -30,7 +33,6 @@ const FACE_SHAPE_MAP = {
   Oblong: "Dài",
   Diamond: "Kim cương",
 };
-
 
 // Lý do lựa chọn kiểu tóc dựa theo dáng mặt
 const REASONS_MAP = {
@@ -60,17 +62,131 @@ const REASONS_MAP = {
   ]
 };
 
+function HairstyleRecCard({ group, idx, savedIds, handleToggleSave, handleTryStyle }) {
+  const [selectedVariant, setSelectedVariant] = useState(group.base);
+  const r = selectedVariant || group.base;
+  const match = Math.max(80, 98 - idx * 3);
+
+  return (
+    <AnimatedContent key={group.base.id || group.base.name} delay={idx * 0.1}>
+      <SpotlightCard className="rounded-2xl">
+        <Card padded={false} className="w-[280px] shrink-0 overflow-hidden">
+          <div className="relative">
+            <img
+              src={r.imageUrl}
+              alt={r.name}
+              draggable={false}
+              className="pointer-events-none h-56 w-full object-cover"
+              onError={(e) => {
+                e.target.src = `https://placehold.co/600x400?text=${encodeURIComponent(r.name)}`;
+              }}
+            />
+            <Badge variant="new" className="absolute left-3 top-3 shadow">
+              {match}% phù hợp
+            </Badge>
+            {r.premiumOnly && (
+              <Badge variant="premium" className="absolute right-3 top-3 shadow">
+                Trả phí
+              </Badge>
+            )}
+            {r.sampleByAi && (
+              <div className="absolute left-3 bottom-3 rounded-full bg-ink/75 px-2 py-0.5 text-[9px] font-semibold text-white backdrop-blur-md shadow">
+                ✨ AI
+              </div>
+            )}
+
+            {/* Nút lưu yêu thích */}
+            <button
+              type="button"
+              onClick={(e) => handleToggleSave(e, r.id)}
+              className="absolute right-3 bottom-3 flex size-8 items-center justify-center rounded-full bg-white/90 text-ink shadow-md hover:bg-white hover:text-primary transition"
+              title={savedIds.has(r.id) ? "Bỏ lưu" : "Lưu kiểu tóc"}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill={savedIds.has(r.id) ? "#FF57CF" : "none"}
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="#FF57CF"
+                className="size-4"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Chấm màu biến thể nếu có */}
+          {group.variants.length > 1 && (
+            <div className="flex items-center gap-1.5 px-4 pt-2">
+              {group.variants.map((v) => {
+                const isSel = v.id === r.id;
+                const colorObj = v.ailabColor ? COLOR_BY_VALUE[v.ailabColor] : null;
+                const tones = colorObj?.tones || ["#3a2c23", "#231812", "#0f0a07"];
+                const label = colorObj?.label || (v.baseStyleId ? "Biến thể" : "Màu gốc");
+                return (
+                  <button
+                    key={v.id}
+                    type="button"
+                    onClick={() => setSelectedVariant(v)}
+                    title={label}
+                    className={`size-3.5 rounded-full transition-transform ${
+                      isSel ? "ring-2 ring-pink ring-offset-1 scale-125" : "hover:scale-110 opacity-70 hover:opacity-100"
+                    }`}
+                    style={{ background: swatchBg(tones) }}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          <div className="p-4 space-y-1">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-ink truncate mr-2" title={r.name}>
+                {r.name}
+              </h4>
+              <Button onClick={() => handleTryStyle(r)} size="sm" className="px-4 py-2 text-xs shrink-0">
+                Thử ngay
+              </Button>
+            </div>
+            <p className="text-xs font-semibold text-muted">Phù hợp: {r.gender || "Unisex"}</p>
+          </div>
+        </Card>
+      </SpotlightCard>
+    </AnimatedContent>
+  );
+}
+
 export default function ResultsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const hairstyleId = searchParams.get("hairstyleId");
   const queryClient = useQueryClient();
 
   // Lấy kết quả phân tích, ảnh preview, giới tính và hàm set kiểu tóc từ Zustand store
-  const { analysisResult, previewUrl, setSelectedHairstyle, gender } = useScanStore();
+  const hasHydrated = useHasHydrated();
+  const {
+    analysisResult,
+    previewUrl,
+    setSelectedHairstyle,
+    gender,
+    setGender,
+    overrideFaceShape,
+  } = useScanStore();
   const { user } = useAuthStore();
 
+  const [showShapePicker, setShowShapePicker] = useState(false);
+  const [showBiometrics, setShowBiometrics] = useState(false);
+  const [gateStyle, setGateStyle] = useState(null);
+
+  const notSaved = location.state?.notSaved;
+
   useEffect(() => {
+    if (!hasHydrated) return;
     if (!analysisResult) {
       // Bảo toàn hairstyleId khi redirect qua scan
       if (hairstyleId) {
@@ -79,7 +195,7 @@ export default function ResultsPage() {
         navigate("/scan");
       }
     }
-  }, [analysisResult, navigate, hairstyleId]);
+  }, [hasHydrated, analysisResult, navigate, hairstyleId]);
 
   // Fetch kiểu tóc được chọn từ catalog nếu có
   const { data: chosenHairstyle = null } = useQuery({
@@ -109,6 +225,26 @@ export default function ResultsPage() {
     enabled: !!faceShape,
   });
 
+  const groupedRecommendations = useMemo(() => {
+    const groups = new Map();
+    for (const item of recommendations) {
+      const baseId = item.baseStyleId || item.id;
+      if (!groups.has(baseId)) groups.set(baseId, []);
+      groups.get(baseId).push(item);
+    }
+    const list = [];
+    for (const variants of groups.values()) {
+      variants.sort((a, b) => {
+        if (!a.baseStyleId && b.baseStyleId) return -1;
+        if (a.baseStyleId && !b.baseStyleId) return 1;
+        return a.id - b.id;
+      });
+      const base = variants.find((v) => !v.baseStyleId) || variants[0];
+      list.push({ base, variants });
+    }
+    return list;
+  }, [recommendations]);
+
   // Query lấy kiểu tóc đã lưu (đồng bộ key chung)
   const { data: savedStyles = [] } = useQuery({
     queryKey: ["profile-saved-styles"],
@@ -131,42 +267,35 @@ export default function ResultsPage() {
     }
 
     const previousSaved = queryClient.getQueryData(["profile-saved-styles"]) || [];
-    const isSaved = savedIds.has(hairstyleId);
+    const isSaved = previousSaved.some(s => s.id === hairstyleId);
 
-    const styleToSave =
-      recommendations.find((r) => r.id === hairstyleId) ||
-      (chosenHairstyle?.id === hairstyleId ? chosenHairstyle : null) ||
-      { id: hairstyleId };
-
-    const nextSaved = isSaved
-      ? previousSaved.filter((s) => s.id !== hairstyleId)
-      : [...previousSaved, styleToSave];
-
-    // Cập nhật giao diện tức thì (Optimistic Update)
-    queryClient.setQueryData(["profile-saved-styles"], nextSaved);
+    queryClient.setQueryData(["profile-saved-styles"], (old = []) => {
+      if (isSaved) {
+        return old.filter(s => s.id !== hairstyleId);
+      } else {
+        const found = recommendations.find(s => s.id === hairstyleId);
+        return found ? [...old, found] : old;
+      }
+    });
 
     try {
       if (isSaved) {
-        await api.delete("/profile/saved-styles", {
-          params: { hairstyleId }
-        });
-        trackEvent("unsave_favorite", { hairstyle_id: hairstyleId, source: "results" });
+        await api.delete(`/profile/saved-styles/${hairstyleId}`);
       } else {
-        await api.post("/profile/saved-styles", null, {
-          params: { hairstyleId }
-        });
-        trackEvent("save_favorite", { hairstyle_id: hairstyleId, source: "results" });
+        await api.post(`/profile/saved-styles/${hairstyleId}`);
       }
-      queryClient.invalidateQueries({ queryKey: ["profile-saved-styles"] });
     } catch (err) {
-      console.error("Lỗi khi thay đổi trạng thái yêu thích:", err);
-      // Hoàn tác lại dữ liệu nếu API gặp lỗi
+      console.error("Lỗi khi lưu/bỏ lưu kiểu tóc:", err);
       queryClient.setQueryData(["profile-saved-styles"], previousSaved);
     }
   };
 
-  if (!analysisResult) {
-    return null;
+  if (!hasHydrated || !analysisResult) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="size-8 animate-spin rounded-full border-4 border-pink border-t-transparent" />
+      </div>
+    );
   }
 
   const faceShapeText = FACE_SHAPE_TRANSLATION[faceShape] || faceShape;
@@ -177,12 +306,12 @@ export default function ResultsPage() {
     { label: "Tỷ lệ hàm/gò má", value: metrics?.jawToCheek ? metrics.jawToCheek.toFixed(2) : "N/A" },
   ];
 
-
   const reasons = REASONS_MAP[faceShape] || REASONS_MAP.Oval;
 
   const handleTryStyle = (hairstyle) => {
-    if (hairstyle.premiumOnly && (!user || (user.role !== "PREMIUM" && user.role !== "ADMIN" && user.role !== "TESTER"))) {
-      navigate("/pricing");
+    const isPaidUser = user?.plan && user.plan !== "FREE";
+    if (hairstyle.premiumOnly && !isPaidUser) {
+      setGateStyle(hairstyle);
       return;
     }
     setSelectedHairstyle({
@@ -200,10 +329,17 @@ export default function ResultsPage() {
       <Navbar />
 
       <Section className="bg-transparent">
+        {/* Banner khi không lưu vào lịch sử do hết quota 5 lần/ngày */}
+        {notSaved && (
+          <div className="mb-6 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-xs font-medium text-amber-500 text-center max-w-2xl mx-auto">
+            Kết quả lần này không được lưu vào lịch sử vì bạn đã dùng hết 5 lượt lưu hôm nay.
+          </div>
+        )}
+
         <div className="mb-12 flex flex-col items-center gap-3 text-center">
-          <Badge variant="new" className="uppercase tracking-wider text-[#3a4d00]">AI phân tích trực tiếp</Badge>
-          <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink sm:text-5xl">Phân tích kết quả của bạn</h1>
-          <p className="text-base text-mauve">Dựa trên trí tuệ nhân tạo, chúng tôi đã tạo ra hồ sơ tóc cá nhân hóa cho bạn.</p>
+          <Badge variant="new" className="uppercase tracking-wider text-[#3a4d00]">Gợi ý từ AI</Badge>
+          <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink sm:text-5xl">Kết quả gợi ý kiểu tóc</h1>
+          <p className="text-base text-mauve">Dựa trên tỉ lệ khuôn mặt từ ảnh của bạn, Hairapy gợi ý các phong cách phù hợp.</p>
         </div>
 
         <div className={`grid grid-cols-1 gap-8 ${chosenHairstyle ? "lg:grid-cols-[1fr_1.4fr] lg:items-start" : "lg:justify-items-center"}`}>
@@ -215,25 +351,94 @@ export default function ResultsPage() {
               className="aspect-square w-full rounded-2xl object-cover border border-line"
             />
 
-            <div>
-              <p className="mb-3 text-xs font-bold uppercase tracking-widest text-muted">Chỉ số sinh trắc học</p>
-              <dl className="grid grid-cols-2 gap-3">
-                {BIOMETRICS.map((b) => (
-                  <div key={b.label} className="rounded-xl bg-canvas p-3">
-                    <dt className="text-xs text-muted">{b.label}</dt>
-                    <dd className="text-base font-bold text-ink">{b.value}</dd>
-                  </div>
-                ))}
-              </dl>
+            {/* Thông tin dáng mặt + cho phép người dùng tự đổi */}
+            <div className="flex flex-col gap-2 rounded-2xl bg-canvas p-4 border border-line/60">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted">Dáng mặt</span>
+                {analysisResult?.userOverridden && (
+                  <Badge variant="outline" className="text-2xs text-brand border-brand/30">
+                    Bạn đã tự chọn
+                  </Badge>
+                )}
+              </div>
+              <div className="text-lg font-bold text-ink">
+                Dáng mặt gợi ý: <span className="text-pink">{faceShapeVi}</span>
+                {analysisResult?.alternativeShape && (
+                  <span className="text-sm font-semibold text-mauve ml-1.5">
+                    · cũng có nét {FACE_SHAPE_MAP[analysisResult.alternativeShape] || analysisResult.alternativeShape}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted leading-relaxed">
+                Đây là gợi ý tham khảo dựa trên tỉ lệ khuôn mặt trong ảnh.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setShowShapePicker(!showShapePicker)}
+                className="mt-1 text-xs font-bold text-primary hover:underline text-left cursor-pointer"
+              >
+                {showShapePicker ? "▲ Thu gọn chọn dáng mặt" : "Không đúng? Chọn dáng mặt khác"}
+              </button>
+
+              {showShapePicker && (
+                <div className="mt-2 flex flex-wrap gap-2 pt-2 border-t border-divider/20">
+                  {Object.entries(FACE_SHAPE_MAP).map(([code, name]) => {
+                    const isSelected = faceShape === code;
+                    return (
+                      <button
+                        key={code}
+                        type="button"
+                        onClick={() => {
+                          overrideFaceShape(code);
+                          trackEvent("face_shape_override", { from: faceShape, to: code });
+                        }}
+                        className={`rounded-full px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
+                          isSelected
+                            ? "bg-pink text-white shadow-sm"
+                            : "border border-line bg-white text-mauve hover:border-pink/40"
+                        }`}
+                      >
+                        {name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            <p className="flex items-start gap-2 text-xs text-muted leading-relaxed">
-              <CheckIcon size={14} className="text-lime shrink-0 mt-0.5" />
+            {/* Số đo tham khảo - mặc định thu gọn */}
+            <div className="border-t border-line/50 pt-4">
+              <button
+                type="button"
+                onClick={() => setShowBiometrics(!showBiometrics)}
+                className="flex items-center justify-between w-full text-xs font-bold uppercase tracking-widest text-muted hover:text-ink cursor-pointer"
+              >
+                <span>Số đo tham khảo</span>
+                <span className="text-xs lowercase font-normal">{showBiometrics ? "Thu gọn ▲" : "Xem chi tiết đo đạc ▼"}</span>
+              </button>
+
+              {showBiometrics && (
+                <dl className="grid grid-cols-2 gap-3 mt-3">
+                  {BIOMETRICS.map((b) => (
+                    <div key={b.label} className="rounded-xl bg-canvas p-3">
+                      <dt className="text-xs text-muted">{b.label}</dt>
+                      <dd className="text-base font-bold text-ink">{b.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </div>
+
+            <p className="flex items-start gap-2 text-[11px] text-muted leading-relaxed">
+              <CheckIcon size={13} className="text-lime shrink-0 mt-0.5" />
               <span>
-                Phân tích bởi <b className="text-mauve font-semibold">MediaPipe Face Landmarker</b>, chạy trực tiếp trên trình duyệt của bạn
+                Phân tích bởi <b className="text-mauve font-semibold">MediaPipe Face Landmarker</b> ngay trên máy của bạn
               </span>
             </p>
           </Card>
+
+          <AiStylistPanel hairstyleId={hairstyleId ? Number(hairstyleId) : null} defaultOpen={false} />
 
           {chosenHairstyle && (
             <div className="flex flex-col gap-6">
@@ -254,7 +459,7 @@ export default function ResultsPage() {
                             <div className="flex items-center gap-2">
                               <h4 className="font-bold text-ink text-base">{chosenHairstyle.name}</h4>
                               {chosenHairstyle.premiumOnly && (
-                                <Badge variant="premium">PRO</Badge>
+                                <Badge variant="premium">Trả phí</Badge>
                               )}
                             </div>
                             <p className="text-xs text-mauve line-clamp-2">{chosenHairstyle.description}</p>
@@ -277,14 +482,41 @@ export default function ResultsPage() {
           )}
         </div>
 
-        {/* Kiểu tóc đề xuất: cuộn ngang giống Trends ở trang chủ, tránh chiếm quá nhiều chiều cao */}
+        {/* Kiểu tóc đề xuất + Bộ chọn giới tính */}
         <div className="mt-12 flex flex-col gap-6">
-          <SectionHeading
-            center={false}
-            title={`Kiểu tóc dành cho gương mặt ${(FACE_SHAPE_TRANSLATION[faceShape] || "").split(" (")[0]}`}
-            subtitle="Đề xuất hàng đầu phù hợp nhất với cấu trúc xương của bạn."
-            action={<a href="/catalog" className="flex shrink-0 items-center gap-2 font-bold text-primary">Xem tất cả <ArrowRight /></a>}
-          />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <SectionHeading
+              center={false}
+              title={`Kiểu tóc dành cho gương mặt ${faceShapeVi}`}
+              subtitle="Đề xuất phù hợp nhất với cấu trúc khuôn mặt của bạn."
+              action={<Link to="/catalog" className="flex shrink-0 items-center gap-2 font-bold text-primary">Xem tất cả <ArrowRight /></Link>}
+            />
+
+            {/* Tab chọn giới tính sau khi quét */}
+            <div className="flex gap-1.5 shrink-0 bg-canvas p-1 rounded-full border border-line w-fit">
+              {[
+                { label: "Tất cả", value: null },
+                { label: "Nam", value: "Nam" },
+                { label: "Nữ", value: "Nữ" },
+              ].map((t) => {
+                const isActive = (gender || null) === t.value;
+                return (
+                  <button
+                    key={t.label}
+                    type="button"
+                    onClick={() => setGender(t.value)}
+                    className={`rounded-full px-4 py-1.5 text-xs font-bold transition cursor-pointer ${
+                      isActive
+                        ? "bg-pink text-white shadow-sm"
+                        : "text-mauve hover:text-ink"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           {recsLoading ? (
             <DragScroll>
@@ -306,55 +538,30 @@ export default function ResultsPage() {
             </Card>
           ) : (
             <DragScroll>
-              {recommendations.map((r, idx) => {
-                const match = Math.max(80, 98 - idx * 3);
-                return (
-                  <AnimatedContent key={r.id || r.name} delay={idx * 0.1}>
-                    <SpotlightCard className="rounded-2xl">
-                      <Card padded={false} className="w-[280px] shrink-0 overflow-hidden">
-                        <div className="relative">
-                          <img
-                            src={r.imageUrl}
-                            alt={r.name}
-                            draggable={false}
-                            className="pointer-events-none h-56 w-full object-cover"
-                            onError={(e) => { e.target.src = `https://placehold.co/600x400?text=${encodeURIComponent(r.name)}`; }}
-                          />
-                          <Badge variant="new" className="absolute left-3 top-3 shadow">{match}% phù hợp</Badge>
-                          {r.premiumOnly && (
-                            <Badge variant="premium" className="absolute right-3 top-3 shadow">PRO</Badge>
-                          )}
+              {groupedRecommendations.map((group, idx) => (
+                <HairstyleRecCard
+                  key={group.base.id || group.base.name}
+                  group={group}
+                  idx={idx}
+                  savedIds={savedIds}
+                  handleToggleSave={handleToggleSave}
+                  handleTryStyle={handleTryStyle}
+                />
+              ))}
 
-                          {/* Nút lưu yêu thích */}
-                          <button
-                            onClick={(e) => handleToggleSave(e, r.id)}
-                            className="absolute left-3 bottom-3 flex size-8 items-center justify-center rounded-full bg-white/90 text-ink shadow-md hover:bg-white hover:text-primary transition"
-                            title={savedIds.has(r.id) ? "Bỏ lưu" : "Lưu kiểu tóc"}
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill={savedIds.has(r.id) ? "#FF57CF" : "none"}
-                              viewBox="0 0 24 24"
-                              strokeWidth={2}
-                              stroke="#FF57CF"
-                              className="size-4"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
-                            </svg>
-                          </button>
-                        </div>
-                        <div className="p-4 space-y-1">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-bold text-ink truncate mr-2" title={r.name}>{r.name}</h4>
-                            <Button onClick={() => handleTryStyle(r)} size="sm" className="px-4 py-2 text-xs shrink-0">Thử ngay</Button>
-                          </div>
-                          <p className="text-xs font-semibold text-muted">Phù hợp: {r.gender || "Unisex"}</p>
-                        </div>
-                      </Card>
-                    </SpotlightCard>
-                  </AnimatedContent>
-                );
-              })}
+              {/* Card cuối danh sách: dẫn tới catalog */}
+              <Card padded={false} className="w-[280px] shrink-0 overflow-hidden flex flex-col justify-center items-center p-6 text-center border-2 border-dashed border-divider bg-canvas/40">
+                <p className="text-sm font-bold text-ink mb-1">Không thích các gợi ý này?</p>
+                <p className="text-xs text-mauve mb-4">Khám phá toàn bộ kiểu tóc phù hợp với mọi phong cách.</p>
+                <Button
+                  to={gender ? `/catalog?gender=${encodeURIComponent(gender)}` : "/catalog"}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                >
+                  Xem toàn bộ kho kiểu tóc
+                </Button>
+              </Card>
             </DragScroll>
           )}
         </div>
@@ -388,9 +595,9 @@ export default function ResultsPage() {
           <GlareHover className="mx-auto max-w-[1200px] rounded-[40px]">
             <div className="relative flex flex-col items-center gap-6 overflow-hidden rounded-[40px] bg-[#2f3131] p-12 text-center sm:p-16">
               <div className="pointer-events-none absolute inset-[-10%] bg-pink/20 blur-[60px]" />
-              <h2 className="relative font-display text-3xl font-extrabold text-white sm:text-4xl">Muốn thử tất cả các kiểu tóc bằng AR?</h2>
+              <h2 className="relative font-display text-3xl font-extrabold text-white sm:text-4xl">Muốn thử tất cả các kiểu tóc bằng AI?</h2>
               <p className="relative max-w-xl text-[#e2e2e2]">
-                Sử dụng công nghệ thực tế ảo tăng cường để thấy chính mình trong hàng trăm kiểu tóc khác nhau trước khi ra tiệm.
+                Sử dụng công nghệ trí tuệ nhân tạo để thấy chính mình trong hàng chục kiểu tóc khác nhau trước khi ra tiệm.
               </p>
               <div className="relative">
                 <BorderGlow rounded="rounded-full" thickness={2}>
@@ -403,6 +610,12 @@ export default function ResultsPage() {
       </section>
 
       <Footer />
+
+      <PremiumGateModal
+        isOpen={!!gateStyle}
+        onClose={() => setGateStyle(null)}
+        style={gateStyle}
+      />
     </div>
   );
 }

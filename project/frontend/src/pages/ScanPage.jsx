@@ -10,14 +10,14 @@ import { UploadIcon } from "../components/icons";
 import { AnimatedContent, BorderGlow } from "../components/animated";
 import { useScanStore } from "../store/useScanStore";
 import { analyzeFace, initFaceAnalyzer } from "../lib/faceAnalysis";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import useAuthStore from "../store/useAuthStore";
+import { useQueryClient } from "@tanstack/react-query";
+import { normalizeImage } from "../utils/imageUtils";
 import api from "../lib/api";
 
 const STATS = [
-  { value: "478 điểm", label: "Điểm khuôn mặt" },
-  { value: "0.2s", label: "Thời gian xử lý" },
-  { value: "Toàn cầu", label: "Kho xu hướng" },
+  { value: "Trên máy bạn", label: "Ảnh không gửi đi để phân tích" },
+  { value: "6 dáng mặt", label: "Trái xoan · Tròn · Vuông · Tim · Dài · Kim cương" },
+  { value: "Tự chỉnh được", label: "Bạn có thể sửa nếu AI đoán chưa đúng" },
 ];
 
 export default function ScanPage() {
@@ -36,30 +36,9 @@ export default function ScanPage() {
     error,
     setError,
     reset,
-    gender,
-    setGender,
   } = useScanStore();
 
   const queryClient = useQueryClient();
-  const token = useAuthStore((s) => s.token);
-
-  const { data: usageData } = useQuery({
-    queryKey: ["usage-summary"],
-    queryFn: async () => {
-      const { data } = await api.get("/usage/me");
-      return data;
-    },
-    enabled: !!token,
-    staleTime: 30_000,
-  });
-
-  const faceScanQuota = usageData?.faceScan;
-  const isFaceScanOut = !!(
-    token &&
-    faceScanQuota &&
-    !faceScanQuota.unlimited &&
-    faceScanQuota.used >= faceScanQuota.limit
-  );
 
   const [showDisclosure, setShowDisclosure] = useState(false);
   const [pendingFile, setPendingFile] = useState(null);
@@ -72,19 +51,17 @@ export default function ScanPage() {
   }, []);
 
   // Xử lý sự kiện khi người dùng chọn/chụp ảnh
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
+  const handleFileChange = async (e) => {
+    let file = e.target.files?.[0];
     if (!file) return;
 
-    if (isFaceScanOut) {
-      setError("Bạn đã hết lượt quét khuôn mặt hôm nay.");
-      return;
-    }
-
-    // Kiểm tra kích thước file (tối đa 5MB)
+    // Kiểm tra kích thước file (> 5MB thì thử nén trước)
     if (file.size > 5 * 1024 * 1024) {
-      setError("Kích thước tệp tin vượt quá 5MB. Vui lòng chọn ảnh nhỏ hơn.");
-      return;
+      file = await normalizeImage(file);
+      if (file.size > 5 * 1024 * 1024) {
+        setError("Kích thước tệp tin vượt quá 5MB kể cả sau khi tối ưu. Vui lòng chọn ảnh khác.");
+        return;
+      }
     }
 
     const accepted = localStorage.getItem("hairapy_disclosure_accepted") === "true";
@@ -107,6 +84,7 @@ export default function ScanPage() {
     img.src = objectUrl;
 
     img.onload = async () => {
+      let notSaved = false;
       try {
         const result = await analyzeFace(img);
         setResult(result);
@@ -118,7 +96,7 @@ export default function ScanPage() {
             const formData = new FormData();
             formData.append("faceShape", result.faceShape);
             formData.append("image", file);
-            formData.append("hairType", "Bình thường"); // Mặc định hoặc mở rộng từ kết quả nếu có
+            formData.append("hairType", "Bình thường");
             await api.post("/profile/scans", formData, {
               headers: {
                 "Content-Type": "multipart/form-data",
@@ -129,23 +107,16 @@ export default function ScanPage() {
           } catch (backendErr) {
             console.error("Lỗi khi lưu lịch sử quét lên backend:", backendErr);
             if (backendErr.response?.status === 429) {
-              const msg = backendErr.response?.data?.error || "Bạn đã hết lượt quét khuôn mặt hôm nay.";
               trackEvent("quota_exceeded", { feature: "face_scan" });
-              setError(msg);
-              setAnalyzing(false);
-              URL.revokeObjectURL(objectUrl);
-              return;
+              notSaved = true;
             }
           }
         }
 
         setAnalyzing(false);
         URL.revokeObjectURL(objectUrl);
-        if (hairstyleId) {
-          navigate(`/results?hairstyleId=${hairstyleId}`);
-        } else {
-          navigate("/results");
-        }
+        const targetPath = hairstyleId ? `/results?hairstyleId=${hairstyleId}` : "/results";
+        navigate(targetPath, { state: { notSaved } });
       } catch (err) {
         console.error("Lỗi phân tích khuôn mặt:", err);
         trackEvent("scan_error", { reason: "analyze_failed" });
@@ -180,56 +151,47 @@ export default function ScanPage() {
     <div className="min-h-screen">
       <Navbar />
 
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes laserScan {
-          0% { top: 0%; }
-          50% { top: 100%; }
-          100% { top: 0%; }
-        }
-      `}} />
-
       <section className="mx-auto grid max-w-[1100px] grid-cols-1 items-center gap-12 px-6 py-16 sm:px-10 lg:grid-cols-2">
         {/* Trái: nội dung */}
         <div className="flex flex-col gap-8">
           <AnimatedContent>
             <div className="flex flex-col items-start gap-4">
-              <Badge variant="new" className="uppercase tracking-wider text-[#3a4d00]">Phân tích AI</Badge>
+              <Badge variant="new" className="uppercase tracking-wider text-[#3a4d00]">Gợi ý AI</Badge>
               <h1 className="font-display text-5xl font-extrabold leading-tight tracking-tight text-ink">
-                Để AI tìm ra <span className="text-pink">phiên bản đẹp nhất của bạn</span>
+                Để AI gợi ý <span className="text-pink">kiểu tóc phù hợp với bạn</span>
               </h1>
               <p className="max-w-lg text-lg leading-7 text-mauve">
-                Trải nghiệm tương lai của tạo kiểu với mạng nơ-ron tiên tiến. AI của chúng tôi phân tích
-                hơn 470+ điểm trên khuôn mặt để gợi ý kiểu cắt, màu và phong cách phù hợp nhất
-                với cấu trúc xương riêng của bạn.
+                AI đo tỉ lệ khuôn mặt từ ảnh chân dung để <strong>gợi ý</strong> dáng mặt và kiểu tóc tham khảo.
+                Kết quả phụ thuộc chất lượng ảnh — bạn luôn có thể tự chỉnh lại.
               </p>
             </div>
           </AnimatedContent>
 
+          {/* Hướng dẫn chụp ảnh */}
           <AnimatedContent delay={0.15}>
-            <div className="flex flex-col gap-2">
-              <p className="text-sm font-semibold text-mauve">Giới tính của bạn</p>
-              <div className="flex gap-3">
-                {[
-                  { value: "Nam" },
-                  { value: "Nữ" },
-                  { value: "Unisex" },
-                ].map((g) => (
-                  <button
-                    key={g.value}
-                    onClick={() => setGender(g.value)}
-                    className={`flex items-center gap-2 rounded-full border-2 px-5 py-2.5 text-sm font-semibold transition-all ${
-                      gender === g.value
-                        ? "border-primary bg-primary/10 text-primary shadow-sm"
-                        : "border-line text-mauve hover:border-primary/50"
-                    }`}
-                  >
-                    {g.value}
-                  </button>
-                ))}
-              </div>
-              {!gender && (
-                <p className="text-xs text-muted">Vui lòng chọn để AI gợi ý kiểu tóc phù hợp hơn</p>
-              )}
+            <div className="rounded-2xl border border-divider/40 bg-white/60 p-5 text-xs text-mauve backdrop-blur-sm shadow-sm">
+              <p className="font-bold text-ink mb-3 text-sm">Hướng dẫn để AI phân tích tốt nhất:</p>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <li className="flex items-center gap-2">
+                  <span className="size-2 rounded-full bg-pink shrink-0" />
+                  <span>Chụp thẳng góc chính diện</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="size-2 rounded-full bg-pink shrink-0" />
+                  <span>Đủ ánh sáng, không ngược sáng</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="size-2 rounded-full bg-pink shrink-0" />
+                  <span>Không đeo kính, không khẩu trang</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="size-2 rounded-full bg-pink shrink-0" />
+                  <span>Vén tóc mái để lộ rõ trán</span>
+                </li>
+              </ul>
+              <p className="mt-3 text-[11px] text-muted italic border-t border-divider/20 pt-2">
+                * Thuật toán đo tỉ lệ hình học nên ảnh nghiêng hoặc che trán có thể cho kết quả chưa chuẩn.
+              </p>
             </div>
           </AnimatedContent>
 
@@ -241,7 +203,7 @@ export default function ScanPage() {
                   <Button
                     onClick={() => fileInputRef.current?.click()}
                     icon={<UploadIcon size={20} />}
-                    disabled={analyzing || isFaceScanOut}
+                    disabled={analyzing}
                   >
                     Tải ảnh
                   </Button>
@@ -264,11 +226,11 @@ export default function ScanPage() {
             className="hidden"
           />
 
-          <AnimatedContent delay={0.4}>
+          <AnimatedContent delay={0.3}>
             <div className="flex gap-8 pt-4">
               {STATS.map((s) => (
                 <div key={s.label}>
-                  <p className="text-2xl font-bold text-magenta">{s.value}</p>
+                  <p className="text-xl font-bold text-magenta">{s.value}</p>
                   <p className="text-xs font-bold uppercase tracking-wider text-mauve">{s.label}</p>
                 </div>
               ))}
@@ -293,17 +255,13 @@ export default function ScanPage() {
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink/60 backdrop-blur-sm transition-opacity duration-300">
                   <div className="relative z-10 flex flex-col items-center gap-4 text-center px-6">
                     <span className="size-16 animate-spin rounded-full border-4 border-pink border-t-transparent shadow-lg" />
-                    <p className="font-display font-semibold text-white animate-pulse tracking-wide text-lg">
+                    <p className="font-display font-semibold text-white tracking-wide text-lg">
                       Đang phân tích khuôn mặt...
                     </p>
-                    <p className="text-xs text-white/70">
-                      Tính toán 478 điểm mốc bằng WebAssembly
+                    <p className="text-xs text-white/80">
+                      Lần đầu cần tải mô hình AI, có thể mất 5–10 giây
                     </p>
                   </div>
-                  <div
-                    className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-pink to-transparent shadow-[0_0_15px_#ff57cf]"
-                    style={{ animation: "laserScan 2.5s ease-in-out infinite" }}
-                  />
                 </div>
               )}
 
@@ -316,22 +274,13 @@ export default function ScanPage() {
                 <span key={c} className={`absolute size-12 border-pink ${c}`} />
               ))}
 
-              <div className="absolute right-7 top-12 flex items-center gap-2 rounded-2xl border border-magenta/20 bg-white/90 px-4 py-2 shadow-lg backdrop-blur-md">
-                <span className="text-[11px] text-magenta">đã xác thực</span>
-                <span className="text-sm font-semibold text-ink">Chính xác 99.8%</span>
-              </div>
-
-              <div className="absolute inset-x-10 bottom-12 flex items-center justify-between rounded-2xl bg-ink/80 p-4 backdrop-blur-md">
+              <div className="absolute inset-x-10 bottom-8 flex items-center justify-between rounded-2xl bg-ink/80 p-4 backdrop-blur-md">
                 <div className="flex items-center gap-3">
                   <span className="size-10 rounded-full border-2 border-pink" />
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">Nhận diện khuôn mặt</p>
-                    <p className="text-sm font-semibold text-white">CHẠY CLIENT-SIDE</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">Xử lý an toàn</p>
+                    <p className="text-sm font-semibold text-white">Ảnh được phân tích ngay trên máy bạn</p>
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">Độ bảo mật</p>
-                  <p className="text-2xl font-bold text-pink">100%</p>
                 </div>
               </div>
             </div>

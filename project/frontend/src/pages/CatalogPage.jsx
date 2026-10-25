@@ -8,15 +8,14 @@ import { Badge, Button, Card } from "../components/ui";
 import api from "../lib/api";
 import { trackEvent } from "../lib/analytics";
 import { useScanStore } from "../store/useScanStore";
+import useAuthStore from "../store/useAuthStore";
+import { HAIR_COLORS, COLOR_BY_VALUE, swatchBg } from "../lib/hairColors";
+import HairstyleDetailModal from "../components/HairstyleDetailModal";
+import PremiumGateModal from "../components/PremiumGateModal";
 
 const GENDER_OPTS = ["Nam", "Nữ", "Unisex"];
 const FACE_OPTS = ["Tròn", "Vuông", "Trái xoan", "Dài", "Trái tim", "Kim cương"];
 const LENGTH_OPTS = ["Ngắn", "Vừa", "Dài"];
-const TREND_OPTS = [
-  { value: "hot-trend", label: "Thịnh hành", api: "Thịnh hành" },
-  { value: "moi", label: "Mới", api: "Mới" },
-  { value: "kinh-dien", label: "Kinh điển", api: "Kinh điển" },
-];
 const SORT_OPTS = [
   { value: "popular", label: "Phổ biến" },
   { value: "newest", label: "Mới nhất" },
@@ -26,9 +25,9 @@ const SORT_OPTS = [
 const PAGE_SIZES = [12, 24, 36];
 
 // ─── Data hook ────────────────────────────────────────────────────────────────
-function useHairstyles({ faceShape, search, gender, hairLength, tag }) {
+function useHairstyles({ faceShape, search, gender, hairLength, tag, color, sort }) {
   return useQuery({
-    queryKey: ["hairstyles", faceShape, search, gender, hairLength, tag],
+    queryKey: ["hairstyles", faceShape, search, gender, hairLength, tag, color, sort],
     queryFn: async () => {
       const params = {};
       if (faceShape) params.faceShape = faceShape;
@@ -36,10 +35,27 @@ function useHairstyles({ faceShape, search, gender, hairLength, tag }) {
       if (gender) params.gender = gender;
       if (hairLength) params.hairLength = hairLength;
       if (tag) params.tag = tag;
+      if (color) params.color = color;
+      if (sort === "popular") params.sort = "popular";
       const { data } = await api.get("/hairstyles", { params });
       return data;
     },
     staleTime: 60_000,
+  });
+}
+
+function useAllCatalogTags() {
+  return useQuery({
+    queryKey: ["catalog-available-tags"],
+    queryFn: async () => {
+      const { data } = await api.get("/hairstyles");
+      const tags = new Set();
+      data.forEach((h) => {
+        if (h.tag && h.tag.trim()) tags.add(h.tag.trim());
+      });
+      return Array.from(tags);
+    },
+    staleTime: 300_000,
   });
 }
 
@@ -166,35 +182,189 @@ function Pagination({ page, totalPages, onPageChange }) {
   );
 }
 
+function HairstyleCatalogCard({
+  group,
+  isSaved,
+  onToggleSave,
+  onOpenDetail,
+  onTryStyle,
+}) {
+  const [selectedVariant, setSelectedVariant] = useState(group.base);
+  const current = selectedVariant || group.base;
+
+  return (
+    <div
+      onClick={() => onOpenDetail(group.base, group.variants, current)}
+      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line/60 bg-white shadow-sm transition-all duration-300 hover:shadow-lg cursor-pointer"
+    >
+      <div className="relative overflow-hidden">
+        <img
+          src={current.imageUrl}
+          alt={current.name}
+          className="aspect-[4/5] w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          onError={(e) => {
+            e.target.src = `https://placehold.co/400x500?text=${encodeURIComponent(current.name)}`;
+          }}
+        />
+        <div className="absolute left-2.5 top-2.5 flex flex-col gap-1.5 z-10">
+          {current.tag && (
+            <Badge variant={["Mới", "Bán chạy", "Viral"].includes(current.tag) ? "new" : "hot"} className="shadow">
+              {current.tag}
+            </Badge>
+          )}
+          {current.premiumOnly && (
+            <Badge variant="premium" className="shadow">
+              Trả phí
+            </Badge>
+          )}
+        </div>
+
+        {current.sampleByAi && (
+          <div className="absolute left-2.5 bottom-2.5 rounded-full bg-ink/75 px-2.5 py-0.5 text-[10px] font-semibold text-white backdrop-blur-md shadow z-10">
+            ✨ Ảnh minh hoạ do AI tạo
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSave(e, current.id);
+          }}
+          title={isSaved ? "Bỏ lưu" : "Lưu kiểu tóc"}
+          className="absolute right-2.5 top-2.5 flex size-8 items-center justify-center rounded-full bg-white/90 shadow transition hover:bg-white hover:scale-110 z-10"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill={isSaved ? "#FF57CF" : "none"}
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            stroke="#FF57CF"
+            className="size-4"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"
+            />
+          </svg>
+        </button>
+      </div>
+
+      {/* Chấm màu biến thể nếu có */}
+      {group.variants.length > 1 && (
+        <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2.5">
+          {group.variants.map((v) => {
+            const isSel = v.id === current.id;
+            const colorObj = v.ailabColor ? COLOR_BY_VALUE[v.ailabColor] : null;
+            const tones = colorObj?.tones || ["#3a2c23", "#231812", "#0f0a07"];
+            const label = colorObj?.label || (v.baseStyleId ? "Biến thể" : "Màu gốc");
+            return (
+              <button
+                key={v.id}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedVariant(v);
+                }}
+                title={label}
+                className={`size-4 rounded-full transition-transform ${
+                  isSel ? "ring-2 ring-pink ring-offset-1 scale-125" : "hover:scale-110 opacity-70 hover:opacity-100"
+                }`}
+                style={{ background: swatchBg(tones) }}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      <div className="flex flex-1 flex-col justify-between p-3">
+        <div>
+          <h4 className="truncate text-sm font-bold text-ink" title={current.name}>
+            {current.name}
+          </h4>
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {current.gender && (
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                {current.gender}
+              </span>
+            )}
+            {current.hairLength && (
+              <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-mauve ring-1 ring-line">
+                {current.hairLength}
+              </span>
+            )}
+            {current.faceShape &&
+              current.faceShape.split(",").slice(0, 2).map((s) => (
+                <span
+                  key={s.trim()}
+                  className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-mauve ring-1 ring-line"
+                >
+                  {s.trim()}
+                </span>
+              ))}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onTryStyle(current);
+          }}
+          className="mt-3 w-full rounded-xl border border-primary/30 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary hover:text-white"
+        >
+          Thử kiểu này
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function CatalogPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  const { user } = useAuthStore();
+  const setSelectedHairstyle = useScanStore((state) => state.setSelectedHairstyle);
+
   const q = searchParams.get("q") || "";
   const genderFilter = searchParams.get("gender") || "";
   const face = searchParams.get("face") || "";
   const lengthFilter = searchParams.get("length") || "";
   const tagFilter = searchParams.get("trend") || "";
+  const colorFilter = searchParams.get("color") || "";
   const sortBy = searchParams.get("sort") || "popular";
   const page = Math.max(1, Number(searchParams.get("page") || "1"));
   const pageSize = PAGE_SIZES.includes(Number(searchParams.get("size")))
     ? Number(searchParams.get("size"))
     : 12;
 
-  const hasFilters = !!(q || genderFilter || face || lengthFilter || tagFilter);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [detailModalData, setDetailModalData] = useState(null);
+  const [gateStyle, setGateStyle] = useState(null);
 
-  // GA4: từ khoá tìm kiếm (chờ 800ms để không gửi từng ký tự) và bộ lọc đang dùng
+  const hasFilters = !!(q || genderFilter || face || lengthFilter || tagFilter || colorFilter);
+
+  // GA4: từ khoá tìm kiếm và bộ lọc đang dùng
   useEffect(() => {
     if (!q.trim()) return;
     const t = setTimeout(() => trackEvent("search", { search_term: q.trim().toLowerCase().slice(0, 60), source: "catalog" }), 800);
     return () => clearTimeout(t);
   }, [q]);
+
   useEffect(() => {
-    if (!(genderFilter || face || lengthFilter || tagFilter)) return;
-    trackEvent("filter_catalog", { gender: genderFilter || "all", face_shape: face || "all", length: lengthFilter || "all", trend: tagFilter || "all" });
-  }, [genderFilter, face, lengthFilter, tagFilter]);
+    if (!(genderFilter || face || lengthFilter || tagFilter || colorFilter)) return;
+    trackEvent("filter_catalog", {
+      gender: genderFilter || "all",
+      face_shape: face || "all",
+      length: lengthFilter || "all",
+      trend: tagFilter || "all",
+      color: colorFilter || "all",
+    });
+  }, [genderFilter, face, lengthFilter, tagFilter, colorFilter]);
 
   const setParam = useCallback(
     (key, value, resetPage = true) => {
@@ -212,20 +382,24 @@ export default function CatalogPage() {
   const clearFilters = useCallback(() => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
-      ["q", "gender", "face", "length", "trend"].forEach((k) => next.delete(k));
+      ["q", "gender", "face", "length", "trend", "color"].forEach((k) => next.delete(k));
       next.set("page", "1");
       return next;
     });
   }, [setSearchParams]);
 
-  const trendApiValue = TREND_OPTS.find((t) => t.value === tagFilter)?.api || null;
+  // Danh sách tag động từ database
+  const { data: availableTags = [] } = useAllCatalogTags();
 
+  // Truy vấn danh sách kiểu tóc
   const { data: items = [], isLoading, isError } = useHairstyles({
     faceShape: face || null,
     search: q || null,
     gender: genderFilter || null,
     hairLength: lengthFilter || null,
-    tag: trendApiValue,
+    tag: tagFilter || null,
+    color: colorFilter || null,
+    sort: sortBy === "popular" ? "popular" : null,
   });
 
   const sorted = useMemo(() => {
@@ -234,66 +408,53 @@ export default function CatalogPage() {
       case "newest": return copy.sort((a, b) => b.id - a.id);
       case "a-z":    return copy.sort((a, b) => a.name.localeCompare(b.name, "vi"));
       case "z-a":    return copy.sort((a, b) => b.name.localeCompare(a.name, "vi"));
-      default:       return copy;
+      default:       return copy; // popular đã được BE sắp xếp đúng
     }
   }, [items, sortBy]);
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
-  const safePage = Math.min(page, totalPages);
-  const pageItems = sorted.slice((safePage - 1) * pageSize, safePage * pageSize);
-  const startItem = sorted.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
-  const endItem = Math.min(safePage * pageSize, sorted.length);
+  // Nhóm theo kiểu tóc gốc nếu không lọc theo màu
+  const groupedItems = useMemo(() => {
+    if (colorFilter) {
+      return sorted.map((item) => ({ base: item, variants: [item] }));
+    }
+    const groups = new Map();
+    for (const item of sorted) {
+      const baseId = item.baseStyleId || item.id;
+      if (!groups.has(baseId)) {
+        groups.set(baseId, []);
+      }
+      groups.get(baseId).push(item);
+    }
+    const list = [];
+    for (const variants of groups.values()) {
+      variants.sort((a, b) => {
+        if (!a.baseStyleId && b.baseStyleId) return -1;
+        if (a.baseStyleId && !b.baseStyleId) return 1;
+        return a.id - b.id;
+      });
+      const base = variants.find((v) => !v.baseStyleId) || variants[0];
+      list.push({ base, variants });
+    }
+    return list;
+  }, [sorted, colorFilter]);
 
+  const totalPages = Math.max(1, Math.ceil(groupedItems.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pageItems = groupedItems.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const startItem = groupedItems.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const endItem = Math.min(safePage * pageSize, groupedItems.length);
+
+  // Yêu thích
   const { data: savedStyles = [] } = useQuery({
     queryKey: ["profile-saved-styles"],
     queryFn: async () => {
       const token = localStorage.getItem("token");
-      if (!token) return []; // giữ guard này — tránh gọi API thừa khi chưa đăng nhập
+      if (!token) return [];
       const { data } = await api.get("/profile/saved-styles");
       return data;
     },
   });
   const savedIds = new Set(savedStyles.map((s) => s.id));
-
-  const setSelectedHairstyle = useScanStore((state) => state.setSelectedHairstyle);
-  const previewUrl = useScanStore((state) => state.previewUrl);
-  const hydrateFromHistory = useScanStore((state) => state.hydrateFromHistory);
-  const [filtersOpen, setFiltersOpen] = useState(false);
-
-  const handleDetail = async (hairstyle) => {
-    trackEvent("view_hairstyle", { hairstyle_id: hairstyle.id, hairstyle_name: hairstyle.name });
-    const token = localStorage.getItem("token");
-    if (!token) {
-      navigate("/login", { state: { from: "/catalog" } });
-      return;
-    }
-    setSelectedHairstyle({
-      id: hairstyle.id,
-      name: hairstyle.name,
-      imageUrl: hairstyle.imageUrl,
-      ailabHairType: hairstyle.ailabHairType,
-      ailabProStyle: hairstyle.ailabProStyle,
-    });
-
-    let hasPhoto = !!previewUrl;
-    if (!hasPhoto) {
-      try {
-        const { data } = await api.get("/profile/scans");
-        if (data?.scans?.length > 0) {
-          await hydrateFromHistory(data.scans[0]);
-          hasPhoto = true;
-        }
-      } catch {
-        // Fallback êm về luồng /scan nếu người dùng chưa có ảnh quét hoặc lỗi mạng
-      }
-    }
-
-    if (hasPhoto) {
-      navigate(`/results?hairstyleId=${hairstyle.id}`);
-    } else {
-      navigate(`/scan?hairstyleId=${hairstyle.id}`);
-    }
-  };
 
   const handleToggleSave = async (e, hairstyleId) => {
     e.stopPropagation();
@@ -312,7 +473,6 @@ export default function CatalogPage() {
       ? previousSaved.filter((s) => s.id !== hairstyleId)
       : [...previousSaved, styleToSave];
 
-    // Cập nhật tức thời trên UI (Optimistic update)
     queryClient.setQueryData(["profile-saved-styles"], nextSaved);
 
     try {
@@ -326,9 +486,39 @@ export default function CatalogPage() {
       queryClient.invalidateQueries({ queryKey: ["profile-saved-styles"] });
     } catch (err) {
       console.error("Lỗi khi thay đổi trạng thái yêu thích:", err);
-      // Hoàn tác nếu API lỗi
       queryClient.setQueryData(["profile-saved-styles"], previousSaved);
     }
+  };
+
+  const handleOpenDetail = (base, variants, selected) => {
+    trackEvent("view_hairstyle", { hairstyle_id: selected.id, hairstyle_name: selected.name });
+    setDetailModalData({ base, variants, selected });
+  };
+
+  const executeTryStyle = (hairstyle) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/login", {
+        state: {
+          from: `/swap?hairstyleId=${hairstyle.id}`,
+          message: "Đăng nhập để thử kiểu tóc bằng AI",
+        },
+      });
+      return;
+    }
+    const isPaidUser = user?.plan && user.plan !== "FREE";
+    if (hairstyle.premiumOnly && !isPaidUser) {
+      setGateStyle(hairstyle);
+      return;
+    }
+    setSelectedHairstyle({
+      id: hairstyle.id,
+      name: hairstyle.name,
+      imageUrl: hairstyle.imageUrl,
+      ailabHairType: hairstyle.ailabHairType,
+      ailabProStyle: hairstyle.ailabProStyle,
+    });
+    navigate(`/swap?hairstyleId=${hairstyle.id}`);
   };
 
   return (
@@ -336,19 +526,19 @@ export default function CatalogPage() {
       <Navbar />
 
       {/* Hero */}
-      <section className="bg-transparent px-6 pb-10 pt-16 sm:px-16">
+      <section className="bg-transparent px-6 pb-6 pt-16 sm:px-16">
         <div className="mx-auto max-w-[1200px] text-center">
           <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink sm:text-5xl">
             Bộ Sưu Tập Kiểu Tóc
           </h1>
           <p className="mx-auto mt-3 max-w-2xl text-mauve">
-            Khám phá hàng ngàn kiểu tóc được tuyển chọn bởi AI, phù hợp với mọi khuôn mặt và phong cách cá nhân của bạn.
+            Khám phá hơn {items.length || 47} mẫu tóc phù hợp cho mọi dáng mặt và phong cách. Xem mẫu trực quan và thử diện mạo mới với AI.
           </p>
         </div>
       </section>
 
       {/* Main Container: Sidebar + Results Grid */}
-      <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-8 px-6 py-10 sm:px-16 lg:grid-cols-[260px_1fr]">
+      <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-8 px-6 py-6 sm:px-16 lg:grid-cols-[260px_1fr]">
         {/* Sidebar filter */}
         <aside className="lg:sticky lg:top-24 lg:self-start">
           {/* Nút toggle mobile (< lg) */}
@@ -421,20 +611,35 @@ export default function CatalogPage() {
                 <FilterSelect label="Tất cả độ dài" options={LENGTH_OPTS} value={lengthFilter} onChange={(v) => setParam("length", v)} />
               </div>
 
+              {availableTags.length > 0 && (
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-mauve">Phong cách & Xu hướng</label>
+                  <FilterSelect
+                    label="Tất cả phong cách"
+                    options={availableTags}
+                    value={tagFilter}
+                    onChange={(v) => setParam("trend", v)}
+                  />
+                </div>
+              )}
+
               <div>
-                <label className="mb-1 block text-xs font-semibold text-mauve">Xu hướng</label>
+                <label className="mb-1 block text-xs font-semibold text-mauve">Màu tóc</label>
                 <FilterSelect
-                  label="Tất cả xu hướng"
-                  options={TREND_OPTS.map((t) => ({ value: t.value, label: t.label }))}
-                  value={tagFilter}
-                  onChange={(v) => setParam("trend", v)}
+                  label="Tất cả màu tóc"
+                  options={[
+                    { value: "original", label: "Màu gốc" },
+                    ...HAIR_COLORS.map((c) => ({ value: c.value, label: c.label })),
+                  ]}
+                  value={colorFilter}
+                  onChange={(v) => setParam("color", v)}
                 />
               </div>
 
               <div className="border-t border-line/40 pt-3">
                 <label className="mb-1 block text-xs font-semibold text-mauve">Sắp xếp theo</label>
                 <FilterSelect
-                  label="Mặc định"
+                  label="Mặc định (Phổ biến)"
                   options={SORT_OPTS}
                   value={sortBy}
                   onChange={(v) => setParam("sort", v, false)}
@@ -446,121 +651,65 @@ export default function CatalogPage() {
 
         {/* Results Area */}
         <div>
-          {isLoading && (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {Array.from({ length: pageSize }).map((_, i) => (
-              <SkeletonCard key={i} />
-            ))}
-          </div>
-        )}
-
-        {isError && (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <p className="text-lg font-semibold text-ink">Không thể tải danh sách kiểu tóc.</p>
-            <p className="mt-1 text-sm text-mauve">Vui lòng kiểm tra kết nối hoặc thử lại sau.</p>
-            <Button to="/login" size="sm" className="mt-4">Đăng nhập lại</Button>
-          </div>
-        )}
-
-        {!isLoading && !isError && (
-          <>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {pageItems.length === 0 ? (
-                <EmptyState hasFilters={hasFilters} onClear={clearFilters} />
-              ) : (
-                pageItems.map((item, idx) => (
-                  <AnimatedContent key={item.id} delay={idx * 0.04}>
-                    <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line/60 bg-white shadow-sm transition-shadow duration-300 hover:shadow-lg">
-                      <div className="relative overflow-hidden">
-                        <img
-                          src={item.imageUrl}
-                          alt={item.name}
-                          className="aspect-[4/5] w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          onError={(e) => {
-                            e.target.src = `https://placehold.co/400x500?text=${encodeURIComponent(item.name)}`;
-                          }}
-                        />
-                        <div className="absolute left-2.5 top-2.5 flex flex-col gap-1.5">
-                          {item.tag && (
-                            <Badge variant={["Mới", "Bán chạy"].includes(item.tag) ? "new" : "hot"} className="shadow">
-                              {item.tag}
-                            </Badge>
-                          )}
-                          {item.premiumOnly && (
-                            <Badge variant="premium" className="shadow">PREMIUM</Badge>
-                          )}
-                        </div>
-                        <button
-                          onClick={(e) => handleToggleSave(e, item.id)}
-                          title={savedIds.has(item.id) ? "Bỏ lưu" : "Lưu kiểu tóc"}
-                          className="absolute right-2.5 top-2.5 flex size-8 items-center justify-center rounded-full bg-white/90 shadow transition hover:bg-white hover:scale-110"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" fill={savedIds.has(item.id) ? "#FF57CF" : "none"} viewBox="0 0 24 24" strokeWidth={2} stroke="#FF57CF" className="size-4">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
-                          </svg>
-                        </button>
-                      </div>
-                      <div className="flex flex-1 flex-col justify-between p-3">
-                        <div>
-                          <h4 className="truncate text-sm font-bold text-ink">{item.name}</h4>
-                          <div className="mt-1.5 flex flex-wrap gap-1">
-                            {item.gender && (
-                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">{item.gender}</span>
-                            )}
-                            {item.hairLength && (
-                              <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-mauve ring-1 ring-line">{item.hairLength}</span>
-                            )}
-                            {item.faceShape &&
-                              item.faceShape.split(",").slice(0, 2).map((s) => (
-                                <span key={s.trim()} className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-mauve ring-1 ring-line">
-                                  {s.trim()}
-                                </span>
-                              ))}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => handleDetail(item)}
-                          className="mt-3 w-full rounded-xl border border-primary/30 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary hover:text-white"
-                        >
-                          Thử kiểu này
-                        </button>
-                      </div>
-                    </div>
-                  </AnimatedContent>
-                ))
-              )}
+          {/* Header hiển thị số lượng */}
+          {!isLoading && !isError && (
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-xs font-semibold text-mauve">
+                Hiển thị <span className="text-ink font-bold">{startItem}–{endItem}</span> trên tổng số{" "}
+                <span className="text-ink font-bold">{items.length}</span> mẫu tóc đang hoạt động
+              </p>
             </div>
+          )}
 
-            {sorted.length > 0 && (
-              <div className="mt-10 flex flex-col items-center gap-5">
-                <Pagination
-                  page={safePage}
-                  totalPages={totalPages}
-                  onPageChange={(p) => setParam("page", String(p), false)}
-                />
-                <div className="flex items-center gap-4 text-sm text-mauve">
-                  <span>
-                    Hiển thị <span className="font-semibold text-ink">{startItem}–{endItem}</span> trong số{" "}
-                    <span className="font-semibold text-ink">{sorted.length}</span> kiểu tóc
-                  </span>
-                  <span className="h-4 w-px bg-line" />
-                  <div className="flex items-center gap-1.5">
-                    <span>Hiển thị:</span>
+          {isLoading && (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {Array.from({ length: pageSize }).map((_, i) => (
+                <SkeletonCard key={i} />
+              ))}
+            </div>
+          )}
+
+          {isError && (
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <p className="text-lg font-semibold text-ink">Không thể tải danh sách kiểu tóc.</p>
+              <p className="mt-1 text-sm text-mauve">Vui lòng kiểm tra kết nối hoặc thử lại sau.</p>
+              <Button to="/login" size="sm" className="mt-4">Đăng nhập lại</Button>
+            </div>
+          )}
+
+          {!isLoading && !isError && (
+            <>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {pageItems.length === 0 ? (
+                  <EmptyState hasFilters={hasFilters} onClear={clearFilters} />
+                ) : (
+                  pageItems.map((group, idx) => (
+                    <AnimatedContent key={group.base.id} delay={idx * 0.03}>
+                      <HairstyleCatalogCard
+                        group={group}
+                        isSaved={savedIds.has(group.base.id)}
+                        onToggleSave={handleToggleSave}
+                        onOpenDetail={handleOpenDetail}
+                        onTryStyle={executeTryStyle}
+                      />
+                    </AnimatedContent>
+                  ))
+                )}
+              </div>
+
+              {groupedItems.length > 0 && (
+                <div className="mt-10 flex flex-col items-center gap-5">
+                  <Pagination page={safePage} totalPages={totalPages} onPageChange={(p) => setParam("page", String(p))} />
+                  <div className="flex items-center gap-2 text-xs text-mauve">
+                    <span>Mỗi trang:</span>
                     {PAGE_SIZES.map((s) => (
                       <button
                         key={s}
-                        onClick={() =>
-                          setSearchParams((prev) => {
-                            const next = new URLSearchParams(prev);
-                            next.set("size", String(s));
-                            next.set("page", "1");
-                            return next;
-                          })
-                        }
-                        className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
-                          s === pageSize
+                        onClick={() => setParam("size", String(s))}
+                        className={`rounded-lg px-2.5 py-1 font-semibold transition ${
+                          pageSize === s
                             ? "bg-primary text-white"
-                            : "bg-white text-mauve ring-1 ring-line hover:ring-primary"
+                            : "border border-line text-mauve hover:border-primary hover:text-primary"
                         }`}
                       >
                         {s}
@@ -568,14 +717,36 @@ export default function CatalogPage() {
                     ))}
                   </div>
                 </div>
-              </div>
-            )}
-          </>
-        )}
+              )}
+            </>
+          )}
         </div>
       </div>
 
       <Footer />
+
+      {/* Modal chi tiết kiểu tóc */}
+      <HairstyleDetailModal
+        isOpen={!!detailModalData}
+        onClose={() => setDetailModalData(null)}
+        hairstyle={detailModalData?.base}
+        variants={detailModalData?.variants || []}
+        selectedVariant={detailModalData?.selected}
+        onSelectVariant={(v) => setDetailModalData((prev) => (prev ? { ...prev, selected: v } : null))}
+        isSaved={detailModalData ? savedIds.has(detailModalData.selected?.id || detailModalData.base?.id) : false}
+        onToggleSave={handleToggleSave}
+        onTryStyle={(h) => {
+          setDetailModalData(null);
+          executeTryStyle(h);
+        }}
+      />
+
+      {/* Paywall Gate */}
+      <PremiumGateModal
+        isOpen={!!gateStyle}
+        onClose={() => setGateStyle(null)}
+        style={gateStyle}
+      />
     </div>
   );
 }

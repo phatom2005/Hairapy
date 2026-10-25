@@ -20,6 +20,8 @@ import api from "../lib/api";
 import { useScanStore } from "../store/useScanStore";
 import { Badge, Button, Card, DragScroll, Section, SectionHeading } from "../components/ui";
 import HairapyLogoMark from "../components/animated/HairapyLogoMark";
+import { PLANS, getPlanCta } from "../lib/plans";
+import PremiumGateModal from "../components/PremiumGateModal";
 
 export default function LandingPage() {
   return (
@@ -172,8 +174,8 @@ function HeroLogoCard() {
           <StarIcon size={20} className="text-ink" />
         </span>
         <div>
-          <p className="text-xs font-bold tracking-wide text-white drop-shadow-sm">Độ chính xác</p>
-          <p className="text-base font-bold text-white drop-shadow-sm">99.8% AI Scan</p>
+          <p className="text-xs font-bold tracking-wide text-white drop-shadow-sm">Gợi ý thông minh</p>
+          <p className="text-base font-bold text-white drop-shadow-sm">Theo dáng mặt</p>
         </div>
       </motion.div>
     </div>
@@ -184,11 +186,11 @@ function HeroLogoCard() {
 function MarqueeStrip() {
   const ITEMS = [
     "Scan • Style • Smile",
-    "AI Scan 99.8%",
-    "1000+ kiểu tóc",
+    "Gợi ý theo dáng mặt",
+    "Thử tóc bằng AI",
+    "Catalog đa dạng",
     "Sản xuất tại Việt Nam",
-    "Thử tóc AR thời gian thực",
-    "Salon Premium giảm 30%",
+    "Tư vấn AI Stylist",
   ];
   return (
     <div className="border-y border-divider/30 bg-lime py-6 text-brand">
@@ -200,13 +202,13 @@ function MarqueeStrip() {
 /* ---------- Features ---------- */
 const FEATURES = [
   { icon: ScanIcon, iconBg: "bg-pink/10", iconColor: "text-pink", title: "Quét AI",
-    desc: "Phân tích tỉ lệ khuôn mặt, cấu trúc xương và chất tóc để đưa ra gợi ý kiểu tóc tối ưu nhất cho bạn.",
+    desc: "Đo đạc tỉ lệ khuôn mặt từ ảnh chân dung để đưa ra gợi ý kiểu tóc phù hợp nhất với cấu trúc riêng của bạn.",
     spotlight: "rgba(255, 87, 207, 0.18)" },
-  { icon: CameraIcon, iconBg: "bg-[#8093ff]/10", iconColor: "text-[#8093ff]", title: "Thử tóc ảo",
-    desc: "Trải nghiệm hàng ngàn kiểu tóc và màu sắc thời thượng ngay lập tức thông qua camera AR thực tế ảo.",
+  { icon: CameraIcon, iconBg: "bg-[#8093ff]/10", iconColor: "text-[#8093ff]", title: "Thử tóc AI",
+    desc: "Trải nghiệm trực quan nhiều kiểu tóc và màu sắc thời thượng ngay trên ảnh chân dung với công nghệ AI.",
     spotlight: "rgba(128, 147, 255, 0.2)" },
-  { icon: StarIcon, iconBg: "bg-lime", iconColor: "text-ink", title: "Gợi ý chuyên gia",
-    desc: "Kết nối với các chuyên gia tạo mẫu tóc hàng đầu để nhận tư vấn chuyên sâu về cách chăm sóc và tạo kiểu.",
+  { icon: StarIcon, iconBg: "bg-lime", iconColor: "text-ink", title: "AI Stylist",
+    desc: "Trợ lý tạo mẫu tóc AI thông minh, hỗ trợ giải đáp thắc mắc về tạo kiểu, giữ nếp và chăm sóc tóc.",
     spotlight: "rgba(208, 238, 136, 0.25)" },
 ];
 
@@ -271,7 +273,7 @@ function Features() {
                     </div>
                     <div className="mt-6 flex items-center gap-2 text-xs font-bold text-brand uppercase tracking-wider">
                       <span className="flex h-2 w-2 rounded-full bg-brand animate-pulse" />
-                      AR Trial Ready
+                      AI Trial Ready
                     </div>
                   </Card>
                 </SpotlightCard>
@@ -327,6 +329,7 @@ function Trends() {
   });
 
   const trendingStyles = allHairstyles.filter((h) => h.tag && h.tag.trim() !== "").slice(0, 8);
+  const [gateStyle, setGateStyle] = useState(null);
 
   const handleTryStyle = (hairstyle) => {
     const token = localStorage.getItem("token");
@@ -334,8 +337,9 @@ function Trends() {
       navigate("/login", { state: { from: "/" } });
       return;
     }
-    if (hairstyle.premiumOnly && (!user || (user.role !== "PREMIUM" && user.role !== "ADMIN" && user.role !== "TESTER"))) {
-      navigate("/pricing");
+    const isPaidUser = user?.plan && user.plan !== "FREE";
+    if (hairstyle.premiumOnly && !isPaidUser) {
+      setGateStyle(hairstyle);
       return;
     }
     setSelectedHairstyle({
@@ -360,9 +364,9 @@ function Trends() {
           title="Xu Hướng Tóc 2026"
           subtitle="Những kiểu tóc nổi bật nhất trong kho catalog của Hairapy."
           action={
-            <a href="/catalog" className="flex shrink-0 items-center gap-2 font-bold text-primary">
+            <Link to="/catalog" className="flex shrink-0 items-center gap-2 font-bold text-primary">
               Xem tất cả <ArrowRight />
-            </a>
+            </Link>
           } />
       </AnimatedContent>
 
@@ -375,7 +379,7 @@ function Trends() {
                 onError={(e) => { e.target.src = `https://placehold.co/280x320?text=${encodeURIComponent(t.name)}`; }} />
               <Badge variant="new" className="absolute left-4 top-4 shadow">{t.tag}</Badge>
               {t.premiumOnly && (
-                <Badge variant="premium" className="absolute right-4 top-4 shadow">PREMIUM</Badge>
+                <Badge variant="premium" className="absolute right-4 top-4 shadow">Trả phí</Badge>
               )}
             </div>
             <h4 className="mt-4 px-2 text-lg font-bold text-ink">{t.name}</h4>
@@ -386,17 +390,21 @@ function Trends() {
           </Card>
         ))}
       </DragScroll>
+
+      <PremiumGateModal
+        isOpen={!!gateStyle}
+        onClose={() => setGateStyle(null)}
+        style={gateStyle}
+      />
     </Section>
   );
 }
 
 /* ---------- Premium Upsell ---------- */
-const PERKS = ["Kiểu tóc Premium mỗi tuần", "Không quảng cáo", "Mã giảm giá Salon 30%"];
-
-const PLANS = [
-  { name: "Cơ bản", price: "0đ", period: "/ vĩnh viễn", label: "GÓI MIỄN PHÍ", to: "/register", desc: "5 lần quét AI & 1 lần thử kiểu tóc mỗi ngày." },
-  { name: "Tuần", price: "49k", period: "/ tuần", label: "TRẢI NGHIỆM NHANH", to: "/checkout?plan=PRO", desc: "5 lần quét AI & 5 lần thử tóc mỗi ngày, ảnh HD không logo." },
-  { name: "Premium", price: "99k", period: "/ tháng", label: "ƯU ĐÃI LỚN NHẤT", to: "/checkout?plan=PREMIUM", desc: "Ảnh HD không watermark & tư vấn 1:1 trực tiếp cùng Stylist." },
+const PERKS = [
+  "Kiểu tóc độc quyền",
+  "Ảnh HD không logo, không watermark",
+  "Tư vấn kiểu tóc với AI Stylist",
 ];
 
 function PremiumUpsell() {
@@ -410,29 +418,7 @@ function PremiumUpsell() {
     return () => clearInterval(timer);
   }, []);
 
-  const getPlanCta = (plan) => {
-    if (!user) {
-      return { text: "Đăng ký ngay", to: plan.to, disabled: false };
-    }
-    if (user.role === "ADMIN") {
-      return { text: "Trang quản trị", to: "/admin", disabled: false };
-    }
-    if (plan.name === "Cơ bản") {
-      if (user.role === "USER") return { text: "Đang áp dụng", to: null, disabled: true };
-      return { text: "Gói cơ bản", to: null, disabled: true };
-    }
-    if (plan.name === "Tuần") {
-      if (user.role === "PREMIUM") return { text: "Đang dùng Premium", to: null, disabled: true };
-      return { text: "Đăng ký ngay", to: plan.to, disabled: false };
-    }
-    if (plan.name === "Premium") {
-      if (user.role === "PREMIUM") return { text: "Đang áp dụng", to: null, disabled: true };
-      return { text: "Đăng ký ngay", to: plan.to, disabled: false };
-    }
-    return { text: "Đăng ký ngay", to: plan.to, disabled: false };
-  };
-
-  const { text: ctaText, to: ctaTo, disabled: ctaDisabled } = getPlanCta(PLANS[activeIdx]);
+  const { text: ctaText, to: ctaTo, disabled: ctaDisabled } = getPlanCta(PLANS[activeIdx], user);
 
   return (
     <section id="premium" className="bg-transparent px-4 py-16 sm:px-16">
@@ -448,8 +434,8 @@ function PremiumUpsell() {
                 Nâng Cấp Trải Nghiệm Premium
               </h2>
               <p className="max-w-2xl text-lg leading-relaxed text-[#e2e2e2]">
-                Mở khóa tất cả các bộ lọc AI độc quyền, nhận tư vấn 1-1 không giới hạn và
-                nhận ưu đãi đặc biệt tại các salon đối tác hàng đầu.
+                Mở khóa tất cả các bộ lọc AI độc quyền, nhận tư vấn kiểu tóc cùng AI Stylist và
+                xuất ảnh HD không logo, không watermark.
               </p>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 w-full">
                 {PERKS.map((p) => (

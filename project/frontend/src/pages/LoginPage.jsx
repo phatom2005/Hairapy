@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { AuthShell, AuthHeading, OrDivider, SocialButtons } from "../components/auth/AuthShell";
 import { Button, Input } from "../components/ui";
 import { AnimatedContent, BorderGlow } from "../components/animated";
@@ -14,9 +14,18 @@ export default function LoginPage() {
   const [unverifiedEmail, setUnverifiedEmail] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { login, loading, error, clearError } = useAuthStore();
 
-  const from = location.state?.from || "/profile";
+  const isExpired = searchParams.get("expired") === "1";
+
+  const from = location.state?.from || (() => {
+    try {
+      return sessionStorage.getItem("hairapy-return-to");
+    } catch {
+      return null;
+    }
+  })() || "/profile";
   const message = location.state?.message;
 
   // Xóa các lỗi cũ khi mở trang đăng nhập
@@ -31,6 +40,11 @@ export default function LoginPage() {
     try {
       const success = await login(email, password);
       if (success) {
+        try {
+          sessionStorage.removeItem("hairapy-return-to");
+        } catch {
+          /* ignore storage error */
+        }
         navigate(from);
       }
     } catch (err) {
@@ -55,7 +69,13 @@ export default function LoginPage() {
 
           {unverifiedEmail && <ResendVerification email={unverifiedEmail} />}
 
-          {message && !error && (
+          {isExpired && !error && (
+            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-center text-sm font-semibold text-amber-700">
+              Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại
+            </div>
+          )}
+
+          {message && !error && !isExpired && (
             <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-center text-sm font-semibold text-primary">
               ℹ️ {message}
             </div>

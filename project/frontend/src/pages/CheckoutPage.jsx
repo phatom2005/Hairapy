@@ -7,35 +7,40 @@ import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/Navbar";
 import { Badge, Button, Card } from "../components/ui";
 import api from "../lib/api";
+import useAuthStore from "../store/useAuthStore";
+import { PLANS, PLAN_LABEL, getPlanCta } from "../lib/plans";
 
 export default function CheckoutPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const plan = searchParams.get("plan")?.toUpperCase() || "PRO";
 
-  // Xác định thông tin chi tiết của gói
-  const isPremium = plan === "PREMIUM";
-  const planName = isPremium ? "Tháng" : "Pro (Tuần)";
-  const planPrice = isPremium ? "99.000vnđ" : "49.000vnđ";
-  const planPeriod = isPremium ? "30 ngày" : "7 ngày";
+  // Xác định thông tin chi tiết của gói từ PLANS (nguồn sự thật duy nhất)
+  const targetPlan = PLANS.find((p) => p.code === plan) || PLANS.find((p) => p.code === "PRO") || PLANS[1];
 
-  const features = isPremium
-    ? [
-        "Quét hình ảnh AI không giới hạn",
-        "Phân tích chuyên sâu hình dáng & màu sắc",
-        "Ưu đãi giảm giá 30% tại Salon liên kết",
-        "Tư vấn 1:1 trực tiếp cùng Stylist chuyên nghiệp",
-        "Không chèn watermark, xuất ảnh chất lượng HD",
-      ]
-    : [
-        "5 lần quét AI phân tích khuôn mặt mỗi ngày",
-        "5 lần thử kiểu tóc mới mỗi ngày",
-        "Ưu đãi giảm giá 10% tại Salon liên kết",
-        "Không chèn watermark, xuất ảnh chất lượng HD",
-      ];
+  const userPlan = user?.plan || "FREE";
+  // Truyền đúng object gói + object user (trước đây truyền chuỗi → nút thanh toán bị khoá với mọi user đã đăng nhập)
+  const cta = getPlanCta(targetPlan, user);
+  const isDisabled = cta.disabled;
+  const disabledHint = cta.hint;
+  const isPaidUser = userPlan !== "FREE";
+  const formattedEndDate = user?.planEndDate
+    ? new Date(user.planEndDate).toLocaleDateString("vi-VN", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
+    : "";
+
+  const planName = targetPlan.name;
+  const planPrice = targetPlan.price;
+  const planPeriod = targetPlan.days ? `${targetPlan.days} ngày` : targetPlan.period;
+
+  const features = targetPlan.features.filter((f) => f.on).map((f) => f.text);
 
   const handlePayment = async () => {
     setLoading(true);
@@ -133,6 +138,18 @@ export default function CheckoutPage() {
                         </div>
                       </div>
 
+                      {isPaidUser && (
+                        <div className="p-3.5 mb-4 rounded-2xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold leading-relaxed">
+                          Bạn đang dùng {PLAN_LABEL[userPlan] || userPlan} {formattedEndDate ? `đến ${formattedEndDate}` : ""}. Gói mới sẽ được cộng dồn vào hạn hiện tại.
+                        </div>
+                      )}
+
+                      {isDisabled && (
+                        <div className="p-4 mb-6 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-medium">
+                          {disabledHint || "Gói này hiện không khả dụng cho tài khoản của bạn."}
+                        </div>
+                      )}
+
                       {error && (
                         <div className="p-4 mb-6 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs">
                           {error}
@@ -144,7 +161,7 @@ export default function CheckoutPage() {
                       {/* Nút thanh toán */}
                       <Button
                         onClick={handlePayment}
-                        disabled={loading}
+                        disabled={loading || isDisabled}
                         variant="pink"
                         className="w-full justify-center py-3.5 mb-4 text-sm font-bold tracking-wide"
                       >
@@ -153,6 +170,8 @@ export default function CheckoutPage() {
                             <span className="size-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                             Đang kết nối...
                           </div>
+                        ) : isDisabled ? (
+                          "Không khả dụng"
                         ) : (
                           "Thanh toán qua VietQR"
                         )}

@@ -35,9 +35,14 @@ api.interceptors.response.use(
     const expired = res && (res.status === 401 || (res.status === 403 && emptyBody && hadToken));
     if (expired) {
       localStorage.removeItem("token");
+      try {
+        sessionStorage.setItem("hairapy-return-to", window.location.pathname + window.location.search);
+      } catch {
+        /* ignore storage error */
+      }
       // Chỉ redirect nếu không phải đang ở trang auth
       if (!window.location.pathname.startsWith("/login")) {
-        window.location.href = "/login";
+        window.location.href = "/login?expired=1";
       }
     }
     return Promise.reject(error);

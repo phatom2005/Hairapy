@@ -4,7 +4,7 @@ import api from "../lib/api";
 import useAuthStore from "../store/useAuthStore";
 
 const LABELS = {
-  FACE_SCAN: "phân tích khuôn mặt",
+  FACE_SCAN: "lưu lịch sử quét",
   HAIR_SWAP: "thử kiểu tóc",
 };
 
@@ -41,6 +41,14 @@ export default function QuotaBadge({ feature }) {
 
   const remaining = Math.max(limit - used, 0);
   const isOut = remaining === 0;
+
+  if (feature === "FACE_SCAN" && isOut) {
+    return (
+      <p className="text-xs font-semibold text-amber-500">
+        Bạn đã dùng hết {limit} lượt lưu lịch sử quét hôm nay. Bạn vẫn phân tích được, nhưng kết quả sẽ không được lưu.
+      </p>
+    );
+  }
 
   return (
     <p className={`text-xs font-semibold ${isOut ? "text-red-500" : "text-mauve"}`}>

@@ -23,7 +23,8 @@ export default function CheckoutPage() {
   const targetPlan = PLANS.find((p) => p.code === plan) || PLANS.find((p) => p.code === "PRO") || PLANS[1];
 
   const userPlan = user?.plan || "FREE";
-  const cta = getPlanCta(plan, userPlan);
+  // Truyền đúng object gói + object user (trước đây truyền chuỗi → nút thanh toán bị khoá với mọi user đã đăng nhập)
+  const cta = getPlanCta(targetPlan, user);
   const isDisabled = cta.disabled;
   const disabledHint = cta.hint;
   const isPaidUser = userPlan !== "FREE";

@@ -4,14 +4,15 @@
 //
 // Replace cho Navbar.jsx cũ. Giữ nguyên API items={[{label, to}]}.
 
+import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
-import { NavLink, Link, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "motion/react";
-import Logo from "./Logo";
-import Button from "../ui/Button";
-import StaggeredMenu from "./StaggeredMenu";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { PROFILE_IMG } from "../../lib/figmaAssets";
 import useAuthStore from "../../store/useAuthStore";
+import Button from "../ui/Button";
+import Logo from "./Logo";
+import StaggeredMenu from "./StaggeredMenu";
+import "../animated/border-glow.css";
 
 const DEFAULT_ITEMS = [
   { label: "Tính năng", to: "/#features" },
@@ -27,93 +28,119 @@ export default function PillNav({ items = DEFAULT_ITEMS }) {
   // Resolve active item theo URL (so sánh path bỏ hash)
   const activeLabel = items.find((it) => {
     const path = it.to.split("#")[0];
-    return path === location.pathname || (path === "/" && location.pathname === "/");
+    return (
+      path === location.pathname || (path === "/" && location.pathname === "/")
+    );
   })?.label;
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-transparent">
-        <nav className="mx-auto flex h-20 max-w-[1200px] items-center justify-between px-6 sm:px-16">
-          <Logo />
-
-          {/* Desktop: pill nav với sliding indicator */}
-          <div className="hidden md:flex">
-            <div className="relative flex items-center gap-1 rounded-full border border-divider/40 bg-white/60 p-1.5 shadow-sm backdrop-blur">
-              {items.map((it) => {
-                const isActive = activeLabel === it.label;
-                return (
-                  <NavLink
-                    key={it.label}
-                    to={it.to}
-                    className="relative rounded-full px-5 py-2 text-sm font-semibold transition-colors"
-                  >
-                    {/* Indicator viên thuốc trượt — dùng layoutId để motion tween */}
-                    {isActive && (
-                      <motion.span
-                        layoutId="pill-nav-indicator"
-                        className="absolute inset-0 rounded-full bg-gradient-to-br from-pink to-brand shadow-md"
-                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                      />
-                    )}
-                    <span
-                      className={`relative z-10 ${
-                        isActive ? "text-white" : "text-mauve hover:text-ink"
-                      }`}
-                    >
-                      {it.label}
-                    </span>
-                  </NavLink>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Right side: login + CTA + profile (desktop) | hamburger (mobile) */}
-          <div className="hidden items-center gap-4 md:flex">
-            {!token ? (
-              <>
-                <Link to="/login" className="text-sm font-semibold text-mauve hover:text-ink">
-                  Đăng nhập
-                </Link>
-                <Button to="/register" size="sm">Bắt đầu ngay</Button>
-              </>
-            ) : (
-              <>
-                <Link to="/profile" aria-label="Tài khoản" className="flex items-center gap-2">
-                  <img
-                    src={PROFILE_IMG}
-                    alt=""
-                    className="size-9 rounded-full border-2 border-white object-cover shadow"
-                  />
-                </Link>
-                <button
-                  onClick={logout}
-                  className="text-sm font-semibold text-[#ba1a1a] hover:text-[#ba1a1a]/80"
-                >
-                  Đăng xuất
-                </button>
-              </>
-            )}
-          </div>
-
-          {/* Mobile hamburger */}
-          <button
-            onClick={() => setMobileOpen(true)}
-            aria-label="Mở menu"
-            className="flex size-10 items-center justify-center rounded-full bg-white shadow md:hidden"
+      <header className="sticky top-3 sm:top-4 z-50 px-3 sm:px-6 transition-all duration-300">
+        <div className="relative mx-auto max-w-[1260px] w-full">
+          {/* Animated LED Border Glow Wrapper (dải LED chuyển động quanh viền) */}
+          <div
+            className="navbar-glow rounded-full w-full block transition-all"
+            style={{
+              "--glow-duration": "6000ms",
+              "--glow-thickness": "2px",
+            }}
           >
-            <Hamburger />
-          </button>
-        </nav>
+            {/* The Floating Glass Pill - Kính mờ trong suốt (bg-white/60 + backdrop-blur-xl) */}
+            <nav className="flex h-16 sm:h-[68px] w-full items-center justify-between rounded-full bg-white/60 px-5 sm:px-8 shadow-xs backdrop-blur-xl backdrop-saturate-150 transition-all">
+              <Logo className="h-10 sm:h-12 w-auto hover:opacity-90 transition-opacity" />
+
+              {/* Desktop: pill nav với sliding indicator */}
+              <div className="hidden md:flex">
+                <div className="relative flex items-center gap-1 rounded-full border border-line/60 bg-white/50 p-1 shadow-2xs backdrop-blur-sm">
+                  {items.map((it) => {
+                    const isActive = activeLabel === it.label;
+                    return (
+                      <NavLink
+                        key={it.label}
+                        to={it.to}
+                        className="relative rounded-full px-5 py-2 text-sm font-semibold transition-colors"
+                      >
+                        {/* Indicator viên thuốc trượt — dùng layoutId để motion tween */}
+                        {isActive && (
+                          <motion.span
+                            layoutId="pill-nav-indicator"
+                            className="absolute inset-0 rounded-full bg-gradient-to-br from-pink to-brand shadow-sm"
+                            transition={{
+                              type: "spring",
+                              stiffness: 400,
+                              damping: 30,
+                            }}
+                          />
+                        )}
+                        <span
+                          className={`relative z-10 transition-colors ${
+                            isActive
+                              ? "text-white"
+                              : "text-mauve hover:text-ink font-semibold"
+                          }`}
+                        >
+                          {it.label}
+                        </span>
+                      </NavLink>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Right side: login + CTA + profile (desktop) | hamburger (mobile) */}
+              <div className="hidden items-center gap-4 md:flex">
+                {!token ? (
+                  <>
+                    <Link
+                      to="/login"
+                      className="text-sm font-semibold text-mauve hover:text-ink transition-colors"
+                    >
+                      Đăng nhập
+                    </Link>
+                    <Button to="/register" size="sm">
+                      Bắt đầu ngay
+                    </Button>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <Link
+                      to="/profile"
+                      aria-label="Tài khoản"
+                      className="group flex items-center gap-2"
+                    >
+                      <img
+                        src={PROFILE_IMG}
+                        alt=""
+                        className="size-9 rounded-full border-2 border-white object-cover shadow-sm group-hover:ring-2 group-hover:ring-primary/40 transition-all"
+                      />
+                    </Link>
+                    <button
+                      onClick={logout}
+                      className="rounded-full px-3 py-1.5 text-xs font-semibold text-[#ba1a1a] hover:bg-[#ba1a1a]/10 transition-colors cursor-pointer"
+                    >
+                      Đăng xuất
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile hamburger */}
+              <button
+                onClick={() => setMobileOpen(true)}
+                aria-label="Mở menu"
+                className="flex size-9 items-center justify-center rounded-full bg-line/60 text-ink hover:bg-line transition-colors md:hidden cursor-pointer"
+              >
+                <Hamburger />
+              </button>
+            </nav>
+          </div>
+        </div>
       </header>
 
       {/* Mobile overlay menu */}
       <AnimatePresence>
         {mobileOpen && (
-          <StaggeredMenu
-            items={items}
-            onClose={() => setMobileOpen(false)}
-          />
+          <StaggeredMenu items={items} onClose={() => setMobileOpen(false)} />
         )}
       </AnimatePresence>
     </>
@@ -122,7 +149,14 @@ export default function PillNav({ items = DEFAULT_ITEMS }) {
 
 function Hamburger() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round">
       <line x1="4" y1="7" x2="20" y2="7" />
       <line x1="4" y1="12" x2="20" y2="12" />
       <line x1="4" y1="17" x2="20" y2="17" />

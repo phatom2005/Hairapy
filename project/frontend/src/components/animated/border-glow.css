@@ -61,4 +61,53 @@
 
 @media (prefers-reduced-motion: reduce) {
   .border-glow { animation: none; }
+  .navbar-glow { animation: none; }
 }
+
+/* ===== Navbar LED Glow Variant (Viền LED rỗng giữa cho hiệu ứng kính trong suốt) ===== */
+.navbar-glow {
+  position: relative;
+  width: 100%;
+  display: block;
+  border-radius: 9999px;
+  box-shadow:
+    0 0 20px -3px rgba(255, 87, 207, 0.35),
+    0 0 35px -6px rgba(177, 0, 141, 0.22),
+    0 8px 30px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.4s ease;
+}
+
+.navbar-glow::before {
+  content: "";
+  position: absolute;
+  inset: -1.5px;
+  border-radius: 9999px;
+  padding: 1.5px; /* độ dày viền LED */
+  background:
+    conic-gradient(
+      from var(--glow-angle),
+      #ff57cf 0%,         /* pink */
+      #ffffff 12%,        /* shimmer highlight 1 */
+      #b1008d 25%,        /* magenta đậm */
+      #1039da 45%,        /* brand blue */
+      #ffffff 60%,        /* shimmer highlight 2 */
+      #ff57cf 75%,        /* pink */
+      #b1008d 90%,
+      #ff57cf 100%        /* loop */
+    );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: border-glow-spin var(--glow-duration, 6000ms) linear infinite;
+  pointer-events: none;
+  z-index: 10;
+}
+
+@supports not (background: conic-gradient(from 0deg, red, blue)) {
+  .navbar-glow::before {
+    background: linear-gradient(135deg, #ff57cf, #b1008d, #1039da);
+    animation: none;
+  }
+}
+

@@ -1,13 +1,21 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from "react";
 import { Brush, TickCircle } from "iconsax-reactjs";
 import { HAIR_COLORS, COLOR_BY_VALUE, swatchBg } from "../lib/hairColors";
 import { getHairMask } from "../lib/hairSegmenter";
 import { recolorHair } from "../lib/recolor";
 import { trackEvent } from "../lib/analytics";
 import useAuthStore from "../store/useAuthStore";
-import { Button } from "./ui";
 
-export default function HairColorStudio({ imageUrl, onPickAiColor, className = "" }) {
+const HairColorStudio = forwardRef(function HairColorStudio(
+  {
+    imageUrl,
+    beforeImage,
+    showCompare = false,
+    onColorChange,
+    className = "",
+  },
+  ref
+) {
   const { user } = useAuthStore();
   const isPaid = user?.role === "ADMIN" || user?.role === "TESTER" || (user?.plan && user.plan !== "FREE");
 
@@ -21,6 +29,8 @@ export default function HairColorStudio({ imageUrl, onPickAiColor, className = "
   const [isDragOver, setIsDragOver] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [sliderPos, setSliderPos] = useState(50);
+  const [aspectRatio, setAspectRatio] = useState(null);
 
   // Trạng thái cho Touch Drag trên mobile
   const [touchGhost, setTouchGhost] = useState(null); // { color, x, y }
@@ -62,6 +72,10 @@ export default function HairColorStudio({ imageUrl, onPickAiColor, className = "
             w = Math.round((w * maxDim) / h);
             h = maxDim;
           }
+        }
+
+        if (w && h) {
+          setAspectRatio(w / h);
         }
 
         const canvas = canvasRef.current;
@@ -177,43 +191,72 @@ export default function HairColorStudio({ imageUrl, onPickAiColor, className = "
     }
   };
 
+  useEffect(() => {
+    onColorChange?.(activeColor);
+  }, [activeColor, onColorChange]);
+
   /**
-   * Tải ảnh về máy (thêm watermark mờ nếu là Free user)
+   * Xuất blob ảnh đã xử lý (kèm watermark nếu là Free user)
    */
-  const handleDownload = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  const getExportBlob = useCallback(() => {
+    return new Promise((resolve) => {
+      const canvas = canvasRef.current;
+      if (!canvas) {
+        resolve(null);
+        return;
+      }
 
-    // Tạo canvas tạm để xuất ảnh
-    const exportCanvas = document.createElement("canvas");
-    exportCanvas.width = canvas.width;
-    exportCanvas.height = canvas.height;
-    const ctx = exportCanvas.getContext("2d");
-    ctx.drawImage(canvas, 0, 0);
+      // Tạo canvas tạm để xuất ảnh
+      const exportCanvas = document.createElement("canvas");
+      exportCanvas.width = canvas.width;
+      exportCanvas.height = canvas.height;
+      const ctx = exportCanvas.getContext("2d");
+      ctx.drawImage(canvas, 0, 0);
 
-    if (!isPaid) {
-      // Vẽ watermark Hairapy mờ ở góc dưới phải
-      const fontSize = Math.max(14, Math.round(canvas.width * 0.035));
-      ctx.font = `bold ${fontSize}px sans-serif`;
-      ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
-      ctx.textAlign = "right";
-      ctx.fillText("Hairapy", canvas.width - 20 + 1, canvas.height - 20 + 1);
-      ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
-      ctx.fillText("Hairapy", canvas.width - 20, canvas.height - 20);
-    }
+      if (!isPaid) {
+        // Vẽ watermark Hairapy mờ ở góc dưới phải
+        const fontSize = Math.max(14, Math.round(canvas.width * 0.035));
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+        ctx.textAlign = "right";
+        ctx.fillText("Hairapy", canvas.width - 20 + 1, canvas.height - 20 + 1);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+        ctx.fillText("Hairapy", canvas.width - 20, canvas.height - 20);
+      }
 
-    exportCanvas.toBlob((blob) => {
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `hairapy-mau-${activeColor?.value || "goc"}.jpg`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, "image/jpeg", 0.92);
-  };
+      exportCanvas.toBlob((blob) => {
+        resolve(blob);
+      }, "image/jpeg", 0.92);
+    });
+  }, [isPaid]);
+
+  /**
+   * Tải ảnh về máy
+   */
+  const handleDownload = useCallback(async () => {
+    const blob = await getExportBlob();
+    if (!blob) return;
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `hairapy-mau-${activeColor?.value || "goc"}.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [getExportBlob, activeColor]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      download: handleDownload,
+      getBlob: getExportBlob,
+      hasActiveColor: Boolean(activeColor),
+      activeColor,
+    }),
+    [handleDownload, getExportBlob, activeColor]
+  );
 
   // ================= Touch / Pointer Event Drag & Drop =================
   const handlePointerDown = (e, color) => {
@@ -289,16 +332,107 @@ export default function HairColorStudio({ imageUrl, onPickAiColor, className = "
             : "border-line"
         }`}
       >
-        <canvas
-          ref={canvasRef}
-          role="img"
-          aria-label={
-            activeColor
-              ? `Xem trước màu tóc ${activeColor.label}`
-              : "Ảnh gốc chưa áp dụng màu"
-          }
-          className="max-h-[580px] w-auto max-w-full object-contain rounded-2xl"
-        />
+        <div
+          className="relative max-h-[580px] w-full flex items-center justify-center overflow-hidden rounded-2xl select-none"
+          style={{
+            aspectRatio: aspectRatio ? `${aspectRatio}` : "auto",
+            maxWidth: "100%",
+            maxHeight: "580px",
+            touchAction: "none",
+          }}
+        >
+          {/* Layer 1: Ảnh gốc (Before) */}
+          {beforeImage && showCompare && (
+            <img
+              src={beforeImage}
+              alt="Ảnh gốc trước khi thử"
+              className="pointer-events-none absolute inset-0 h-full w-full object-contain"
+              draggable={false}
+            />
+          )}
+
+          {/* Layer 2: Canvas đổi màu (After) */}
+          <div
+            className={`w-full h-full flex items-center justify-center overflow-hidden ${
+              beforeImage && showCompare ? "pointer-events-none absolute inset-0" : ""
+            }`}
+            style={
+              beforeImage && showCompare
+                ? { clipPath: `inset(0 0 0 ${sliderPos}%)` }
+                : {}
+            }
+          >
+            <canvas
+              ref={canvasRef}
+              role="img"
+              aria-label={
+                activeColor
+                  ? `Xem trước màu tóc ${activeColor.label}`
+                  : "Ảnh gốc chưa áp dụng màu"
+              }
+              className="h-full w-full object-contain max-h-[580px]"
+            />
+          </div>
+
+          {/* Layer 3: Thanh trượt so sánh & nhãn */}
+          {beforeImage && showCompare && (
+            <>
+              {/* Divider vertical line & handle */}
+              <div
+                className="pointer-events-none absolute inset-y-0 w-0.5 bg-white shadow-[0_0_10px_rgba(0,0,0,0.5)] z-20"
+                style={{ left: `${sliderPos}%` }}
+              >
+                <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 size-8 rounded-full bg-white shadow-lg flex items-center justify-center text-ink text-xs font-bold border border-black/10">
+                  <svg
+                    className="size-4 text-zinc-700"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="8 7 3 12 8 17" />
+                    <polyline points="16 7 21 12 16 17" />
+                  </svg>
+                </div>
+              </div>
+
+              {/* Nhãn Trước / Sau */}
+              <span className="pointer-events-none absolute bottom-3 left-3 rounded-md bg-black/60 backdrop-blur-md px-2.5 py-1 text-[11px] font-semibold text-white/90 z-20">
+                {sliderPos > 20 ? "Ảnh gốc" : ""}
+              </span>
+              <span className="pointer-events-none absolute bottom-3 right-3 rounded-md bg-black/60 backdrop-blur-md px-2.5 py-1 text-[11px] font-semibold text-white/90 z-20">
+                {sliderPos < 80
+                  ? activeColor
+                    ? `Sau (${activeColor.label})`
+                    : "Sau khi thử"
+                  : ""}
+              </span>
+
+              {/* Input range bắt kéo chuột / cảm ứng */}
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={sliderPos}
+                onChange={(e) => setSliderPos(Number(e.target.value))}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragOver(true);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragOver(false);
+                  const val = e.dataTransfer.getData("text/plain");
+                  if (val) applyColorByValue(val, "drag");
+                }}
+                className="absolute inset-0 h-full w-full opacity-0 cursor-ew-resize z-30"
+                aria-label="Thanh trượt so sánh trước sau"
+              />
+            </>
+          )}
+        </div>
 
         {/* Overlay khi kéo màu vào ảnh */}
         {isDragOver && (
@@ -397,8 +531,8 @@ export default function HairColorStudio({ imageUrl, onPickAiColor, className = "
           })}
         </div>
 
-        {/* Thanh trượt Độ đậm & Các nút bấm */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 border-t border-line/60 pt-4">
+        {/* Thanh trượt Độ đậm & Nút Bỏ màu */}
+        <div className="flex items-center justify-between gap-4 border-t border-line/60 pt-4">
           <div className="flex items-center gap-3">
             <span className="text-xs font-semibold text-muted shrink-0">Độ đậm:</span>
             <input
@@ -416,40 +550,19 @@ export default function HairColorStudio({ imageUrl, onPickAiColor, className = "
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
-            {activeColor && (
-              <button
-                type="button"
-                onClick={() => renderColor(null, intensity, "reset")}
-                className="rounded-xl border border-line bg-white px-3 py-2 text-xs font-semibold text-mauve hover:text-ink transition-colors cursor-pointer"
-              >
-                Bỏ màu
-              </button>
-            )}
+          {activeColor && (
             <button
               type="button"
-              onClick={handleDownload}
-              disabled={!imageLoaded}
-              className="rounded-xl border border-line bg-white px-3 py-2 text-xs font-semibold text-ink hover:border-primary hover:text-primary transition-colors cursor-pointer disabled:opacity-40"
+              onClick={() => renderColor(null, intensity, "reset")}
+              className="rounded-xl border border-line bg-white px-3 py-1.5 text-xs font-semibold text-mauve hover:text-ink hover:border-primary/40 transition-colors cursor-pointer"
             >
-              Tải ảnh này
+              Bỏ màu
             </button>
-            {activeColor && onPickAiColor && (
-              <Button
-                onClick={() => onPickAiColor(activeColor.value)}
-                size="sm"
-                className="text-xs font-bold shadow-sm"
-              >
-                Tạo ảnh đẹp bằng AI với màu này →
-              </Button>
-            )}
-          </div>
+          )}
         </div>
-
-        <p className="text-[11px] text-muted italic">
-          * Xem trước nhanh trên máy bạn — kết quả AI sẽ tự nhiên và hoà hợp ánh sáng hơn.
-        </p>
       </div>
     </div>
   );
-}
+});
+
+export default HairColorStudio;

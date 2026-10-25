@@ -4,7 +4,7 @@ import { trackEvent } from "../lib/analytics";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { normalizeImage } from "../utils/imageUtils";
 import { Link, useSearchParams } from "react-router-dom";
-import { CheckIcon, DownloadIcon, UploadIcon } from "../components/icons";
+import { CheckIcon, DownloadIcon, UploadIcon, ShareIcon } from "../components/icons";
 import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/Navbar";
 import QuotaBadge from "../components/QuotaBadge";
@@ -14,10 +14,10 @@ import useAuthStore from "../store/useAuthStore";
 import { useScanStore, useHasHydrated } from "../store/useScanStore";
 import FeedbackWidget from "../components/FeedbackWidget";
 import AiReportButton from "../components/AiReportButton";
-import BeforeAfter from "../components/BeforeAfter";
 import PremiumGateModal from "../components/PremiumGateModal";
 import AiStylistPanel from "../components/AiStylistPanel";
 import HairColorStudio from "../components/HairColorStudio";
+import ShareModal from "../components/ShareModal";
 
 import { COLOR_BY_VALUE } from "../lib/hairColors";
 
@@ -56,7 +56,9 @@ export default function SwapPage() {
   const [resultImage, setResultImage] = useState(null);
   const [error, setError] = useState(null);
   const [downloading, setDownloading] = useState(false);
-  const [previewTab, setPreviewTab] = useState("compare"); // "compare" | "recolor"
+  const [showCompare, setShowCompare] = useState(true);
+  const [activeStudioColor, setActiveStudioColor] = useState(null);
+  const colorStudioRef = useRef(null);
 
   // Lưu lịch sử các kiểu đã thử trong phiên (tối đa 10)
   const [sessionResults, setSessionResults] = useState([]);
@@ -64,6 +66,11 @@ export default function SwapPage() {
   // Modal cảnh báo gói trả phí
   const [premiumGateStyle, setPremiumGateStyle] = useState(null);
   const [showPremiumGate, setShowPremiumGate] = useState(false);
+
+  // Modal chia sẻ mạng xã hội (Hybrid Share)
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [shareData, setShareData] = useState(null);
 
   const pollTimeoutRef = useRef(null);
 
@@ -163,10 +170,13 @@ export default function SwapPage() {
   const MAX_POLL_ATTEMPTS = 30;
 
   const handleSwapError = (errMsg) => {
-    setError(
-      errMsg ||
-      "Hệ thống AI đang bận, vui lòng thử lại sau ít phút. Lượt của bạn sẽ được hoàn lại nếu AI không trả kết quả."
-    );
+    let message = "Hệ thống AI đang bận, vui lòng thử lại sau ít phút. Lượt của bạn sẽ được hoàn lại nếu AI không trả kết quả.";
+    if (typeof errMsg === "string" && errMsg.trim()) {
+      message = errMsg;
+    } else if (errMsg && typeof errMsg === "object") {
+      message = errMsg.message || errMsg.error || JSON.stringify(errMsg);
+    }
+    setError(message);
     setLoading(false);
   };
 
@@ -233,8 +243,19 @@ export default function SwapPage() {
     }
   };
 
+  /**
+   * Tải ảnh kết quả về máy
+   */
   const handleDownload = async () => {
-    if (!activeResultImage || downloading) return;
+    if (downloading) return;
+
+    // Nếu người dùng đang thử màu tóc trên canvas của HairColorStudio
+    if (colorStudioRef.current?.hasActiveColor) {
+      colorStudioRef.current.download();
+      return;
+    }
+
+    if (!activeResultImage) return;
     setDownloading(true);
     try {
       const response = await fetch(activeResultImage);
@@ -242,7 +263,7 @@ export default function SwapPage() {
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = blobUrl;
-      link.download = `hairapy-${activeStyle?.name || "hairstyle"}.jpg`;
+      link.download = `hairapy-${activeStyle?.name ? activeStyle.name.toLowerCase().replace(/\s+/g, "-") : "hairstyle"}.jpg`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -252,6 +273,109 @@ export default function SwapPage() {
       window.open(activeResultImage, "_blank");
     } finally {
       setDownloading(false);
+    }
+  };
+
+  /**
+   * Lấy Blob ảnh hiện tại (từ HairColorStudio canvas nếu đang thử màu, hoặc tải từ activeResultImage)
+   */
+  const getCurrentImageBlob = async () => {
+    // 1. Nếu đang có màu tóc được áp dụng trên canvas của HairColorStudio
+    if (colorStudioRef.current?.hasActiveColor && colorStudioRef.current?.getBlob) {
+      try {
+        const blob = await colorStudioRef.current.getBlob();
+        if (blob) return blob;
+      } catch (e) {
+        console.warn("Lỗi lấy blob từ HairColorStudio canvas:", e);
+      }
+    }
+
+    // 2. Hoặc ảnh kết quả AI Swap / preview
+    const targetUrl = activeResultImage || previewUrl;
+    if (!targetUrl) return null;
+
+    try {
+      const response = await fetch(targetUrl);
+      return await response.blob();
+    } catch (err) {
+      console.error("Lỗi tải blob ảnh:", err);
+      return null;
+    }
+  };
+
+  /**
+   * Xử lý chia sẻ Hybrid:
+   * - Mobile / OS hỗ trợ Web Share API với files: mở trực tiếp Share Sheet hệ thống (TikTok, Messenger, FB, Zalo...)
+   * - Desktop / Trình duyệt thường: mở ShareModal chuyên dụng (Copy ảnh vào clipboard Ctrl+V, TikTok, FB, Messenger...)
+   */
+  const handleShare = async () => {
+    if (sharing) return;
+    setSharing(true);
+    setError(null);
+
+    try {
+      const blob = await getCurrentImageBlob();
+      if (!blob) {
+        setError("Chưa có ảnh để chia sẻ. Vui lòng chọn hoặc thử một kiểu tóc trước.");
+        return;
+      }
+
+      const styleName = activeStyle?.name || "Kiểu tóc mới";
+      const colorName = activeStudioColor?.name || "";
+      const shareUrl = window.location.href;
+      const title = `Kiểu tóc ${styleName} trên Hairapy`;
+      const text = `Tôi vừa thử kiểu tóc ${styleName}${colorName ? ` với màu ${colorName}` : ""} trên Hairapy! Thử ngay nhé:`;
+
+      const file = new File(
+        [blob],
+        `hairapy-${activeStyle?.name ? activeStyle.name.toLowerCase().replace(/\s+/g, "-") : "hairstyle"}.jpg`,
+        { type: "image/jpeg" }
+      );
+
+      // 1. Kiểm tra nếu trình duyệt hỗ trợ Native Web Share API với files (iOS Safari, Android Chrome)
+      if (typeof navigator !== "undefined" && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            title,
+            text,
+            url: shareUrl,
+            files: [file],
+          });
+          trackEvent("hair_share", {
+            method: "native_share",
+            hairstyle_id: activeStyle?.id,
+            color: colorName || "default",
+          });
+          return;
+        } catch (shareErr) {
+          if (shareErr.name === "AbortError") {
+            return;
+          }
+          console.warn("Native share lỗi hoặc bị huỷ, chuyển sang ShareModal:", shareErr);
+        }
+      }
+
+      // 2. Fallback cho Desktop hoặc trình duyệt không hỗ trợ chia sẻ file trực tiếp
+      const previewBlobUrl = URL.createObjectURL(blob);
+      setShareData({
+        blob,
+        imageUrl: previewBlobUrl,
+        styleName,
+        colorName,
+        shareUrl,
+      });
+      setShowShareModal(true);
+
+      trackEvent("hair_share", {
+        method: "modal_opened",
+        hairstyle_id: activeStyle?.id,
+        color: colorName || "default",
+      });
+    } catch (err) {
+      console.error("Lỗi khi chuẩn bị chia sẻ ảnh:", err);
+      setError("Không thể chuẩn bị ảnh để chia sẻ.");
+    } finally {
+      setSharing(false);
     }
   };
 
@@ -480,7 +604,10 @@ export default function SwapPage() {
 
           {error && (
             <div className="text-xs font-semibold text-red-500 bg-red-500/10 p-3 rounded-xl border border-red-500/20 leading-relaxed">
-              <span className="flex items-start gap-2"><Danger size={16} variant="Bold" className="mt-px shrink-0" /><span>{error}</span></span>
+              <span className="flex items-start gap-2">
+                <Danger size={16} variant="Bold" className="mt-px shrink-0" />
+                <span>{typeof error === "string" ? error : (error?.message || "Đã có lỗi xảy ra")}</span>
+              </span>
             </div>
           )}
 
@@ -521,15 +648,26 @@ export default function SwapPage() {
             </Button>
           </div>
 
-          {activeResultImage && (
-            <div className="flex flex-col gap-3">
+          {(activeResultImage || (previewUrl && activeStudioColor)) && (
+            <div className="grid grid-cols-2 gap-2.5">
               <Button
                 onClick={handleDownload}
                 disabled={downloading}
-                className="flex w-full items-center justify-center gap-2"
+                variant="outline"
+                className="flex w-full items-center justify-center gap-1.5 py-2.5 text-xs font-bold"
               >
-                <DownloadIcon size={18} />
-                {downloading ? "Đang tải ảnh..." : "Tải ảnh về"}
+                <DownloadIcon size={16} />
+                <span>{downloading ? "Đang tải..." : "Tải ảnh về"}</span>
+              </Button>
+
+              <Button
+                onClick={handleShare}
+                disabled={sharing}
+                variant="pink"
+                className="flex w-full items-center justify-center gap-1.5 py-2.5 text-xs font-bold shadow-sm"
+              >
+                <ShareIcon size={16} />
+                <span>{sharing ? "Đang xử lý..." : "Chia sẻ"}</span>
               </Button>
             </div>
           )}
@@ -619,31 +757,37 @@ export default function SwapPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {(activeResultImage || (previewUrl && activeStudioColor)) && (
+                    <button
+                      type="button"
+                      onClick={handleShare}
+                      disabled={sharing}
+                      className="rounded-xl border border-pink/30 bg-pink/10 px-3 py-1.5 text-xs font-bold text-pink hover:bg-pink hover:text-white transition cursor-pointer flex items-center gap-1.5"
+                    >
+                      <ShareIcon size={14} />
+                      <span>Chia sẻ</span>
+                    </button>
+                  )}
+
                   {activeResultImage && (
-                    <div className="flex rounded-xl bg-line/40 p-1 text-xs">
-                      <button
-                        type="button"
-                        onClick={() => setPreviewTab("compare")}
-                        className={`rounded-lg px-3 py-1 font-semibold transition cursor-pointer ${
-                          previewTab === "compare"
-                            ? "bg-white text-ink shadow-xs"
-                            : "text-mauve hover:text-ink"
+                    <button
+                      type="button"
+                      onClick={() => setShowCompare(!showCompare)}
+                      className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                        showCompare
+                          ? "border-primary bg-primary/10 text-primary font-bold shadow-xs"
+                          : "border-line bg-white text-mauve hover:text-ink hover:border-primary/40"
+                      }`}
+                    >
+                      <span>↔ So sánh Trước / Sau</span>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                          showCompare ? "bg-primary text-white" : "bg-line text-muted"
                         }`}
                       >
-                        Trước / Sau
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPreviewTab("recolor")}
-                        className={`rounded-lg px-3 py-1 font-semibold transition cursor-pointer ${
-                          previewTab === "recolor"
-                            ? "bg-white text-ink shadow-xs"
-                            : "text-mauve hover:text-ink"
-                        }`}
-                      >
-                        Thử màu tức thì
-                      </button>
-                    </div>
+                        {showCompare ? "BẬT" : "TẮT"}
+                      </span>
+                    </button>
                   )}
 
                   <button
@@ -658,44 +802,13 @@ export default function SwapPage() {
 
               {/* Vùng hiển thị chính */}
               <div className="relative">
-                {activeResultImage ? (
-                  previewTab === "compare" ? (
-                    <div className="relative overflow-hidden rounded-[32px] shadow-2xl ring-4 ring-pink/40 bg-ink">
-                      <BeforeAfter
-                        beforeImage={previewUrl}
-                        afterImage={activeResultImage}
-                        className="aspect-[3/4] w-full"
-                      />
-                      <div className="absolute inset-x-6 bottom-6 flex items-center justify-between rounded-2xl bg-white/95 px-5 py-3 shadow-lg backdrop-blur-md z-30">
-                        <div className="max-w-[75%]">
-                          <p className="text-sm font-bold text-ink truncate" title={activeStyle?.name}>
-                            {activeStyle?.name || "Kiểu tóc đã tạo"}
-                          </p>
-                          <p className="text-xs text-muted">Kéo thanh trượt để so sánh trước / sau</p>
-                        </div>
-                        {activeStyle?.premiumOnly && (
-                          <Badge variant="premium" className="text-[10px]">Trả phí</Badge>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <HairColorStudio
-                      imageUrl={activeResultImage}
-                      onPickAiColor={(colorVal) => {
-                        setHairColor(colorVal);
-                        handleApply(colorVal);
-                      }}
-                    />
-                  )
-                ) : (
-                  <HairColorStudio
-                    imageUrl={previewUrl}
-                    onPickAiColor={(colorVal) => {
-                      setHairColor(colorVal);
-                      handleApply(colorVal);
-                    }}
-                  />
-                )}
+                <HairColorStudio
+                  ref={colorStudioRef}
+                  imageUrl={activeResultImage || previewUrl}
+                  beforeImage={activeResultImage ? previewUrl : null}
+                  showCompare={showCompare && Boolean(activeResultImage)}
+                  onColorChange={setActiveStudioColor}
+                />
 
                 {/* Overlay khi AI đang tạo kiểu */}
                 {loading && (
@@ -749,6 +862,16 @@ export default function SwapPage() {
           )}
         </div>
       </div>
+
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        imageBlob={shareData?.blob}
+        imageUrl={shareData?.imageUrl}
+        styleName={shareData?.styleName}
+        colorName={shareData?.colorName}
+        shareUrl={shareData?.shareUrl}
+      />
 
       <PremiumGateModal
         isOpen={showPremiumGate}

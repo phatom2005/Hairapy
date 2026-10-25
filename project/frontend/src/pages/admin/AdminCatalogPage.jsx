@@ -234,10 +234,29 @@ export default function AdminCatalogPage() {
 
   const [confirmDelete, setConfirmDelete] = useState(null); // { id, name }
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [confirmHidePrompt, setConfirmHidePrompt] = useState(null); // { id, name, savedCount }
+  const [hideLoading, setHideLoading] = useState(false);
 
-  // Xóa kiểu tóc
-  const handleDelete = (id, name) => {
-    setConfirmDelete({ id, name });
+  // Bật/tắt hiển thị kiểu tóc
+  const handleToggleActive = async (id, currentActive) => {
+    try {
+      await api.patch(`/admin/catalog/${id}/active`, { active: !currentActive });
+      setCatalog((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, active: !currentActive } : item))
+      );
+    } catch (err) {
+      console.error("Lỗi cập nhật hiển thị:", err);
+      alert("Không thể cập nhật trạng thái hiển thị.");
+    }
+  };
+
+  // Xóa kiểu tóc — kiểm tra nếu có người đang lưu thì mở dialog gợi ý ẩn
+  const handleDelete = (item) => {
+    if ((item.savedCount || 0) > 0) {
+      setConfirmHidePrompt({ id: item.id, name: item.name, savedCount: item.savedCount });
+    } else {
+      setConfirmDelete({ id: item.id, name: item.name });
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -248,10 +267,32 @@ export default function AdminCatalogPage() {
       setConfirmDelete(null);
       fetchCatalog();
     } catch (err) {
-      console.error(err);
-      alert("Xóa kiểu tóc thất bại.");
+      console.error("Lỗi khi xóa kiểu tóc:", err);
+      if (err.response?.status === 409) {
+        const savedCount = err.response.data?.savedCount || 1;
+        const toHide = { id: confirmDelete.id, name: confirmDelete.name, savedCount };
+        setConfirmDelete(null);
+        setConfirmHidePrompt(toHide);
+      } else {
+        alert(err.response?.data?.message || err.response?.data?.error || "Xóa kiểu tóc thất bại.");
+      }
     } finally {
       setDeleteLoading(false);
+    }
+  };
+
+  const handleConfirmHide = async () => {
+    if (!confirmHidePrompt) return;
+    setHideLoading(true);
+    try {
+      await api.patch(`/admin/catalog/${confirmHidePrompt.id}/active`, { active: false });
+      setConfirmHidePrompt(null);
+      fetchCatalog();
+    } catch (err) {
+      console.error("Lỗi khi ẩn kiểu tóc:", err);
+      alert("Ẩn kiểu tóc thất bại.");
+    } finally {
+      setHideLoading(false);
     }
   };
 
@@ -325,31 +366,33 @@ export default function AdminCatalogPage() {
             <table className="w-full text-left border-collapse text-sm">
               <thead>
                 <tr className="border-b border-line bg-canvas text-xs font-bold uppercase tracking-wider text-muted">
-                  <th className="px-6 py-4">Hình ảnh</th>
-                  <th className="px-6 py-4">Tên kiểu tóc</th>
-                  <th className="px-6 py-4">Nhãn tag</th>
-                  <th className="px-6 py-4">Dáng mặt</th>
-                  <th className="px-6 py-4">Độ dài</th>
-                  <th className="px-6 py-4">Giới tính</th>
-                  <th className="px-6 py-4">Giới hạn</th>
-                  <th className="px-6 py-4 text-center">Hành động</th>
+                  <th className="px-5 py-4">Hình ảnh</th>
+                  <th className="px-5 py-4">Tên kiểu tóc</th>
+                  <th className="px-5 py-4">Nhãn tag</th>
+                  <th className="px-5 py-4">Dáng mặt</th>
+                  <th className="px-5 py-4">Độ dài</th>
+                  <th className="px-5 py-4">Giới tính</th>
+                  <th className="px-5 py-4">Giới hạn</th>
+                  <th className="px-5 py-4 text-center">Hiển thị</th>
+                  <th className="px-5 py-4 text-center">Đang lưu</th>
+                  <th className="px-5 py-4 text-center">Hành động</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
                 {catalog.map((item) => (
                   <tr key={item.id} className="hover:bg-canvas/50 transition-colors">
-                    <td className="px-6 py-3">
+                    <td className="px-5 py-3">
                       <img
-                         src={item.imageUrl}
+                        src={item.imageUrl}
                         alt={item.name}
                         className="size-12 rounded-xl object-cover border border-line"
                       />
                     </td>
-                    <td className="px-6 py-3 font-semibold text-ink">{item.name}</td>
-                    <td className="px-6 py-3">
+                    <td className="px-5 py-3 font-semibold text-ink">{item.name}</td>
+                    <td className="px-5 py-3">
                       {item.tag ? <Badge variant="new">{item.tag}</Badge> : <span className="text-muted">-</span>}
                     </td>
-                    <td className="px-6 py-3">
+                    <td className="px-5 py-3">
                       {item.faceShape ? (
                         <div className="flex flex-wrap gap-1">
                           {item.faceShape.split(",").map((s) => (
@@ -360,25 +403,44 @@ export default function AdminCatalogPage() {
                         </div>
                       ) : <span className="text-muted">-</span>}
                     </td>
-                    <td className="px-6 py-3 text-mauve font-medium">{item.hairLength || "-"}</td>
-                    <td className="px-6 py-3">
+                    <td className="px-5 py-3 text-mauve font-medium">{item.hairLength || "-"}</td>
+                    <td className="px-5 py-3">
                       <Badge variant={item.gender === "Nam" ? "new" : (item.gender === "Nữ" ? "premium" : "neutral")}>
                         {item.gender || "Unisex"}
                       </Badge>
                     </td>
-                    <td className="px-6 py-3">
+                    <td className="px-5 py-3">
                       {item.premiumOnly ? (
                         <Badge variant="premium">Trả phí</Badge>
                       ) : (
                         <Badge variant="neutral">FREE</Badge>
                       )}
                     </td>
-                    <td className="px-6 py-3 text-center">
+                    <td className="px-5 py-3 text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleActive(item.id, item.active)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                          item.active ? "bg-emerald-500" : "bg-gray-300"
+                        }`}
+                        title={item.active ? "Đang hiển thị cho khách — bấm để ẩn" : "Đang ẩn — bấm để hiển thị"}
+                      >
+                        <span
+                          className={`inline-block size-4 transform rounded-full bg-white transition-transform ${
+                            item.active ? "translate-x-6" : "translate-x-1"
+                          }`}
+                        />
+                      </button>
+                    </td>
+                    <td className="px-5 py-3 text-center font-bold text-ink">
+                      {item.savedCount || 0}
+                    </td>
+                    <td className="px-5 py-3 text-center">
                       <div className="flex justify-center gap-2">
                         <Button
                           size="sm"
                           variant="outline"
-                          className="px-3.5 py-1.5 text-xs rounded-xl"
+                          className="px-3 py-1 text-xs rounded-xl cursor-pointer"
                           onClick={() => handleOpenEdit(item)}
                         >
                           Sửa
@@ -386,8 +448,8 @@ export default function AdminCatalogPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="px-3.5 py-1.5 text-xs rounded-xl text-red-600 hover:bg-red-50 hover:text-red-700"
-                          onClick={() => handleDelete(item.id, item.name)}
+                          className="px-3 py-1 text-xs rounded-xl text-red-600 hover:bg-red-50 hover:text-red-700 cursor-pointer"
+                          onClick={() => handleDelete(item)}
                         >
                           Xóa
                         </Button>
@@ -630,6 +692,16 @@ export default function AdminCatalogPage() {
         loading={deleteLoading}
         onConfirm={handleConfirmDelete}
         onCancel={() => setConfirmDelete(null)}
+      />
+
+      <ConfirmDialog
+        open={!!confirmHidePrompt}
+        title="Không thể xoá kiểu tóc"
+        message={`Có ${confirmHidePrompt?.savedCount} người đang lưu kiểu "${confirmHidePrompt?.name}". Bạn có muốn ẩn kiểu tóc này thay vì xoá để tránh mất dữ liệu của người dùng?`}
+        confirmText="Ẩn kiểu tóc"
+        loading={hideLoading}
+        onConfirm={handleConfirmHide}
+        onCancel={() => setConfirmHidePrompt(null)}
       />
     </div>
   );

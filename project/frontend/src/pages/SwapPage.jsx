@@ -15,6 +15,7 @@ import FeedbackWidget from "../components/FeedbackWidget";
 import AiReportButton from "../components/AiReportButton";
 import BeforeAfter from "../components/BeforeAfter";
 import PremiumGateModal from "../components/PremiumGateModal";
+import AiStylistPanel from "../components/AiStylistPanel";
 
 import { HAIR_COLORS, swatchBg } from "../lib/hairColors";
 
@@ -395,7 +396,8 @@ export default function SwapPage() {
 
       <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-8 px-6 py-12 sm:px-16 lg:grid-cols-[380px_1fr]">
         {/* ASIDE: bộ chọn kiểu tóc và màu sắc */}
-        <Card className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6">
+          <Card className="flex flex-col gap-6">
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-bold text-ink">Chọn kiểu tóc</h2>
@@ -554,6 +556,9 @@ export default function SwapPage() {
             <AiReportButton imageUrl={activeResultImage} hairstyleId={activeStyle?.id} feature="HAIR_SWAP" />
           )}
         </Card>
+
+        <AiStylistPanel hairstyleId={activeStyle?.id} defaultOpen={false} />
+      </div>
 
         {/* PREVIEW KHU VỰC CHÍNH */}
         <div className="flex flex-col gap-6">

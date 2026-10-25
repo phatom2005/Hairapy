@@ -12,6 +12,7 @@ import { useScanStore, useHasHydrated } from "../store/useScanStore";
 import useAuthStore from "../store/useAuthStore";
 import FeedbackWidget from "../components/FeedbackWidget";
 import PremiumGateModal from "../components/PremiumGateModal";
+import AiStylistPanel from "../components/AiStylistPanel";
 import { COLOR_BY_VALUE, swatchBg } from "../lib/hairColors";
 
 // Bản đồ dịch dáng mặt sang tiếng Việt
@@ -436,6 +437,8 @@ export default function ResultsPage() {
               </span>
             </p>
           </Card>
+
+          <AiStylistPanel hairstyleId={hairstyleId ? Number(hairstyleId) : null} defaultOpen={false} />
 
           {chosenHairstyle && (
             <div className="flex flex-col gap-6">

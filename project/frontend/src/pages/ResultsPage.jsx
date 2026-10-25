@@ -5,7 +5,7 @@ import { AnimatedContent, BorderGlow, GlareHover, SpotlightCard } from "../compo
 import { ArrowRight, CheckIcon, StarIcon } from "../components/icons";
 import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/Navbar";
-import { Badge, Button, Card, DragScroll, Section, SectionHeading } from "../components/ui";
+import { Badge, Button, Card, Section, SectionHeading } from "../components/ui";
 import api from "../lib/api";
 import { trackEvent } from "../lib/analytics";
 import { useScanStore, useHasHydrated } from "../store/useScanStore";
@@ -69,7 +69,7 @@ function HairstyleRecCard({ group, idx, savedIds, handleToggleSave, handleTrySty
   return (
     <AnimatedContent key={group.base.id || group.base.name} delay={idx * 0.1}>
       <SpotlightCard className="rounded-2xl">
-        <Card padded={false} className="w-[280px] shrink-0 overflow-hidden">
+        <Card padded={false} className="h-full w-full overflow-hidden">
           <div className="relative">
             <img
               src={r.imageUrl}
@@ -343,13 +343,14 @@ export default function ResultsPage() {
           <p className="text-base text-mauve">Dựa trên tỉ lệ khuôn mặt từ ảnh của bạn, Hairapy gợi ý các phong cách phù hợp.</p>
         </div>
 
-        <div className={`grid grid-cols-1 gap-8 ${chosenHairstyle ? "lg:grid-cols-[1fr_1.4fr] lg:items-start" : "lg:justify-items-center"}`}>
-          <Card className={`flex flex-col gap-6 ${chosenHairstyle ? "lg:sticky lg:top-24" : "w-full lg:max-w-md"}`}>
+        <div className={`grid grid-cols-1 gap-8 lg:grid-cols-[minmax(300px,380px)_1fr] lg:items-start`}>
+          {/* Cột trái: hồ sơ khuôn mặt (ghim khi cuộn) */}
+          <Card className="flex flex-col gap-6 lg:sticky lg:top-24">
             <h3 className="text-xl font-bold text-ink">Hồ sơ khuôn mặt</h3>
             <img
               src={previewUrl}
               alt="Khuôn mặt người dùng"
-              className="aspect-[3/4] w-full rounded-2xl object-contain bg-canvas border border-line"
+              className="aspect-[3/4] max-h-[340px] w-full rounded-2xl object-contain bg-canvas border border-line"
             />
 
             {/* Thông tin dáng mặt + cho phép người dùng tự đổi */}
@@ -439,135 +440,138 @@ export default function ResultsPage() {
             </p>
           </Card>
 
-          {chosenHairstyle && (
-            <div className="flex flex-col gap-6">
-              <AnimatedContent delay={0}>
-                <div className="rounded-2xl bg-canvas p-4 border border-primary/20 shadow-sm">
-                  <p className="mb-3 text-sm font-bold text-mauve">Kiểu tóc bạn chọn từ bộ sưu tập:</p>
-                  <SpotlightCard className="rounded-2xl">
-                    <Card padded={false} className="overflow-hidden">
-                      <div className="flex flex-col sm:flex-row gap-4 items-center">
-                        <img
-                          src={chosenHairstyle.imageUrl}
-                          alt={chosenHairstyle.name}
-                          className="h-32 w-32 rounded-xl object-cover shrink-0"
-                          onError={(e) => { e.target.src = `https://placehold.co/300x300?text=${encodeURIComponent(chosenHairstyle.name)}`; }}
-                        />
-                        <div className="flex flex-1 flex-col justify-between w-full">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-bold text-ink text-base">{chosenHairstyle.name}</h4>
-                              {chosenHairstyle.premiumOnly && (
-                                <Badge variant="premium">Trả phí</Badge>
-                              )}
+          {/* Cột phải: kiểu đã chọn + gợi ý kiểu tóc + AI Stylist */}
+          <div className="flex min-w-0 flex-col gap-6">
+            {chosenHairstyle && (
+              <div className="flex flex-col gap-6">
+                <AnimatedContent delay={0}>
+                  <div className="rounded-2xl bg-canvas p-4 border border-primary/20 shadow-sm">
+                    <p className="mb-3 text-sm font-bold text-mauve">Kiểu tóc bạn chọn từ bộ sưu tập:</p>
+                    <SpotlightCard className="rounded-2xl">
+                      <Card padded={false} className="overflow-hidden">
+                        <div className="flex flex-col sm:flex-row gap-4 items-center">
+                          <img
+                            src={chosenHairstyle.imageUrl}
+                            alt={chosenHairstyle.name}
+                            className="h-32 w-32 rounded-xl object-cover shrink-0"
+                            onError={(e) => { e.target.src = `https://placehold.co/300x300?text=${encodeURIComponent(chosenHairstyle.name)}`; }}
+                          />
+                          <div className="flex flex-1 flex-col justify-between w-full">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-bold text-ink text-base">{chosenHairstyle.name}</h4>
+                                {chosenHairstyle.premiumOnly && (
+                                  <Badge variant="premium">Trả phí</Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-mauve line-clamp-2">{chosenHairstyle.description}</p>
+                              <p className="text-[11px] font-semibold text-muted">
+                                Độ dài: {chosenHairstyle.hairLength} | Phù hợp: {chosenHairstyle.gender || "Unisex"}
+                              </p>
                             </div>
-                            <p className="text-xs text-mauve line-clamp-2">{chosenHairstyle.description}</p>
-                            <p className="text-[11px] font-semibold text-muted">
-                              Độ dài: {chosenHairstyle.hairLength} | Phù hợp: {chosenHairstyle.gender || "Unisex"}
-                            </p>
-                          </div>
-                          <div className="mt-3 flex justify-end">
-                            <Button onClick={() => handleTryStyle(chosenHairstyle)} size="sm" className="px-4 py-2 text-xs">
-                              Thử kiểu này ngay
-                            </Button>
+                            <div className="mt-3 flex justify-end">
+                              <Button onClick={() => handleTryStyle(chosenHairstyle)} size="sm" className="px-4 py-2 text-xs">
+                                Thử kiểu này ngay
+                              </Button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </Card>
-                  </SpotlightCard>
-                </div>
-              </AnimatedContent>
-            </div>
-          )}
-        </div>
-
-        {/* AI Stylist: đặt ngoài grid để không bị thẻ "Hồ sơ khuôn mặt" (sticky) đè lên khi cuộn */}
-        <div className="mx-auto mt-8 w-full max-w-3xl">
-          <AiStylistPanel hairstyleId={hairstyleId ? Number(hairstyleId) : null} defaultOpen={false} />
-        </div>
-
-        {/* Kiểu tóc đề xuất + Bộ chọn giới tính */}
-        <div className="mt-12 flex flex-col gap-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <SectionHeading
-              center={false}
-              title={`Kiểu tóc dành cho gương mặt ${faceShapeVi}`}
-              subtitle="Đề xuất phù hợp nhất với cấu trúc khuôn mặt của bạn."
-              action={<Link to="/catalog" className="flex shrink-0 items-center gap-2 font-bold text-primary">Xem tất cả <ArrowRight /></Link>}
-            />
-
-            {/* Tab chọn giới tính sau khi quét */}
-            <div className="flex gap-1.5 shrink-0 bg-canvas p-1 rounded-full border border-line w-fit">
-              {[
-                { label: "Tất cả", value: null },
-                { label: "Nam", value: "Nam" },
-                { label: "Nữ", value: "Nữ" },
-              ].map((t) => {
-                const isActive = (gender || null) === t.value;
-                return (
-                  <button
-                    key={t.label}
-                    type="button"
-                    onClick={() => setGender(t.value)}
-                    className={`rounded-full px-4 py-1.5 text-xs font-bold transition cursor-pointer ${
-                      isActive
-                        ? "bg-pink text-white shadow-sm"
-                        : "text-mauve hover:text-ink"
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {recsLoading ? (
-            <DragScroll>
-              {Array.from({ length: 4 }).map((_, idx) => (
-                <Card key={idx} padded={false} className="w-[280px] shrink-0 animate-pulse overflow-hidden">
-                  <div className="h-56 w-full bg-line" />
-                  <div className="flex items-center justify-between p-4">
-                    <div className="h-4 w-1/2 rounded bg-line" />
-                    <div className="h-8 w-20 rounded bg-line animate-pulse" />
+                      </Card>
+                    </SpotlightCard>
                   </div>
-                </Card>
-              ))}
-            </DragScroll>
-          ) : recommendations.length === 0 ? (
-            <Card className="flex flex-col items-center justify-center py-16 text-center">
-              <p className="text-lg font-semibold text-ink">Không tìm thấy kiểu tóc phù hợp trong danh mục.</p>
-              <p className="mt-1 text-sm text-mauve">Vui lòng quay lại hoặc khám phá tất cả kiểu tóc.</p>
-              <Button to="/catalog" className="mt-4">Khám phá Catalog</Button>
-            </Card>
-          ) : (
-            <DragScroll>
-              {groupedRecommendations.map((group, idx) => (
-                <HairstyleRecCard
-                  key={group.base.id || group.base.name}
-                  group={group}
-                  idx={idx}
-                  savedIds={savedIds}
-                  handleToggleSave={handleToggleSave}
-                  handleTryStyle={handleTryStyle}
-                />
-              ))}
+                </AnimatedContent>
+              </div>
+            )}
 
-              {/* Card cuối danh sách: dẫn tới catalog */}
-              <Card padded={false} className="w-[280px] shrink-0 overflow-hidden flex flex-col justify-center items-center p-6 text-center border-2 border-dashed border-divider bg-canvas/40">
-                <p className="text-sm font-bold text-ink mb-1">Không thích các gợi ý này?</p>
-                <p className="text-xs text-mauve mb-4">Khám phá toàn bộ kiểu tóc phù hợp với mọi phong cách.</p>
-                <Button
+            {/* Tiêu đề + thanh công cụ: lọc giới tính bên trái, "Xem tất cả" bên phải cùng 1 hàng */}
+            <div className="flex flex-col gap-3">
+              <div>
+                <h2 className="font-display text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
+                  Kiểu tóc dành cho gương mặt {faceShapeVi}
+                </h2>
+                <p className="mt-1 text-sm text-mauve">Gợi ý theo dáng mặt của bạn — lọc nhanh theo Nam / Nữ.</p>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+              <div className="flex gap-1 bg-canvas p-1 rounded-full border border-line w-fit">
+                {[
+                  { label: "Tất cả", value: null },
+                  { label: "Nam", value: "Nam" },
+                  { label: "Nữ", value: "Nữ" },
+                ].map((t) => {
+                  const isActive = (gender || null) === t.value;
+                  return (
+                    <button
+                      key={t.label}
+                      type="button"
+                      onClick={() => setGender(t.value)}
+                      className={`rounded-full px-4 py-1.5 text-xs font-bold transition cursor-pointer ${
+                        isActive ? "bg-pink text-white shadow-sm" : "text-mauve hover:text-ink"
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  );
+                })}
+              </div>
+                <Link
                   to={gender ? `/catalog?gender=${encodeURIComponent(gender)}` : "/catalog"}
-                  variant="outline"
-                  size="sm"
-                  className="text-xs"
+                  className="flex shrink-0 items-center gap-1.5 text-sm font-bold text-primary hover:underline"
                 >
-                  Xem toàn bộ kho kiểu tóc
-                </Button>
+                  Xem tất cả <ArrowRight />
+                </Link>
+              </div>
+            </div>
+
+            {recsLoading ? (
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {Array.from({ length: 4 }).map((_, idx) => (
+                  <Card key={idx} padded={false} className="w-full animate-pulse overflow-hidden">
+                    <div className="h-56 w-full bg-line" />
+                    <div className="flex items-center justify-between p-4">
+                      <div className="h-4 w-1/2 rounded bg-line" />
+                      <div className="h-8 w-20 rounded bg-line animate-pulse" />
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : recommendations.length === 0 ? (
+              <Card className="flex flex-col items-center justify-center py-16 text-center">
+                <p className="text-lg font-semibold text-ink">Không tìm thấy kiểu tóc phù hợp trong danh mục.</p>
+                <p className="mt-1 text-sm text-mauve">Vui lòng quay lại hoặc khám phá tất cả kiểu tóc.</p>
+                <Button to="/catalog" className="mt-4">Khám phá Catalog</Button>
               </Card>
-            </DragScroll>
-          )}
+            ) : (
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {groupedRecommendations.map((group, idx) => (
+                  <HairstyleRecCard
+                    key={group.base.id || group.base.name}
+                    group={group}
+                    idx={idx}
+                    savedIds={savedIds}
+                    handleToggleSave={handleToggleSave}
+                    handleTryStyle={handleTryStyle}
+                  />
+                ))}
+
+                {/* Card cuối danh sách: dẫn tới catalog */}
+                <Card padded={false} className="w-full h-full min-h-[200px] overflow-hidden flex flex-col justify-center items-center p-6 text-center border-2 border-dashed border-divider bg-canvas/40">
+                  <p className="text-sm font-bold text-ink mb-1">Không thích các gợi ý này?</p>
+                  <p className="text-xs text-mauve mb-4">Khám phá toàn bộ kiểu tóc phù hợp với mọi phong cách.</p>
+                  <Button
+                    to={gender ? `/catalog?gender=${encodeURIComponent(gender)}` : "/catalog"}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                  >
+                    Xem toàn bộ kho kiểu tóc
+                  </Button>
+                </Card>
+              </div>
+            )}
+
+            {/* AI Stylist ở cuối cột phải */}
+            <AiStylistPanel hairstyleId={hairstyleId ? Number(hairstyleId) : null} defaultOpen={false} />
+          </div>
         </div>
       </Section>
 

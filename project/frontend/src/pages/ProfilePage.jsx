@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AnimatedContent, SpotlightCard } from "../components/animated";
 import { ArrowRight } from "../components/icons";
 import { CameraIcon } from "../components/icons";
@@ -207,7 +207,7 @@ export default function ProfilePage() {
         <AnimatedContent key="overview">
           <Section className="bg-transparent">
             <SectionHeading center={false} title="Đề xuất cho bạn"
-              action={<a href="/catalog" className="flex shrink-0 items-center gap-2 font-bold text-primary">Xem tất cả <ArrowRight /></a>} />
+              action={<Link to="/catalog" className="flex shrink-0 items-center gap-2 font-bold text-primary">Xem tất cả <ArrowRight /></Link>} />
 
             {recsLoading ? (
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">

@@ -361,9 +361,9 @@ function Trends() {
           title="Xu Hướng Tóc 2026"
           subtitle="Những kiểu tóc nổi bật nhất trong kho catalog của Hairapy."
           action={
-            <a href="/catalog" className="flex shrink-0 items-center gap-2 font-bold text-primary">
+            <Link to="/catalog" className="flex shrink-0 items-center gap-2 font-bold text-primary">
               Xem tất cả <ArrowRight />
-            </a>
+            </Link>
           } />
       </AnimatedContent>
 

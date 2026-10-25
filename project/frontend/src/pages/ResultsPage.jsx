@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatedContent, BorderGlow, GlareHover, SpotlightCard } from "../components/animated";
 import { ArrowRight, CheckIcon, StarIcon } from "../components/icons";
 import Footer from "../components/layout/Footer";
@@ -8,7 +8,7 @@ import Navbar from "../components/layout/Navbar";
 import { Badge, Button, Card, DragScroll, Section, SectionHeading } from "../components/ui";
 import api from "../lib/api";
 import { trackEvent } from "../lib/analytics";
-import { useScanStore } from "../store/useScanStore";
+import { useScanStore, useHasHydrated } from "../store/useScanStore";
 import useAuthStore from "../store/useAuthStore";
 import FeedbackWidget from "../components/FeedbackWidget";
 
@@ -67,10 +67,12 @@ export default function ResultsPage() {
   const queryClient = useQueryClient();
 
   // Lấy kết quả phân tích, ảnh preview, giới tính và hàm set kiểu tóc từ Zustand store
+  const hasHydrated = useHasHydrated();
   const { analysisResult, previewUrl, setSelectedHairstyle, gender } = useScanStore();
   const { user } = useAuthStore();
 
   useEffect(() => {
+    if (!hasHydrated) return;
     if (!analysisResult) {
       // Bảo toàn hairstyleId khi redirect qua scan
       if (hairstyleId) {
@@ -79,7 +81,7 @@ export default function ResultsPage() {
         navigate("/scan");
       }
     }
-  }, [analysisResult, navigate, hairstyleId]);
+  }, [hasHydrated, analysisResult, navigate, hairstyleId]);
 
   // Fetch kiểu tóc được chọn từ catalog nếu có
   const { data: chosenHairstyle = null } = useQuery({
@@ -165,8 +167,12 @@ export default function ResultsPage() {
     }
   };
 
-  if (!analysisResult) {
-    return null;
+  if (!hasHydrated || !analysisResult) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="size-8 animate-spin rounded-full border-4 border-pink border-t-transparent" />
+      </div>
+    );
   }
 
   const faceShapeText = FACE_SHAPE_TRANSLATION[faceShape] || faceShape;
@@ -283,7 +289,7 @@ export default function ResultsPage() {
             center={false}
             title={`Kiểu tóc dành cho gương mặt ${(FACE_SHAPE_TRANSLATION[faceShape] || "").split(" (")[0]}`}
             subtitle="Đề xuất hàng đầu phù hợp nhất với cấu trúc xương của bạn."
-            action={<a href="/catalog" className="flex shrink-0 items-center gap-2 font-bold text-primary">Xem tất cả <ArrowRight /></a>}
+            action={<Link to="/catalog" className="flex shrink-0 items-center gap-2 font-bold text-primary">Xem tất cả <ArrowRight /></Link>}
           />
 
           {recsLoading ? (

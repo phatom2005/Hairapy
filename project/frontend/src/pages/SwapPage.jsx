@@ -10,7 +10,7 @@ import QuotaBadge from "../components/QuotaBadge";
 import { Button, Card } from "../components/ui";
 import api from "../lib/api";
 import useAuthStore from "../store/useAuthStore";
-import { useScanStore } from "../store/useScanStore";
+import { useScanStore, useHasHydrated } from "../store/useScanStore";
 import FeedbackWidget from "../components/FeedbackWidget";
 import AiReportButton from "../components/AiReportButton";
 
@@ -54,6 +54,7 @@ export default function SwapPage() {
   const hairstyleId = searchParams.get("hairstyleId");
 
   // Lấy ảnh gốc, kết quả phân tích, giới tính và kiểu tóc đã chọn (nếu có) từ useScanStore
+  const hasHydrated = useHasHydrated();
   const { imageFile, previewUrl, selectedHairstyle, analysisResult, gender } =
     useScanStore();
   const { user } = useAuthStore();
@@ -106,6 +107,7 @@ export default function SwapPage() {
 
   // Bảo vệ route: Nếu không có ảnh preview thì chuyển hướng về /scan
   useEffect(() => {
+    if (!hasHydrated) return;
     if (!previewUrl) {
       if (hairstyleId) {
         navigate(`/scan?hairstyleId=${hairstyleId}`);
@@ -113,7 +115,7 @@ export default function SwapPage() {
         navigate("/scan");
       }
     }
-  }, [previewUrl, navigate, hairstyleId]);
+  }, [hasHydrated, previewUrl, navigate, hairstyleId]);
 
   // Đảm bảo kiểu tóc đã chọn từ catalog xuất hiện trong danh sách hiển thị, kể cả khi không thuộc đề xuất
   const displayedStyles = [...styles];
@@ -327,6 +329,14 @@ export default function SwapPage() {
       handleSwapError(errMsg, errDetails);
     }
   };
+
+  if (!hasHydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="size-8 animate-spin rounded-full border-4 border-pink border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">

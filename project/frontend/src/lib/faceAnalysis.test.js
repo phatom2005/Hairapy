@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { classifyFaceShape } from "./faceAnalysis";
+import { classifyFaceShape, getAlternativeShape } from "./faceAnalysis";
 
 describe("classifyFaceShape", () => {
   it("phân loại Oval khi tỷ lệ cân đối, không lệch rõ nhóm nào", () => {
@@ -48,5 +48,30 @@ describe("classifyFaceShape", () => {
     expect(() =>
       classifyFaceShape({ foreheadWidth: 0, cheekboneWidth: 0, jawWidth: 0, faceLength: 0 })
     ).toThrow();
+  });
+});
+
+describe("getAlternativeShape", () => {
+  it("trả về dáng phụ khi chỉ số sát ngưỡng (ví dụ r1 sát 1.15)", () => {
+    // r1 = 1.16 sát 1.15, primary là Oval, nhưng r1 * 0.95 = 1.102 <= 1.15 (jawToCheek 0.75 -> Round)
+    const metrics = {
+      r1: 1.16,
+      r2: 1.05,
+      r3: 1.02,
+      jawToCheek: 0.75,
+    };
+    const alt = getAlternativeShape(metrics);
+    expect(alt).toBe("Round");
+  });
+
+  it("trả về null khi các chỉ số nằm sâu giữa vùng ổn định", () => {
+    const metrics = {
+      r1: 1.35,
+      r2: 1.02,
+      r3: 1.02,
+      jawToCheek: 0.8,
+    };
+    const alt = getAlternativeShape(metrics);
+    expect(alt).toBeNull();
   });
 });

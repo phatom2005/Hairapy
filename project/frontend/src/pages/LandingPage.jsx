@@ -173,8 +173,8 @@ function HeroLogoCard() {
           <StarIcon size={20} className="text-ink" />
         </span>
         <div>
-          <p className="text-xs font-bold tracking-wide text-white drop-shadow-sm">Độ chính xác</p>
-          <p className="text-base font-bold text-white drop-shadow-sm">99.8% AI Scan</p>
+          <p className="text-xs font-bold tracking-wide text-white drop-shadow-sm">Gợi ý thông minh</p>
+          <p className="text-base font-bold text-white drop-shadow-sm">Theo dáng mặt</p>
         </div>
       </motion.div>
     </div>
@@ -185,11 +185,11 @@ function HeroLogoCard() {
 function MarqueeStrip() {
   const ITEMS = [
     "Scan • Style • Smile",
-    "AI Scan 99.8%",
-    "1000+ kiểu tóc",
+    "Gợi ý theo dáng mặt",
+    "Thử tóc bằng AI",
+    "Catalog đa dạng",
     "Sản xuất tại Việt Nam",
-    "Thử tóc AR thời gian thực",
-    "Salon Premium giảm 30%",
+    "Tư vấn AI Stylist",
   ];
   return (
     <div className="border-y border-divider/30 bg-lime py-6 text-brand">
@@ -201,13 +201,13 @@ function MarqueeStrip() {
 /* ---------- Features ---------- */
 const FEATURES = [
   { icon: ScanIcon, iconBg: "bg-pink/10", iconColor: "text-pink", title: "Quét AI",
-    desc: "Phân tích tỉ lệ khuôn mặt, cấu trúc xương và chất tóc để đưa ra gợi ý kiểu tóc tối ưu nhất cho bạn.",
+    desc: "Đo đạc tỉ lệ khuôn mặt từ ảnh chân dung để đưa ra gợi ý kiểu tóc phù hợp nhất với cấu trúc riêng của bạn.",
     spotlight: "rgba(255, 87, 207, 0.18)" },
-  { icon: CameraIcon, iconBg: "bg-[#8093ff]/10", iconColor: "text-[#8093ff]", title: "Thử tóc ảo",
-    desc: "Trải nghiệm hàng ngàn kiểu tóc và màu sắc thời thượng ngay lập tức thông qua camera AR thực tế ảo.",
+  { icon: CameraIcon, iconBg: "bg-[#8093ff]/10", iconColor: "text-[#8093ff]", title: "Thử tóc AI",
+    desc: "Trải nghiệm trực quan nhiều kiểu tóc và màu sắc thời thượng ngay trên ảnh chân dung với công nghệ AI.",
     spotlight: "rgba(128, 147, 255, 0.2)" },
-  { icon: StarIcon, iconBg: "bg-lime", iconColor: "text-ink", title: "Gợi ý chuyên gia",
-    desc: "Kết nối với các chuyên gia tạo mẫu tóc hàng đầu để nhận tư vấn chuyên sâu về cách chăm sóc và tạo kiểu.",
+  { icon: StarIcon, iconBg: "bg-lime", iconColor: "text-ink", title: "AI Stylist",
+    desc: "Trợ lý tạo mẫu tóc AI thông minh, hỗ trợ giải đáp thắc mắc về tạo kiểu, giữ nếp và chăm sóc tóc.",
     spotlight: "rgba(208, 238, 136, 0.25)" },
 ];
 
@@ -272,7 +272,7 @@ function Features() {
                     </div>
                     <div className="mt-6 flex items-center gap-2 text-xs font-bold text-brand uppercase tracking-wider">
                       <span className="flex h-2 w-2 rounded-full bg-brand animate-pulse" />
-                      AR Trial Ready
+                      AI Trial Ready
                     </div>
                   </Card>
                 </SpotlightCard>

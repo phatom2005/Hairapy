@@ -89,6 +89,19 @@ export const useScanStore = create(
         set({ analysisResult: result, error: null });
       },
 
+      // Cho phép người dùng tự chỉnh dáng mặt nếu AI đoán chưa đúng
+      overrideFaceShape: (shape) => {
+        const currentResult = get().analysisResult;
+        if (!currentResult) return;
+        set({
+          analysisResult: {
+            ...currentResult,
+            faceShape: shape,
+            userOverridden: true,
+          },
+        });
+      },
+
       // Thiết lập trạng thái đang phân tích
       setAnalyzing: (analyzing) => {
         set({ analyzing });

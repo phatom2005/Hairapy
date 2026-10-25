@@ -1,4 +1,5 @@
-import { FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
+import { FaceLandmarker } from "@mediapipe/tasks-vision";
+import { getVisionFileset } from "./visionFileset";
 
 // Khởi tạo thực thể FaceLandmarker dạng Singleton
 let faceLandmarkerInstance = null;
@@ -26,10 +27,8 @@ export async function initFaceAnalyzer() {
 
   initPromise = (async () => {
     try {
-      // Tải bộ giải quyết tệp tin WASM từ CDN jsDelivr
-      const filesetResolver = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8/wasm"
-      );
+      // Tải bộ giải quyết tệp tin WASM dùng chung từ getVisionFileset
+      const filesetResolver = await getVisionFileset();
 
       // Khởi tạo FaceLandmarker từ model task CDN của Google
       // Ưu tiên GPU, fallback CPU nếu thiết bị không hỗ trợ WebGPU
@@ -65,19 +64,51 @@ export async function initFaceAnalyzer() {
 }
 
 /**
+ * Hàm quyết định dáng mặt từ các chỉ số tỷ lệ r1, r2, r3, jawToCheek
+ */
+export function decideShape({ r1, r2, r3, jawToCheek }) {
+  if (r1 <= 1.15) {
+    // Mặt "ngắn/rộng" — phân biệt Round (hàm mềm) và Square (hàm gần vuông, rộng gần bằng gò má).
+    return jawToCheek > 0.88 ? "Square" : "Round";
+  } else if (r1 >= 1.6) {
+    return "Oblong";
+  } else if (r2 >= 1.15) {
+    return "Heart";
+  } else if (r3 >= 1.1) {
+    return "Diamond";
+  } else {
+    return "Oval";
+  }
+}
+
+/**
+ * Tìm dáng mặt "gần thứ hai" bằng cách biến thiên từng chỉ số +/-5%.
+ * Trả về dáng đầu tiên khác dáng chính, hoặc null nếu kết quả hoàn toàn ổn định.
+ */
+export function getAlternativeShape(metrics) {
+  if (!metrics) return null;
+  const { r1, r2, r3, jawToCheek } = metrics;
+  const primaryShape = decideShape({ r1, r2, r3, jawToCheek });
+
+  const multipliers = [0.95, 1.05];
+  const keys = ["r1", "r2", "r3", "jawToCheek"];
+
+  for (const key of keys) {
+    for (const m of multipliers) {
+      const perturbed = { r1, r2, r3, jawToCheek, [key]: metrics[key] * m };
+      const shape = decideShape(perturbed);
+      if (shape !== primaryShape) {
+        return shape;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Phân loại hình dáng khuôn mặt từ 4 số đo (không phụ thuộc MediaPipe/landmark thật) —
  * tách riêng thành pure function để unit test độc lập.
- *
- * Thuật toán dựa theo cách phân loại phổ biến bằng 3 tỷ lệ:
- * - R1 = faceLength / cheekboneWidth (dài/rộng) — chỉ số quan trọng nhất, quyết định nhóm
- *   "ngắn/rộng" (Round/Square), "dài" (Oblong), hay "cân đối" (Oval/Heart/Diamond).
- * - R2 = foreheadWidth / jawWidth — trán rộng hơn hàm rõ rệt là đặc trưng mặt Heart.
- * - R3 = cheekboneWidth / trung bình(forehead, jaw) — gò má nổi bật nhất là đặc trưng mặt Diamond.
- *
- * Khác bản cũ: bản cũ dùng nhiều điều kiện AND hẹp, khiến phần lớn khuôn mặt "bình thường"
- * (không cực đoan) rơi vào nhánh mặc định Oval dù tỷ lệ trán/hàm/gò má thực ra lệch rõ về
- * Heart/Diamond. Bản mới luôn kiểm tra R2/R3 trước khi kết luận Oval, nên Oval chỉ thắng khi
- * tỷ lệ thực sự cân đối — không phải vì "không khớp điều kiện nào khác".
  */
 export function classifyFaceShape({ foreheadWidth, cheekboneWidth, jawWidth, faceLength }) {
   if (faceLength === 0 || cheekboneWidth === 0) {
@@ -89,32 +120,25 @@ export function classifyFaceShape({ foreheadWidth, cheekboneWidth, jawWidth, fac
   const r3 = cheekboneWidth / ((foreheadWidth + jawWidth) / 2);
   const jawToCheek = jawWidth / cheekboneWidth;
 
-  let faceShape;
-
-  if (r1 <= 1.15) {
-    // Mặt "ngắn/rộng" — phân biệt Round (hàm mềm) và Square (hàm gần vuông, rộng gần bằng gò má).
-    faceShape = jawToCheek > 0.88 ? "Square" : "Round";
-  } else if (r1 >= 1.6) {
-    faceShape = "Oblong";
-  } else if (r2 >= 1.15) {
-    faceShape = "Heart";
-  } else if (r3 >= 1.1) {
-    faceShape = "Diamond";
-  } else {
-    faceShape = "Oval";
-  }
+  const faceShape = decideShape({ r1, r2, r3, jawToCheek });
+  const metrics = {
+    r1,
+    r2,
+    r3,
+    jawToCheek,
+    foreheadWidth,
+    cheekboneWidth,
+    jawWidth,
+    faceLength,
+    widthToLength: 1 / r1,
+    foreheadToJaw: r2,
+  };
+  const alternativeShape = getAlternativeShape(metrics);
 
   return {
     faceShape,
-    metrics: {
-      r1, r2, r3, jawToCheek, foreheadWidth, cheekboneWidth, jawWidth, faceLength,
-      // Alias giữ tương thích ngược — ResultsPage.jsx đang đọc trực tiếp 2 field cũ này
-      // (metrics.widthToLength, metrics.foreheadToJaw) để hiển thị "Tỷ lệ rộng/dài",
-      // "Tỷ lệ trán/hàm" và tính symmetryScore/styleScore. KHÔNG xoá 2 field này,
-      // nếu không ResultsPage sẽ hiện "N/A" cho 2 dòng biometrics đó.
-      widthToLength: 1 / r1,
-      foreheadToJaw: r2,
-    },
+    alternativeShape,
+    metrics,
   };
 }
 
@@ -131,11 +155,6 @@ export async function analyzeFace(imageElement) {
 
   const landmarks = result.faceLandmarks[0];
 
-  // Lấy các điểm mốc chính để tính toán kích thước khuôn mặt:
-  // - foreheadWidth: khoảng cách giữa landmark 70 và 300 (hai bên trán)
-  // - cheekboneWidth: khoảng cách giữa landmark 234 và 454 (hai bên gò má)
-  // - jawWidth: khoảng cách giữa landmark 172 và 397 (hai bên hàm)
-  // - faceLength: khoảng cách giữa landmark 10 (trán trên) và 152 (cằm dưới)
   const p70 = landmarks[70];
   const p300 = landmarks[300];
   const p234 = landmarks[234];
@@ -150,7 +169,12 @@ export async function analyzeFace(imageElement) {
   const jawWidth = calculateDistance(p172, p397);
   const faceLength = calculateDistance(p10, p152);
 
-  const { faceShape, metrics } = classifyFaceShape({ foreheadWidth, cheekboneWidth, jawWidth, faceLength });
+  const { faceShape, alternativeShape, metrics } = classifyFaceShape({
+    foreheadWidth,
+    cheekboneWidth,
+    jawWidth,
+    faceLength,
+  });
 
-  return { faceShape, landmarks, metrics };
+  return { faceShape, alternativeShape, landmarks, metrics };
 }

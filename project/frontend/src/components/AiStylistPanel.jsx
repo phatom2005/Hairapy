@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { AI_STYLIST_ENABLED } from "../lib/features";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../lib/api";
 import useAuthStore from "../store/useAuthStore";
@@ -12,7 +13,7 @@ const SUGGESTED_PROMPTS = [
   "Kiểu này chăm sóc có khó không?",
 ];
 
-export default function AiStylistPanel({ hairstyleId = null, defaultOpen = false, className = "" }) {
+function AiStylistPanelInner({ hairstyleId = null, defaultOpen = false, className = "" }) {
   const { user } = useAuthStore();
   const { analysisResult } = useScanStore();
   const queryClient = useQueryClient();
@@ -281,4 +282,27 @@ export default function AiStylistPanel({ hairstyleId = null, defaultOpen = false
       />
     </div>
   );
+}
+
+/** Thẻ "Sắp ra mắt" khi AI Stylist chưa mở (VITE_AI_STYLIST_ENABLED != "true"). */
+function AiStylistComingSoon({ className = "" }) {
+  return (
+    <div className={`flex items-center gap-4 rounded-3xl border border-dashed border-line bg-canvas/60 p-5 ${className}`}>
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-xl">✨</div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="font-display font-bold text-ink">AI Stylist 1:1</h3>
+          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-600">Sắp ra mắt</span>
+        </div>
+        <p className="mt-0.5 text-xs text-mauve">
+          Trợ lý AI tư vấn kiểu tóc theo dáng mặt và chất tóc của bạn — đang được hoàn thiện.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default function AiStylistPanel(props) {
+  if (!AI_STYLIST_ENABLED) return <AiStylistComingSoon className={props.className} />;
+  return <AiStylistPanelInner {...props} />;
 }

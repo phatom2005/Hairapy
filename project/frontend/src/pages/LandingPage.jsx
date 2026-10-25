@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { AI_STYLIST_ENABLED } from "../lib/features";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import useAuthStore from "../store/useAuthStore";
@@ -190,7 +191,7 @@ function MarqueeStrip() {
     "Thử tóc bằng AI",
     "Catalog đa dạng",
     "Sản xuất tại Việt Nam",
-    "Tư vấn AI Stylist",
+    ...(AI_STYLIST_ENABLED ? ["Tư vấn AI Stylist"] : []),
   ];
   return (
     <div className="border-y border-divider/30 bg-lime py-6 text-brand">
@@ -207,7 +208,7 @@ const FEATURES = [
   { icon: CameraIcon, iconBg: "bg-[#8093ff]/10", iconColor: "text-[#8093ff]", title: "Thử tóc AI",
     desc: "Trải nghiệm trực quan nhiều kiểu tóc và màu sắc thời thượng ngay trên ảnh chân dung với công nghệ AI.",
     spotlight: "rgba(128, 147, 255, 0.2)" },
-  { icon: StarIcon, iconBg: "bg-lime", iconColor: "text-ink", title: "AI Stylist",
+  { icon: StarIcon, iconBg: "bg-lime", iconColor: "text-ink", title: AI_STYLIST_ENABLED ? "AI Stylist" : "AI Stylist (sắp ra mắt)",
     desc: "Trợ lý tạo mẫu tóc AI thông minh, hỗ trợ giải đáp thắc mắc về tạo kiểu, giữ nếp và chăm sóc tóc.",
     spotlight: "rgba(208, 238, 136, 0.25)" },
 ];
@@ -404,7 +405,7 @@ function Trends() {
 const PERKS = [
   "Kiểu tóc độc quyền",
   "Ảnh HD không logo, không watermark",
-  "Tư vấn kiểu tóc với AI Stylist",
+  AI_STYLIST_ENABLED ? "Tư vấn kiểu tóc với AI Stylist" : "Kiểu tóc độc quyền theo xu hướng",
 ];
 
 function PremiumUpsell() {
@@ -434,8 +435,9 @@ function PremiumUpsell() {
                 Nâng Cấp Trải Nghiệm Premium
               </h2>
               <p className="max-w-2xl text-lg leading-relaxed text-[#e2e2e2]">
-                Mở khóa tất cả các bộ lọc AI độc quyền, nhận tư vấn kiểu tóc cùng AI Stylist và
-                xuất ảnh HD không logo, không watermark.
+                {AI_STYLIST_ENABLED
+                  ? "Mở khóa tất cả các bộ lọc AI độc quyền, nhận tư vấn kiểu tóc cùng AI Stylist và xuất ảnh HD không logo, không watermark."
+                  : "Mở khóa tất cả các kiểu tóc độc quyền, thêm lượt thử mỗi ngày và xuất ảnh HD không logo, không watermark."}
               </p>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 w-full">
                 {PERKS.map((p) => (

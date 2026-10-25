@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AI_STYLIST_ENABLED } from "../lib/features";
 import { useNavigate } from "react-router-dom";
 import { PROFILE_IMG } from "../lib/figmaAssets";
 import { Button, Card, Input, Badge } from "../components/ui";
@@ -490,8 +491,8 @@ export default function SettingsPage() {
                       )}
                     </div>
 
-                    {/* Thẻ AI Stylist cho Gói Tháng */}
-                    {userPlan === "PREMIUM" && (
+                    {/* Thẻ AI Stylist cho Gói Tháng (ẩn khi tính năng chưa mở) */}
+                    {AI_STYLIST_ENABLED && userPlan === "PREMIUM" && (
                       <div className="rounded-xl border border-line bg-white/70 p-4 sm:col-span-2">
                         <p className="text-xs font-semibold text-mauve">Tư vấn AI Stylist</p>
                         {usageData?.aiStylist?.unlimited ? (

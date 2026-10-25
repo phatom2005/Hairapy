@@ -28,7 +28,6 @@ const HairColorStudio = forwardRef(function HairColorStudio(
   const [isSegmenting, setIsSegmenting] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
-  const [imageLoaded, setImageLoaded] = useState(false);
   const [sliderPos, setSliderPos] = useState(50);
   const [aspectRatio, setAspectRatio] = useState(null);
 
@@ -104,7 +103,6 @@ const HairColorStudio = forwardRef(function HairColorStudio(
           segCanvas,
         });
 
-        setImageLoaded(true);
         setActiveColor(null);
         setErrorMsg(null);
       } catch (err) {

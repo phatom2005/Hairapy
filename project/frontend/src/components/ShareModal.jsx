@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { TickCircle, Copy, DocumentCopy } from "iconsax-reactjs";
 import { ShareIcon } from "./icons";
 import { trackEvent } from "../lib/analytics";
@@ -90,8 +90,12 @@ function ZaloIcon({ size = 20, className = "" }) {
 /**
  * Modal Chia sẻ thông minh (Hybrid Social Share Modal)
  */
-export default function ShareModal({
-  isOpen,
+export default function ShareModal(props) {
+  if (!props.isOpen) return null;
+  return <ShareModalDialog {...props} />;
+}
+
+function ShareModalDialog({
   onClose,
   imageBlob,
   imageUrl,
@@ -103,16 +107,6 @@ export default function ShareModal({
   const [imageCopied, setImageCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [feedbackNotice, setFeedbackNotice] = useState(null);
-
-  useEffect(() => {
-    if (!isOpen) {
-      setImageCopied(false);
-      setLinkCopied(false);
-      setFeedbackNotice(null);
-    }
-  }, [isOpen]);
-
-  if (!isOpen) return null;
 
   const triggerDownload = (filenamePrefix = "hairapy") => {
     if (!imageBlob && !imageUrl) return;

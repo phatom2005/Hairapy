@@ -8,7 +8,7 @@ import { CheckIcon, DownloadIcon, UploadIcon, ShareIcon } from "../components/ic
 import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/Navbar";
 import QuotaBadge from "../components/QuotaBadge";
-import { Button, Card, Badge } from "../components/ui";
+import { Button, Card } from "../components/ui";
 import api from "../lib/api";
 import useAuthStore from "../store/useAuthStore";
 import { useScanStore, useHasHydrated } from "../store/useScanStore";

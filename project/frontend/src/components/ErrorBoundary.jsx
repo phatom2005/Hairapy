@@ -24,7 +24,9 @@ class ErrorBoundary extends Component {
         stack: error?.stack,
         time: new Date().toISOString(),
       }));
-    } catch {}
+    } catch {
+      // Bỏ qua lỗi sessionStorage (ví dụ chế độ ẩn danh vượt quota)
+    }
     trackEvent("exception", { description: `render: ${error?.name || "Error"}`, fatal: true, page_path: window.location.pathname });
   }
 

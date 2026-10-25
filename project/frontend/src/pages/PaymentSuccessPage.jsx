@@ -101,16 +101,39 @@ export default function PaymentSuccessPage() {
                   </h2>
                   
                   <p className="text-sm text-mauve mb-8 max-w-xs">
-                    Tài khoản của bạn đã được nâng cấp lên gói dịch vụ trả phí. Hãy bắt đầu khám phá các tính năng AI không giới hạn ngay hôm nay!
+                    Tài khoản của bạn đã được nâng cấp lên gói dịch vụ trả phí. Hãy bắt đầu khám phá các kiểu tóc độc quyền và tính năng AI ngay hôm nay!
                   </p>
 
-                  <Button
-                    onClick={() => navigate("/scan")}
-                    variant="pink"
-                    className="w-full justify-center py-3.5 text-sm font-bold"
-                  >
-                    Bắt đầu trải nghiệm ngay
-                  </Button>
+                  {sessionStorage.getItem("hairapy-return-to") ? (
+                    <div className="flex flex-col gap-2.5 w-full">
+                      <Button
+                        onClick={() => {
+                          const target = sessionStorage.getItem("hairapy-return-to");
+                          sessionStorage.removeItem("hairapy-return-to");
+                          navigate(target);
+                        }}
+                        variant="pink"
+                        className="w-full justify-center py-3.5 text-sm font-bold shadow-md"
+                      >
+                        Quay lại thử kiểu tóc
+                      </Button>
+                      <Button
+                        onClick={() => navigate("/scan")}
+                        variant="outline"
+                        className="w-full justify-center py-2.5 text-xs text-muted hover:text-ink"
+                      >
+                        Đi tới trang quét AI
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={() => navigate("/scan")}
+                      variant="pink"
+                      className="w-full justify-center py-3.5 text-sm font-bold"
+                    >
+                      Bắt đầu trải nghiệm ngay
+                    </Button>
+                  )}
                 </div>
               )}
 

@@ -11,6 +11,7 @@ import api from "../lib/api";
 import { PROFILE_IMG } from "../lib/figmaAssets";
 import useAuthStore from "../store/useAuthStore";
 import { useScanStore } from "../store/useScanStore";
+import PremiumGateModal from "../components/PremiumGateModal";
 
 // Bản đồ dịch dáng mặt sang tiếng Việt (đồng bộ với ResultsPage.jsx)
 const FACE_SHAPE_MAP = {
@@ -35,6 +36,7 @@ export default function ProfilePage() {
   const queryClient = useQueryClient();
   const { setSelectedHairstyle } = useScanStore();
   const [activeTab, setActiveTab] = useState("overview");
+  const [gateStyle, setGateStyle] = useState(null);
 
   const userName = user?.fullName || (user?.email ? user.email.split("@")[0] : "Người dùng");
   const userRole = user?.role === "ADMIN" ? "Admin" : (user?.role === "PREMIUM" ? "Premium" : "Thành viên");
@@ -99,8 +101,9 @@ export default function ProfilePage() {
   ];
 
   const handleTryStyle = (style) => {
-    if (style.premiumOnly && (!user || (user.role !== "PREMIUM" && user.role !== "ADMIN" && user.role !== "TESTER"))) {
-      navigate("/pricing");
+    const isPaidUser = user?.plan && user.plan !== "FREE";
+    if (style.premiumOnly && !isPaidUser) {
+      setGateStyle(style);
       return;
     }
     setSelectedHairstyle({
@@ -110,7 +113,7 @@ export default function ProfilePage() {
       ailabHairType: style.ailabHairType,
       ailabProStyle: style.ailabProStyle
     });
-    navigate("/swap");
+    navigate(`/swap?hairstyleId=${style.id}`);
   };
 
   // Hàm hủy lưu kiểu tóc yêu thích
@@ -233,7 +236,7 @@ export default function ProfilePage() {
                           <img src={r.imageUrl} alt={r.name} className="h-56 w-full object-cover"
                             onError={(e) => { e.target.src = `https://placehold.co/600x400?text=${encodeURIComponent(r.name)}`; }} />
                           {r.premiumOnly && (
-                            <Badge variant="premium" className="absolute right-3 top-3 shadow">PREMIUM</Badge>
+                            <Badge variant="premium" className="absolute right-3 top-3 shadow">Trả phí</Badge>
                           )}
                         </div>
                         <div className="p-4">
@@ -398,6 +401,12 @@ export default function ProfilePage() {
       )}
 
       <Footer />
+
+      <PremiumGateModal
+        isOpen={!!gateStyle}
+        onClose={() => setGateStyle(null)}
+        style={gateStyle}
+      />
     </div>
   );
 }

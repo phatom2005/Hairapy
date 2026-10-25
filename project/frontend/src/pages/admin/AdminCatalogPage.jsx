@@ -359,7 +359,7 @@ export default function AdminCatalogPage() {
                     </td>
                     <td className="px-6 py-3">
                       {item.premiumOnly ? (
-                        <Badge variant="premium">PREMIUM</Badge>
+                        <Badge variant="premium">Trả phí</Badge>
                       ) : (
                         <Badge variant="neutral">FREE</Badge>
                       )}

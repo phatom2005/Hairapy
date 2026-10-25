@@ -11,6 +11,7 @@ import { trackEvent } from "../lib/analytics";
 import { useScanStore, useHasHydrated } from "../store/useScanStore";
 import useAuthStore from "../store/useAuthStore";
 import FeedbackWidget from "../components/FeedbackWidget";
+import PremiumGateModal from "../components/PremiumGateModal";
 
 // Bản đồ dịch dáng mặt sang tiếng Việt
 const FACE_SHAPE_TRANSLATION = {
@@ -80,6 +81,7 @@ export default function ResultsPage() {
 
   const [showShapePicker, setShowShapePicker] = useState(false);
   const [showBiometrics, setShowBiometrics] = useState(false);
+  const [gateStyle, setGateStyle] = useState(null);
 
   const notSaved = location.state?.notSaved;
 
@@ -187,8 +189,9 @@ export default function ResultsPage() {
   const reasons = REASONS_MAP[faceShape] || REASONS_MAP.Oval;
 
   const handleTryStyle = (hairstyle) => {
-    if (hairstyle.premiumOnly && (!user || (user.role !== "PREMIUM" && user.role !== "ADMIN" && user.role !== "TESTER"))) {
-      navigate("/pricing");
+    const isPaidUser = user?.plan && user.plan !== "FREE";
+    if (hairstyle.premiumOnly && !isPaidUser) {
+      setGateStyle(hairstyle);
       return;
     }
     setSelectedHairstyle({
@@ -334,7 +337,7 @@ export default function ResultsPage() {
                             <div className="flex items-center gap-2">
                               <h4 className="font-bold text-ink text-base">{chosenHairstyle.name}</h4>
                               {chosenHairstyle.premiumOnly && (
-                                <Badge variant="premium">PRO</Badge>
+                                <Badge variant="premium">Trả phí</Badge>
                               )}
                             </div>
                             <p className="text-xs text-mauve line-clamp-2">{chosenHairstyle.description}</p>
@@ -429,7 +432,7 @@ export default function ResultsPage() {
                           />
                           <Badge variant="new" className="absolute left-3 top-3 shadow">{match}% phù hợp</Badge>
                           {r.premiumOnly && (
-                            <Badge variant="premium" className="absolute right-3 top-3 shadow">PRO</Badge>
+                            <Badge variant="premium" className="absolute right-3 top-3 shadow">Trả phí</Badge>
                           )}
 
                           {/* Nút lưu yêu thích */}
@@ -524,6 +527,12 @@ export default function ResultsPage() {
       </section>
 
       <Footer />
+
+      <PremiumGateModal
+        isOpen={!!gateStyle}
+        onClose={() => setGateStyle(null)}
+        style={gateStyle}
+      />
     </div>
   );
 }

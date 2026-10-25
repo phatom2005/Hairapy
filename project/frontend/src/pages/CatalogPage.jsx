@@ -487,7 +487,7 @@ export default function CatalogPage() {
                             </Badge>
                           )}
                           {item.premiumOnly && (
-                            <Badge variant="premium" className="shadow">PREMIUM</Badge>
+                            <Badge variant="premium" className="shadow">Trả phí</Badge>
                           )}
                         </div>
                         <button

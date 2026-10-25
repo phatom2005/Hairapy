@@ -21,6 +21,7 @@ import { useScanStore } from "../store/useScanStore";
 import { Badge, Button, Card, DragScroll, Section, SectionHeading } from "../components/ui";
 import HairapyLogoMark from "../components/animated/HairapyLogoMark";
 import { PLANS, getPlanCta } from "../lib/plans";
+import PremiumGateModal from "../components/PremiumGateModal";
 
 export default function LandingPage() {
   return (
@@ -328,6 +329,7 @@ function Trends() {
   });
 
   const trendingStyles = allHairstyles.filter((h) => h.tag && h.tag.trim() !== "").slice(0, 8);
+  const [gateStyle, setGateStyle] = useState(null);
 
   const handleTryStyle = (hairstyle) => {
     const token = localStorage.getItem("token");
@@ -335,8 +337,9 @@ function Trends() {
       navigate("/login", { state: { from: "/" } });
       return;
     }
-    if (hairstyle.premiumOnly && (!user || (user.role !== "PREMIUM" && user.role !== "ADMIN" && user.role !== "TESTER"))) {
-      navigate("/pricing");
+    const isPaidUser = user?.plan && user.plan !== "FREE";
+    if (hairstyle.premiumOnly && !isPaidUser) {
+      setGateStyle(hairstyle);
       return;
     }
     setSelectedHairstyle({
@@ -376,7 +379,7 @@ function Trends() {
                 onError={(e) => { e.target.src = `https://placehold.co/280x320?text=${encodeURIComponent(t.name)}`; }} />
               <Badge variant="new" className="absolute left-4 top-4 shadow">{t.tag}</Badge>
               {t.premiumOnly && (
-                <Badge variant="premium" className="absolute right-4 top-4 shadow">PREMIUM</Badge>
+                <Badge variant="premium" className="absolute right-4 top-4 shadow">Trả phí</Badge>
               )}
             </div>
             <h4 className="mt-4 px-2 text-lg font-bold text-ink">{t.name}</h4>
@@ -387,6 +390,12 @@ function Trends() {
           </Card>
         ))}
       </DragScroll>
+
+      <PremiumGateModal
+        isOpen={!!gateStyle}
+        onClose={() => setGateStyle(null)}
+        style={gateStyle}
+      />
     </Section>
   );
 }

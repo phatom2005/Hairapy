@@ -7,41 +7,7 @@ import { CheckIcon } from "../components/icons";
 import { AnimatedContent, GlareHover, BorderGlow } from "../components/animated";
 import useAuthStore from "../store/useAuthStore";
 
-const PLANS = [
-  {
-    name: "Cơ bản", tagline: "Bắt đầu hành trình của bạn",
-    price: "0đ", period: "/ vĩnh viễn", highlight: false,
-    cta: "Dùng bản miễn phí", to: "/register", variant: "outline",
-    features: [
-      { text: "5 lần quét AI mỗi ngày", on: true },
-      { text: "1 lần thử kiểu tóc mỗi ngày", on: true },
-      { text: "Phân tích chuyên sâu", on: false },
-      { text: "Ưu đãi Salon", on: false },
-    ],
-  },
-  {
-    name: "Tuần", tagline: "Trải nghiệm nhanh",
-    price: "49.000vnđ", period: "/ tuần", highlight: false,
-    cta: "Mua gói Tuần", to: "/checkout?plan=PRO", variant: "outline",
-    features: [
-      { text: "5 lần quét AI mỗi ngày", on: true },
-      { text: "5 lần thử kiểu tóc mỗi ngày", on: true },
-      { text: "Ảnh HD không watermark", on: true },
-      { text: "Tư vấn 1:1 cùng Stylist", on: false },
-    ],
-  },
-  {
-    name: "Tháng", tagline: "Trải nghiệm không giới hạn",
-    price: "99.000vnđ", period: "/ tháng", highlight: true,
-    cta: "Nâng cấp ngay", to: "/checkout?plan=PREMIUM", variant: "pink",
-    features: [
-      { text: "5 lần quét AI mỗi ngày", on: true },
-      { text: "8 lần thử kiểu tóc mỗi ngày", on: true },
-      { text: "Ảnh HD không watermark", on: true },
-      { text: "Tư vấn 1:1 cùng Stylist", on: true },
-    ],
-  },
-];
+import { PLANS, getPlanCta } from "../lib/plans";
 
 export default function PricingPage() {
   const { user } = useAuthStore();
@@ -64,7 +30,7 @@ export default function PricingPage() {
               Nâng cấp trải nghiệm Premium
             </h1>
             <p className="mx-auto mt-3 text-mauve">
-              Khai phá tiềm năng thực sự của mái tóc với trí tuệ nhân tạo chuyên sâu và đặc quyền từ các Salon hàng đầu.
+              Khai phá tiềm năng thực sự của mái tóc với trí tuệ nhân tạo chuyên sâu và công nghệ thử kiểu tóc độc quyền.
             </p>
           </div>
         </AnimatedContent>
@@ -123,35 +89,7 @@ export default function PricingPage() {
 
 /* Tách card ra để re-use trong cả GlareHover wrapper và standalone */
 function PlanCard({ plan: p, premium = false, user }) {
-  const getCtaState = () => {
-    if (!user) {
-      return { cta: p.cta, to: p.to, disabled: false };
-    }
-    if (user.role === "ADMIN") {
-      return { cta: "Trang quản trị", to: "/admin", disabled: false };
-    }
-    if (p.name === "Cơ bản") {
-      if (user.role === "USER") {
-        return { cta: "Đang áp dụng", to: null, disabled: true };
-      }
-      return { cta: "Gói cơ bản", to: null, disabled: true };
-    }
-    if (p.name === "Tuần") {
-      if (user.role === "PREMIUM") {
-        return { cta: "Đang dùng Premium", to: null, disabled: true };
-      }
-      return { cta: p.cta, to: p.to, disabled: false };
-    }
-    if (p.name === "Premium") {
-      if (user.role === "PREMIUM") {
-        return { cta: "Đang áp dụng", to: null, disabled: true };
-      }
-      return { cta: p.cta, to: p.to, disabled: false };
-    }
-    return { cta: p.cta, to: p.to, disabled: false };
-  };
-
-  const { cta, to, disabled } = getCtaState();
+  const { text: cta, to, disabled, hint } = getPlanCta(p, user);
 
   return (
     <Card className="relative flex h-full flex-col gap-6">
@@ -169,7 +107,7 @@ function PlanCard({ plan: p, premium = false, user }) {
           <span className={`text-4xl font-extrabold ${premium ? "text-magenta" : "text-ink"}`}>{p.price}</span>
           <span className="pb-1 text-sm text-muted">{p.period}</span>
         </div>
-        {p.note && <p className="mt-1 text-xs font-semibold text-magenta">{p.note}</p>}
+        {hint && <p className="mt-1 text-xs font-semibold text-magenta">{hint}</p>}
       </div>
 
       <ul className="flex flex-col gap-3">

@@ -20,6 +20,7 @@ import api from "../lib/api";
 import { useScanStore } from "../store/useScanStore";
 import { Badge, Button, Card, DragScroll, Section, SectionHeading } from "../components/ui";
 import HairapyLogoMark from "../components/animated/HairapyLogoMark";
+import { PLANS, getPlanCta } from "../lib/plans";
 
 export default function LandingPage() {
   return (
@@ -391,12 +392,10 @@ function Trends() {
 }
 
 /* ---------- Premium Upsell ---------- */
-const PERKS = ["Kiểu tóc Premium mỗi tuần", "Không quảng cáo", "Mã giảm giá Salon 30%"];
-
-const PLANS = [
-  { name: "Cơ bản", price: "0đ", period: "/ vĩnh viễn", label: "GÓI MIỄN PHÍ", to: "/register", desc: "5 lần quét AI & 1 lần thử kiểu tóc mỗi ngày." },
-  { name: "Tuần", price: "49k", period: "/ tuần", label: "TRẢI NGHIỆM NHANH", to: "/checkout?plan=PRO", desc: "5 lần quét AI & 5 lần thử tóc mỗi ngày, ảnh HD không logo." },
-  { name: "Premium", price: "99k", period: "/ tháng", label: "ƯU ĐÃI LỚN NHẤT", to: "/checkout?plan=PREMIUM", desc: "Ảnh HD không watermark & tư vấn 1:1 trực tiếp cùng Stylist." },
+const PERKS = [
+  "Kiểu tóc độc quyền",
+  "Ảnh HD không logo, không watermark",
+  "Tư vấn kiểu tóc với AI Stylist",
 ];
 
 function PremiumUpsell() {
@@ -410,29 +409,7 @@ function PremiumUpsell() {
     return () => clearInterval(timer);
   }, []);
 
-  const getPlanCta = (plan) => {
-    if (!user) {
-      return { text: "Đăng ký ngay", to: plan.to, disabled: false };
-    }
-    if (user.role === "ADMIN") {
-      return { text: "Trang quản trị", to: "/admin", disabled: false };
-    }
-    if (plan.name === "Cơ bản") {
-      if (user.role === "USER") return { text: "Đang áp dụng", to: null, disabled: true };
-      return { text: "Gói cơ bản", to: null, disabled: true };
-    }
-    if (plan.name === "Tuần") {
-      if (user.role === "PREMIUM") return { text: "Đang dùng Premium", to: null, disabled: true };
-      return { text: "Đăng ký ngay", to: plan.to, disabled: false };
-    }
-    if (plan.name === "Premium") {
-      if (user.role === "PREMIUM") return { text: "Đang áp dụng", to: null, disabled: true };
-      return { text: "Đăng ký ngay", to: plan.to, disabled: false };
-    }
-    return { text: "Đăng ký ngay", to: plan.to, disabled: false };
-  };
-
-  const { text: ctaText, to: ctaTo, disabled: ctaDisabled } = getPlanCta(PLANS[activeIdx]);
+  const { text: ctaText, to: ctaTo, disabled: ctaDisabled } = getPlanCta(PLANS[activeIdx], user);
 
   return (
     <section id="premium" className="bg-transparent px-4 py-16 sm:px-16">
@@ -448,8 +425,8 @@ function PremiumUpsell() {
                 Nâng Cấp Trải Nghiệm Premium
               </h2>
               <p className="max-w-2xl text-lg leading-relaxed text-[#e2e2e2]">
-                Mở khóa tất cả các bộ lọc AI độc quyền, nhận tư vấn 1-1 không giới hạn và
-                nhận ưu đãi đặc biệt tại các salon đối tác hàng đầu.
+                Mở khóa tất cả các bộ lọc AI độc quyền, nhận tư vấn kiểu tóc cùng AI Stylist và
+                xuất ảnh HD không logo, không watermark.
               </p>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 w-full">
                 {PERKS.map((p) => (

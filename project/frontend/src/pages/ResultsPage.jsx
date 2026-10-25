@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { AnimatedContent, BorderGlow, GlareHover, SpotlightCard } from "../components/animated";
 import { ArrowRight, CheckIcon, StarIcon } from "../components/icons";
@@ -12,6 +12,7 @@ import { useScanStore, useHasHydrated } from "../store/useScanStore";
 import useAuthStore from "../store/useAuthStore";
 import FeedbackWidget from "../components/FeedbackWidget";
 import PremiumGateModal from "../components/PremiumGateModal";
+import { COLOR_BY_VALUE, swatchBg } from "../lib/hairColors";
 
 // Bản đồ dịch dáng mặt sang tiếng Việt
 const FACE_SHAPE_TRANSLATION = {
@@ -59,6 +60,104 @@ const REASONS_MAP = {
     { title: "Tạo độ phồng vùng thái dương", desc: "Độ phồng ở phần thái dương và chân tóc quanh cằm giúp cân đối khoảng cách so với phần gò má rộng nhất." }
   ]
 };
+
+function HairstyleRecCard({ group, idx, savedIds, handleToggleSave, handleTryStyle }) {
+  const [selectedVariant, setSelectedVariant] = useState(group.base);
+  const r = selectedVariant || group.base;
+  const match = Math.max(80, 98 - idx * 3);
+
+  return (
+    <AnimatedContent key={group.base.id || group.base.name} delay={idx * 0.1}>
+      <SpotlightCard className="rounded-2xl">
+        <Card padded={false} className="w-[280px] shrink-0 overflow-hidden">
+          <div className="relative">
+            <img
+              src={r.imageUrl}
+              alt={r.name}
+              draggable={false}
+              className="pointer-events-none h-56 w-full object-cover"
+              onError={(e) => {
+                e.target.src = `https://placehold.co/600x400?text=${encodeURIComponent(r.name)}`;
+              }}
+            />
+            <Badge variant="new" className="absolute left-3 top-3 shadow">
+              {match}% phù hợp
+            </Badge>
+            {r.premiumOnly && (
+              <Badge variant="premium" className="absolute right-3 top-3 shadow">
+                Trả phí
+              </Badge>
+            )}
+            {r.sampleByAi && (
+              <div className="absolute left-3 bottom-3 rounded-full bg-ink/75 px-2 py-0.5 text-[9px] font-semibold text-white backdrop-blur-md shadow">
+                ✨ AI
+              </div>
+            )}
+
+            {/* Nút lưu yêu thích */}
+            <button
+              type="button"
+              onClick={(e) => handleToggleSave(e, r.id)}
+              className="absolute right-3 bottom-3 flex size-8 items-center justify-center rounded-full bg-white/90 text-ink shadow-md hover:bg-white hover:text-primary transition"
+              title={savedIds.has(r.id) ? "Bỏ lưu" : "Lưu kiểu tóc"}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill={savedIds.has(r.id) ? "#FF57CF" : "none"}
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="#FF57CF"
+                className="size-4"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Chấm màu biến thể nếu có */}
+          {group.variants.length > 1 && (
+            <div className="flex items-center gap-1.5 px-4 pt-2">
+              {group.variants.map((v) => {
+                const isSel = v.id === r.id;
+                const colorObj = v.ailabColor ? COLOR_BY_VALUE[v.ailabColor] : null;
+                const tones = colorObj?.tones || ["#3a2c23", "#231812", "#0f0a07"];
+                const label = colorObj?.label || (v.baseStyleId ? "Biến thể" : "Màu gốc");
+                return (
+                  <button
+                    key={v.id}
+                    type="button"
+                    onClick={() => setSelectedVariant(v)}
+                    title={label}
+                    className={`size-3.5 rounded-full transition-transform ${
+                      isSel ? "ring-2 ring-pink ring-offset-1 scale-125" : "hover:scale-110 opacity-70 hover:opacity-100"
+                    }`}
+                    style={{ background: swatchBg(tones) }}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          <div className="p-4 space-y-1">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-ink truncate mr-2" title={r.name}>
+                {r.name}
+              </h4>
+              <Button onClick={() => handleTryStyle(r)} size="sm" className="px-4 py-2 text-xs shrink-0">
+                Thử ngay
+              </Button>
+            </div>
+            <p className="text-xs font-semibold text-muted">Phù hợp: {r.gender || "Unisex"}</p>
+          </div>
+        </Card>
+      </SpotlightCard>
+    </AnimatedContent>
+  );
+}
 
 export default function ResultsPage() {
   const navigate = useNavigate();
@@ -124,6 +223,26 @@ export default function ResultsPage() {
     },
     enabled: !!faceShape,
   });
+
+  const groupedRecommendations = useMemo(() => {
+    const groups = new Map();
+    for (const item of recommendations) {
+      const baseId = item.baseStyleId || item.id;
+      if (!groups.has(baseId)) groups.set(baseId, []);
+      groups.get(baseId).push(item);
+    }
+    const list = [];
+    for (const variants of groups.values()) {
+      variants.sort((a, b) => {
+        if (!a.baseStyleId && b.baseStyleId) return -1;
+        if (a.baseStyleId && !b.baseStyleId) return 1;
+        return a.id - b.id;
+      });
+      const base = variants.find((v) => !v.baseStyleId) || variants[0];
+      list.push({ base, variants });
+    }
+    return list;
+  }, [recommendations]);
 
   // Query lấy kiểu tóc đã lưu (đồng bộ key chung)
   const { data: savedStyles = [] } = useQuery({
@@ -416,55 +535,16 @@ export default function ResultsPage() {
             </Card>
           ) : (
             <DragScroll>
-              {recommendations.map((r, idx) => {
-                const match = Math.max(80, 98 - idx * 3);
-                return (
-                  <AnimatedContent key={r.id || r.name} delay={idx * 0.1}>
-                    <SpotlightCard className="rounded-2xl">
-                      <Card padded={false} className="w-[280px] shrink-0 overflow-hidden">
-                        <div className="relative">
-                          <img
-                            src={r.imageUrl}
-                            alt={r.name}
-                            draggable={false}
-                            className="pointer-events-none h-56 w-full object-cover"
-                            onError={(e) => { e.target.src = `https://placehold.co/600x400?text=${encodeURIComponent(r.name)}`; }}
-                          />
-                          <Badge variant="new" className="absolute left-3 top-3 shadow">{match}% phù hợp</Badge>
-                          {r.premiumOnly && (
-                            <Badge variant="premium" className="absolute right-3 top-3 shadow">Trả phí</Badge>
-                          )}
-
-                          {/* Nút lưu yêu thích */}
-                          <button
-                            onClick={(e) => handleToggleSave(e, r.id)}
-                            className="absolute left-3 bottom-3 flex size-8 items-center justify-center rounded-full bg-white/90 text-ink shadow-md hover:bg-white hover:text-primary transition"
-                            title={savedIds.has(r.id) ? "Bỏ lưu" : "Lưu kiểu tóc"}
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill={savedIds.has(r.id) ? "#FF57CF" : "none"}
-                              viewBox="0 0 24 24"
-                              strokeWidth={2}
-                              stroke="#FF57CF"
-                              className="size-4"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
-                            </svg>
-                          </button>
-                        </div>
-                        <div className="p-4 space-y-1">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-bold text-ink truncate mr-2" title={r.name}>{r.name}</h4>
-                            <Button onClick={() => handleTryStyle(r)} size="sm" className="px-4 py-2 text-xs shrink-0">Thử ngay</Button>
-                          </div>
-                          <p className="text-xs font-semibold text-muted">Phù hợp: {r.gender || "Unisex"}</p>
-                        </div>
-                      </Card>
-                    </SpotlightCard>
-                  </AnimatedContent>
-                );
-              })}
+              {groupedRecommendations.map((group, idx) => (
+                <HairstyleRecCard
+                  key={group.base.id || group.base.name}
+                  group={group}
+                  idx={idx}
+                  savedIds={savedIds}
+                  handleToggleSave={handleToggleSave}
+                  handleTryStyle={handleTryStyle}
+                />
+              ))}
 
               {/* Card cuối danh sách: dẫn tới catalog */}
               <Card padded={false} className="w-[280px] shrink-0 overflow-hidden flex flex-col justify-center items-center p-6 text-center border-2 border-dashed border-divider bg-canvas/40">

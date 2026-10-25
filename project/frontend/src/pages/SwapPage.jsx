@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { trackEvent } from "../lib/analytics";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { normalizeImage } from "../utils/imageUtils";
 import { Link, useSearchParams } from "react-router-dom";
 import { CheckIcon, DownloadIcon, UploadIcon } from "../components/icons";
@@ -16,27 +16,7 @@ import AiReportButton from "../components/AiReportButton";
 import BeforeAfter from "../components/BeforeAfter";
 import PremiumGateModal from "../components/PremiumGateModal";
 
-// Màu tóc gửi cho AILab (tham số color) — value phải trùng whitelist ở HairSwapService.SUPPORTED_COLORS
-const HAIR_COLORS = [
-  { value: "black", label: "Đen", tones: ["#4a4a52", "#1b1b20", "#050507"] },
-  { value: "brown", label: "Nâu", tones: ["#9a6b45", "#5b3a22", "#2e1a0e"] },
-  { value: "lightBrown", label: "Nâu sáng", tones: ["#cfa57a", "#9b7048", "#6a4a2c"] },
-  { value: "blonde", label: "Vàng", tones: ["#f6dd9a", "#d9b25f", "#a9812f"] },
-  { value: "platinumBlonde", label: "Bạch kim", tones: ["#fbf6e8", "#e6dcc3", "#c4b896"] },
-  { value: "red", label: "Đỏ", tones: ["#e0624f", "#b3321f", "#6e170c"] },
-  { value: "burgundy", label: "Đỏ rượu", tones: ["#9a3558", "#6a1634", "#36081a"] },
-  { value: "orange", label: "Cam", tones: ["#f5a45d", "#dd7a1f", "#a55410"] },
-  { value: "pink", label: "Hồng", tones: ["#fcc3d8", "#f08fb3", "#c9608a"] },
-  { value: "purple", label: "Tím", tones: ["#ae92e8", "#7852c4", "#46298a"] },
-  { value: "blue", label: "Xanh dương", tones: ["#7fb0f5", "#3571d6", "#1c418f"] },
-  { value: "green", label: "Xanh lá", tones: ["#79d49e", "#2f9e5e", "#16603a"] },
-  { value: "grey", label: "Xám", tones: ["#c3c8ce", "#8e949b", "#585d63"] },
-  { value: "silver", label: "Bạc", tones: ["#f1f3f5", "#cdd2d8", "#9aa1a9"] },
-  { value: "white", label: "Trắng", tones: ["#ffffff", "#f1f1f1", "#d6d6d6"] },
-];
-
-const swatchBg = ([light, base, dark]) =>
-  `linear-gradient(120deg, ${dark} 0%, ${base} 35%, ${light} 50%, ${base} 65%, ${dark} 100%)`;
+import { HAIR_COLORS, swatchBg } from "../lib/hairColors";
 
 const FACE_SHAPE_MAP = {
   Oval: "Trái xoan",
@@ -141,10 +121,29 @@ export default function SwapPage() {
 
   const hairSwapQuota = usageData?.hairSwap;
 
-  const displayedStyles = [...styles];
-  if (chosenHairstyle && !styles.some((s) => s.id === chosenHairstyle.id)) {
-    displayedStyles.unshift(chosenHairstyle);
-  }
+  const displayedStyles = useMemo(() => {
+    const all = [...styles];
+    if (chosenHairstyle && !all.some((s) => s.id === chosenHairstyle.id)) {
+      all.unshift(chosenHairstyle);
+    }
+    const groups = new Map();
+    for (const item of all) {
+      const baseId = item.baseStyleId || item.id;
+      if (!groups.has(baseId)) groups.set(baseId, []);
+      groups.get(baseId).push(item);
+    }
+    const list = [];
+    for (const variants of groups.values()) {
+      variants.sort((a, b) => {
+        if (!a.baseStyleId && b.baseStyleId) return -1;
+        if (a.baseStyleId && !b.baseStyleId) return 1;
+        return a.id - b.id;
+      });
+      const base = variants.find((v) => !v.baseStyleId) || variants[0];
+      list.push(base);
+    }
+    return list;
+  }, [styles, chosenHairstyle]);
 
   // KHÔNG tự chọn sẵn kiểu tóc — phải do người dùng chọn chủ động
   const activeStyle = selectedStyle || chosenHairstyle || null;

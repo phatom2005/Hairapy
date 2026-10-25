@@ -16,7 +16,13 @@ export default function LoginPage() {
   const location = useLocation();
   const { login, loading, error, clearError } = useAuthStore();
 
-  const from = location.state?.from || "/profile";
+  const from = location.state?.from || (() => {
+    try {
+      return sessionStorage.getItem("hairapy-return-to");
+    } catch {
+      return null;
+    }
+  })() || "/profile";
   const message = location.state?.message;
 
   // Xóa các lỗi cũ khi mở trang đăng nhập
@@ -31,6 +37,11 @@ export default function LoginPage() {
     try {
       const success = await login(email, password);
       if (success) {
+        try {
+          sessionStorage.removeItem("hairapy-return-to");
+        } catch {
+          /* ignore storage error */
+        }
         navigate(from);
       }
     } catch (err) {

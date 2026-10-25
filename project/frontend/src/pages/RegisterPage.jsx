@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { AuthShell, AuthHeading, OrDivider, SocialButtons } from "../components/auth/AuthShell";
 import { Button, Input } from "../components/ui";
 import { AnimatedContent, BorderGlow } from "../components/animated";
@@ -15,7 +15,19 @@ export default function RegisterPage() {
   const [localError, setLocalError] = useState("");
   
   const navigate = useNavigate();
+  const location = useLocation();
   const { register, loading, error, clearError } = useAuthStore();
+
+  const from = location.state?.from;
+  useEffect(() => {
+    if (from) {
+      try {
+        sessionStorage.setItem("hairapy-return-to", from);
+      } catch {
+        /* ignore storage error */
+      }
+    }
+  }, [from]);
 
   // Xóa các lỗi cũ khi mở trang đăng ký
   useEffect(() => {

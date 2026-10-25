@@ -32,7 +32,7 @@ export default function PillNav({ items = DEFAULT_ITEMS }) {
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-divider/20 bg-canvas/80 shadow-sm backdrop-blur-md">
+      <header className="sticky top-0 z-50 bg-transparent">
         <nav className="mx-auto flex h-20 max-w-[1200px] items-center justify-between px-6 sm:px-16">
           <Logo />
 

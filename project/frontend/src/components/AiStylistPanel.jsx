@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { AI_STYLIST_ENABLED } from "../lib/features";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../lib/api";
 import useAuthStore from "../store/useAuthStore";
@@ -12,7 +13,7 @@ const SUGGESTED_PROMPTS = [
   "Kiểu này chăm sóc có khó không?",
 ];
 
-export default function AiStylistPanel({ hairstyleId = null, defaultOpen = false, className = "" }) {
+function AiStylistPanelInner({ hairstyleId = null, defaultOpen = false, className = "" }) {
   const { user } = useAuthStore();
   const { analysisResult } = useScanStore();
   const queryClient = useQueryClient();
@@ -37,9 +38,12 @@ export default function AiStylistPanel({ hairstyleId = null, defaultOpen = false
     enabled: !!user,
   });
 
+  // BE trả FeatureUsage(used, limit, unlimited) — không có field "remaining"; Admin/Tester có limit = Integer.MAX_VALUE
   const stylistQuota = usageData?.aiStylist;
-  const remaining = stylistQuota?.remaining ?? (isPremium ? 5 : 0);
+  const unlimitedQuota = !!stylistQuota?.unlimited;
   const limit = stylistQuota?.limit ?? 5;
+  const remaining = Math.max(limit - (stylistQuota?.used ?? 0), 0);
+  const quotaLabel = unlimitedQuota ? "Không giới hạn lượt" : `Còn ${remaining}/${limit} lượt`;
 
   const handleSend = async (textToSend) => {
     const q = (textToSend || question).trim();
@@ -123,7 +127,7 @@ export default function AiStylistPanel({ hairstyleId = null, defaultOpen = false
         <div className="flex items-center gap-3">
           {isPremium && (
             <span className="hidden sm:inline-block rounded-xl border border-divider/10 bg-white px-2.5 py-1 text-xs font-semibold text-muted">
-              Còn {remaining}/{limit} lượt
+              {quotaLabel}
             </span>
           )}
           <span className="text-mauve transition-transform duration-200" style={{ transform: isOpen ? "rotate(180deg)" : "none" }}>
@@ -175,7 +179,7 @@ export default function AiStylistPanel({ hairstyleId = null, defaultOpen = false
               {/* Quota Bar Mobile */}
               <div className="flex sm:hidden items-center justify-between rounded-xl bg-white p-2.5 border border-divider/10 text-xs">
                 <span className="text-muted">Hạn mức hôm nay:</span>
-                <span className="font-bold text-ink">{remaining} / {limit} lượt</span>
+                <span className="font-bold text-ink">{unlimitedQuota ? "Không giới hạn" : `${remaining} / ${limit} lượt`}</span>
               </div>
 
               {/* Chat Log */}
@@ -278,4 +282,27 @@ export default function AiStylistPanel({ hairstyleId = null, defaultOpen = false
       />
     </div>
   );
+}
+
+/** Thẻ "Sắp ra mắt" khi AI Stylist chưa mở (VITE_AI_STYLIST_ENABLED != "true"). */
+function AiStylistComingSoon({ className = "" }) {
+  return (
+    <div className={`flex items-center gap-4 rounded-3xl border border-dashed border-line bg-canvas/60 p-5 ${className}`}>
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-xl">✨</div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="font-display font-bold text-ink">AI Stylist 1:1</h3>
+          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-600">Sắp ra mắt</span>
+        </div>
+        <p className="mt-0.5 text-xs text-mauve">
+          Trợ lý AI tư vấn kiểu tóc theo dáng mặt và chất tóc của bạn — đang được hoàn thiện.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default function AiStylistPanel(props) {
+  if (!AI_STYLIST_ENABLED) return <AiStylistComingSoon className={props.className} />;
+  return <AiStylistPanelInner {...props} />;
 }

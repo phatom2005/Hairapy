@@ -12,17 +12,24 @@ export default function BeforeAfter({
   className = "",
 }) {
   const [sliderPos, setSliderPos] = useState(50);
+  // Tỉ lệ thật của ảnh gốc — khung so sánh theo đúng tỉ lệ này để không bị cắt (object-cover cắt khác nhau
+  // giữa ảnh gốc và ảnh AI nếu 2 ảnh khác tỉ lệ → khuôn mặt 2 bên lệch nhau)
+  const [ratio, setRatio] = useState(null);
 
   return (
     <div
       className={`relative select-none overflow-hidden rounded-2xl bg-zinc-950 ${className}`}
-      style={{ touchAction: "none" }}
+      style={{ touchAction: "none", ...(ratio ? { aspectRatio: String(ratio) } : {}) }}
     >
       {/* Ảnh gốc (Before) ở dưới cùng */}
       <img
         src={beforeImage}
         alt={beforeLabel}
-        className="pointer-events-none block h-full w-full object-cover"
+        onLoad={(e) => {
+          const { naturalWidth: w, naturalHeight: h } = e.currentTarget;
+          if (w && h) setRatio(w / h);
+        }}
+        className="pointer-events-none block h-full w-full object-contain"
         draggable={false}
       />
 
@@ -36,7 +43,7 @@ export default function BeforeAfter({
         <img
           src={afterImage}
           alt={afterLabel}
-          className="pointer-events-none block h-full w-full object-cover"
+          className="pointer-events-none block h-full w-full object-contain"
           draggable={false}
         />
       </div>

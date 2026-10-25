@@ -78,6 +78,13 @@ public class AiStylistService {
         } catch (ResourceAccessException e) {
             log.warn("Gemini API timeout khi tư vấn AI Stylist");
             throw new AiTimeoutException("AI xử lý quá lâu, lượt của bạn đã được hoàn lại.");
+        } catch (org.springframework.web.client.HttpStatusCodeException e) {
+            // Ghi rõ mã lỗi + thân lỗi của Google (KHÔNG log URL vì chứa API key) để biết ngay nguyên nhân:
+            // 400/403 = thiếu/sai GEMINI_API_KEY, 404 = model đã bị khai tử (đổi GEMINI_MODEL), 429 = hết quota.
+            String body = e.getResponseBodyAsString();
+            log.error("Gemini API lỗi: status={}, model={}, body={}", e.getStatusCode(), llmConfig.getModel(),
+                    body.length() > 500 ? body.substring(0, 500) + "…" : body);
+            throw new RuntimeException("Không thể kết nối đến dịch vụ AI Stylist.");
         }
 
         if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {

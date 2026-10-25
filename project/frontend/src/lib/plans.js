@@ -1,3 +1,4 @@
+import { AI_STYLIST_ENABLED, SOON } from "./features";
 // Nguồn sự thật DUY NHẤT cho tên gói, giá, quyền lợi ở FE — phải khớp UsageService.getDailyLimit (backend)
 export const PLAN_LABEL = { FREE: "Miễn phí", PRO: "Gói Tuần", PREMIUM: "Gói Tháng" };
 export const PLAN_RANK = { FREE: 0, PRO: 1, PREMIUM: 2 };
@@ -22,7 +23,7 @@ export const PLANS = [
       { text: "1 lần thử kiểu tóc AI mỗi ngày", on: true },
       { text: "Ảnh kết quả không watermark", on: false },
       { text: "Kiểu tóc độc quyền", on: false },
-      { text: "Tư vấn kiểu tóc với AI Stylist", on: false },
+      { text: "Tư vấn kiểu tóc với AI Stylist" + (AI_STYLIST_ENABLED ? "" : SOON), on: false },
     ],
   },
   {
@@ -44,7 +45,7 @@ export const PLANS = [
       { text: "5 lần thử kiểu tóc AI mỗi ngày", on: true },
       { text: "Ảnh kết quả không watermark", on: true },
       { text: "Kiểu tóc độc quyền", on: true },
-      { text: "Tư vấn kiểu tóc với AI Stylist", on: false },
+      { text: "Tư vấn kiểu tóc với AI Stylist" + (AI_STYLIST_ENABLED ? "" : SOON), on: false },
     ],
   },
   {
@@ -59,14 +60,14 @@ export const PLANS = [
     cta: "Mua Gói Tháng",
     to: "/checkout?plan=PREMIUM",
     variant: "pink",
-    desc: "8 lần thử tóc mỗi ngày, ảnh HD không logo & tư vấn kiểu tóc với AI Stylist.",
+    desc: AI_STYLIST_ENABLED ? "8 lần thử tóc mỗi ngày, ảnh HD không logo & tư vấn kiểu tóc với AI Stylist." : "8 lần thử tóc mỗi ngày, ảnh HD không logo, kiểu tóc độc quyền.",
     features: [
       { text: "Phân tích khuôn mặt không giới hạn", on: true },
       { text: "Lưu 5 lần quét/ngày vào lịch sử", on: true },
       { text: "8 lần thử kiểu tóc AI mỗi ngày", on: true },
       { text: "Ảnh kết quả không watermark", on: true },
       { text: "Kiểu tóc độc quyền", on: true },
-      { text: "Tư vấn kiểu tóc với AI Stylist (5 lượt/ngày)", on: true },
+      { text: AI_STYLIST_ENABLED ? "Tư vấn kiểu tóc với AI Stylist (5 lượt/ngày)" : "Tư vấn kiểu tóc với AI Stylist" + SOON, on: AI_STYLIST_ENABLED },
     ],
   },
 ];

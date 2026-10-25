@@ -73,6 +73,12 @@ export default function HairColorStudio({ imageUrl, onPickAiColor, className = "
 
         const originalData = ctx.getImageData(0, 0, w, h);
 
+        // Bản sao đã thu nhỏ đúng w×h để đưa vào model tách tóc (không dùng ảnh gốc full-res → lệch kích thước mask)
+        const segCanvas = document.createElement("canvas");
+        segCanvas.width = w;
+        segCanvas.height = h;
+        segCanvas.getContext("2d").drawImage(img, 0, 0, w, h);
+
         // Lưu trữ ảnh gốc vào cache
         const cached = maskCacheRef.current.get(imageUrl) || {};
         maskCacheRef.current.set(imageUrl, {
@@ -80,7 +86,7 @@ export default function HairColorStudio({ imageUrl, onPickAiColor, className = "
           width: w,
           height: h,
           originalData,
-          imageElement: img,
+          segCanvas,
         });
 
         setImageLoaded(true);
@@ -124,7 +130,7 @@ export default function HairColorStudio({ imageUrl, onPickAiColor, className = "
         setIsSegmenting(true);
         setErrorMsg(null);
         try {
-          mask = await getHairMask(cached.imageElement || canvasRef.current);
+          mask = await getHairMask(cached.segCanvas, cached.width, cached.height);
           maskCacheRef.current.set(imageUrl, { ...cached, mask });
         } catch (err) {
           console.error("Lỗi nhận diện tóc:", err);

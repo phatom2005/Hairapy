@@ -65,7 +65,6 @@ const REASONS_MAP = {
 function HairstyleRecCard({ group, idx, savedIds, handleToggleSave, handleTryStyle }) {
   const [selectedVariant, setSelectedVariant] = useState(group.base);
   const r = selectedVariant || group.base;
-  const match = Math.max(80, 98 - idx * 3);
 
   return (
     <AnimatedContent key={group.base.id || group.base.name} delay={idx * 0.1}>
@@ -81,9 +80,11 @@ function HairstyleRecCard({ group, idx, savedIds, handleToggleSave, handleTrySty
                 e.target.src = `https://placehold.co/600x400?text=${encodeURIComponent(r.name)}`;
               }}
             />
-            <Badge variant="new" className="absolute left-3 top-3 shadow">
-              {match}% phù hợp
-            </Badge>
+            {idx < 3 && (
+              <Badge variant="new" className="absolute left-3 top-3 shadow">
+                Gợi ý #{idx + 1}
+              </Badge>
+            )}
             {r.premiumOnly && (
               <Badge variant="premium" className="absolute right-3 top-3 shadow">
                 Trả phí
@@ -343,7 +344,7 @@ export default function ResultsPage() {
         </div>
 
         <div className={`grid grid-cols-1 gap-8 ${chosenHairstyle ? "lg:grid-cols-[1fr_1.4fr] lg:items-start" : "lg:justify-items-center"}`}>
-          <Card className={`flex flex-col gap-6 lg:sticky lg:top-24 ${chosenHairstyle ? "" : "w-full lg:max-w-md"}`}>
+          <Card className={`flex flex-col gap-6 ${chosenHairstyle ? "lg:sticky lg:top-24" : "w-full lg:max-w-md"}`}>
             <h3 className="text-xl font-bold text-ink">Hồ sơ khuôn mặt</h3>
             <img
               src={previewUrl}
@@ -438,8 +439,6 @@ export default function ResultsPage() {
             </p>
           </Card>
 
-          <AiStylistPanel hairstyleId={hairstyleId ? Number(hairstyleId) : null} defaultOpen={false} />
-
           {chosenHairstyle && (
             <div className="flex flex-col gap-6">
               <AnimatedContent delay={0}>
@@ -480,6 +479,11 @@ export default function ResultsPage() {
               </AnimatedContent>
             </div>
           )}
+        </div>
+
+        {/* AI Stylist: đặt ngoài grid để không bị thẻ "Hồ sơ khuôn mặt" (sticky) đè lên khi cuộn */}
+        <div className="mx-auto mt-8 w-full max-w-3xl">
+          <AiStylistPanel hairstyleId={hairstyleId ? Number(hairstyleId) : null} defaultOpen={false} />
         </div>
 
         {/* Kiểu tóc đề xuất + Bộ chọn giới tính */}

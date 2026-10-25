@@ -37,9 +37,12 @@ export default function AiStylistPanel({ hairstyleId = null, defaultOpen = false
     enabled: !!user,
   });
 
+  // BE trả FeatureUsage(used, limit, unlimited) — không có field "remaining"; Admin/Tester có limit = Integer.MAX_VALUE
   const stylistQuota = usageData?.aiStylist;
-  const remaining = stylistQuota?.remaining ?? (isPremium ? 5 : 0);
+  const unlimitedQuota = !!stylistQuota?.unlimited;
   const limit = stylistQuota?.limit ?? 5;
+  const remaining = Math.max(limit - (stylistQuota?.used ?? 0), 0);
+  const quotaLabel = unlimitedQuota ? "Không giới hạn lượt" : `Còn ${remaining}/${limit} lượt`;
 
   const handleSend = async (textToSend) => {
     const q = (textToSend || question).trim();
@@ -123,7 +126,7 @@ export default function AiStylistPanel({ hairstyleId = null, defaultOpen = false
         <div className="flex items-center gap-3">
           {isPremium && (
             <span className="hidden sm:inline-block rounded-xl border border-divider/10 bg-white px-2.5 py-1 text-xs font-semibold text-muted">
-              Còn {remaining}/{limit} lượt
+              {quotaLabel}
             </span>
           )}
           <span className="text-mauve transition-transform duration-200" style={{ transform: isOpen ? "rotate(180deg)" : "none" }}>
@@ -175,7 +178,7 @@ export default function AiStylistPanel({ hairstyleId = null, defaultOpen = false
               {/* Quota Bar Mobile */}
               <div className="flex sm:hidden items-center justify-between rounded-xl bg-white p-2.5 border border-divider/10 text-xs">
                 <span className="text-muted">Hạn mức hôm nay:</span>
-                <span className="font-bold text-ink">{remaining} / {limit} lượt</span>
+                <span className="font-bold text-ink">{unlimitedQuota ? "Không giới hạn" : `${remaining} / ${limit} lượt`}</span>
               </div>
 
               {/* Chat Log */}

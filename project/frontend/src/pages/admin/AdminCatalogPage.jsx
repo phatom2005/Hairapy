@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { Flash, TickCircle, MagicStar, ArrowRight3, Add } from "iconsax-reactjs";
 import Cropper from "react-easy-crop";
 import api from "../../lib/api";
 import { Card, Badge, Button } from "../../components/ui";
@@ -510,7 +511,7 @@ export default function AdminCatalogPage() {
             onClick={() => setBatchModalOpen(true)}
             disabled={stylesWithoutAi.length === 0}
           >
-            ⚡ Tạo hàng loạt ảnh AI ({stylesWithoutAi.length})
+            <Flash size={14} variant="Bold" className="mr-1 inline -mt-0.5" />Tạo hàng loạt ảnh AI ({stylesWithoutAi.length})
           </Button>
           <Button size="sm" variant="brand" className="rounded-xl px-4 text-xs font-bold" onClick={handleOpenAdd}>
             + Thêm kiểu tóc mới
@@ -651,7 +652,7 @@ export default function AdminCatalogPage() {
                             <td className="px-5 py-3 text-center">
                               {item.sampleByAi ? (
                                 <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700 border border-emerald-200">
-                                  AI ✓
+                                  <TickCircle size={12} variant="Bold" className="mr-1" />AI
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-700 border border-amber-200">
@@ -724,7 +725,7 @@ export default function AdminCatalogPage() {
                                   disabled={sampleGeneratingId === item.id}
                                   onClick={() => handleGenerateSample(item)}
                                 >
-                                  {sampleGeneratingId === item.id ? "Đang tạo..." : "✨ Tạo mẫu AI"}
+                                  {sampleGeneratingId === item.id ? "Đang tạo..." : <><MagicStar size={14} variant="Bold" className="mr-1 inline -mt-0.5" />Tạo mẫu AI</>}
                                 </Button>
                                 <Button
                                   size="sm"
@@ -767,7 +768,7 @@ export default function AdminCatalogPage() {
                                 </td>
                                 <td className="px-5 py-2.5">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-muted text-xs">↳</span>
+                                    <ArrowRight3 size={12} className="shrink-0 text-muted" />
                                     <span className="text-xs font-semibold text-ink">{v.name}</span>
                                     {!v.active && (
                                       <span className="inline-block rounded-md bg-gray-200 px-1 py-0.5 text-[9px] font-bold text-gray-700">
@@ -779,7 +780,7 @@ export default function AdminCatalogPage() {
                                 <td className="px-5 py-2.5 text-center">
                                   {v.sampleByAi ? (
                                     <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200">
-                                      AI ✓
+                                      <TickCircle size={12} variant="Bold" className="mr-1" />AI
                                     </span>
                                   ) : (
                                     <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700 border border-amber-200">
@@ -820,7 +821,7 @@ export default function AdminCatalogPage() {
                                       disabled={sampleGeneratingId === v.id}
                                       onClick={() => handleGenerateSample(v)}
                                     >
-                                      {sampleGeneratingId === v.id ? "Đang tạo..." : "✨ Tạo ảnh AI"}
+                                      {sampleGeneratingId === v.id ? "Đang tạo..." : <><MagicStar size={14} variant="Bold" className="mr-1 inline -mt-0.5" />Tạo ảnh AI</>}
                                     </Button>
                                     <Button
                                       size="sm"
@@ -871,7 +872,7 @@ export default function AdminCatalogPage() {
                           <td className="px-5 py-3 text-center">
                             {item.sampleByAi ? (
                               <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700 border border-emerald-200">
-                                AI ✓
+                                <TickCircle size={12} variant="Bold" className="mr-1" />AI
                               </span>
                             ) : (
                               <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-700 border border-amber-200">
@@ -923,7 +924,7 @@ export default function AdminCatalogPage() {
                                 disabled={sampleGeneratingId === item.id}
                                 onClick={() => handleGenerateSample(item)}
                               >
-                                {sampleGeneratingId === item.id ? "Đang tạo..." : "✨ Tạo mẫu AI"}
+                                {sampleGeneratingId === item.id ? "Đang tạo..." : <><MagicStar size={14} variant="Bold" className="mr-1 inline -mt-0.5" />Tạo mẫu AI</>}
                               </Button>
                               <Button
                                 size="sm"
@@ -956,7 +957,7 @@ export default function AdminCatalogPage() {
                       <td className="px-5 py-3 font-semibold text-ink">
                         {item.name} <span className="text-[10px] text-muted">(Biến thể)</span>
                       </td>
-                      <td className="px-5 py-3 text-center">{item.sampleByAi ? "AI ✓" : "Chưa có"}</td>
+                      <td className="px-5 py-3 text-center">{item.sampleByAi ? <span className="inline-flex items-center gap-1"><TickCircle size={12} variant="Bold" />AI</span> : "Chưa có"}</td>
                       <td className="px-5 py-3 text-xs">{item.ailabColor}</td>
                       <td className="px-5 py-3 text-xs">{item.faceShape}</td>
                       <td className="px-5 py-3 text-xs">{item.hairLength}</td>
@@ -1017,7 +1018,7 @@ export default function AdminCatalogPage() {
                 onClick={() => setIsOpen(false)}
                 className="text-muted hover:text-ink text-xl font-bold p-1 cursor-pointer"
               >
-                ✕
+                <Add size={22} className="rotate-45" />
               </button>
             </div>
 

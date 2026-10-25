@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Add, TickCircle, CloseCircle } from "iconsax-reactjs";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../../lib/api";
 import { Badge, Button } from "../ui";
@@ -116,7 +117,7 @@ export default function UserDetailDrawer({ userId, onClose }) {
             onClick={onClose}
             className="rounded-full p-2 text-mauve hover:bg-line/40 hover:text-ink transition cursor-pointer"
           >
-            ✕
+            <Add size={22} className="rotate-45" />
           </button>
         </div>
 
@@ -166,9 +167,9 @@ export default function UserDetailDrawer({ userId, onClose }) {
                   <div>
                     <span className="text-muted">Email: </span>
                     {user.emailVerified ? (
-                      <span className="font-semibold text-emerald-600">✓ Đã xác minh</span>
+                      <span className="font-semibold text-emerald-600"><TickCircle size={14} variant="Bold" className="mr-1 inline -mt-0.5" />Đã xác minh</span>
                     ) : (
-                      <span className="font-semibold text-amber-600">✗ Chưa xác minh</span>
+                      <span className="font-semibold text-amber-600"><CloseCircle size={14} variant="Bold" className="mr-1 inline -mt-0.5" />Chưa xác minh</span>
                     )}
                   </div>
                   <div>

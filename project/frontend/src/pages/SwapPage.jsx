@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Danger, TickCircle } from "iconsax-reactjs";
 import { trackEvent } from "../lib/analytics";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { normalizeImage } from "../utils/imageUtils";
@@ -479,7 +480,7 @@ export default function SwapPage() {
 
           {error && (
             <div className="text-xs font-semibold text-red-500 bg-red-500/10 p-3 rounded-xl border border-red-500/20 leading-relaxed">
-              ⚠️ {error}
+              <span className="flex items-start gap-2"><Danger size={16} variant="Bold" className="mt-px shrink-0" /><span>{error}</span></span>
             </div>
           )}
 
@@ -592,10 +593,10 @@ export default function SwapPage() {
               <div className="rounded-2xl border border-divider/40 bg-white/70 p-4 text-xs text-mauve max-w-md text-left">
                 <p className="font-bold text-ink mb-2">Để kết quả thử tóc đẹp nhất:</p>
                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
-                  <li className="flex items-center gap-1.5">✓ Chụp chính diện, rõ mặt</li>
-                  <li className="flex items-center gap-1.5">✓ Đủ sáng, không ngược sáng</li>
-                  <li className="flex items-center gap-1.5">✓ Không đeo kính, khẩu trang</li>
-                  <li className="flex items-center gap-1.5">✓ Vén tóc mái để lộ trán</li>
+                  <li className="flex items-center gap-1.5"><TickCircle size={13} variant="Bold" className="shrink-0 text-emerald-600" /> Chụp chính diện, rõ mặt</li>
+                  <li className="flex items-center gap-1.5"><TickCircle size={13} variant="Bold" className="shrink-0 text-emerald-600" /> Đủ sáng, không ngược sáng</li>
+                  <li className="flex items-center gap-1.5"><TickCircle size={13} variant="Bold" className="shrink-0 text-emerald-600" /> Không đeo kính, khẩu trang</li>
+                  <li className="flex items-center gap-1.5"><TickCircle size={13} variant="Bold" className="shrink-0 text-emerald-600" /> Vén tóc mái để lộ trán</li>
                 </ul>
               </div>
             </div>

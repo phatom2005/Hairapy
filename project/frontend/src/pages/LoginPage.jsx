@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { InfoCircle } from "iconsax-reactjs";
 import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { AuthShell, AuthHeading, OrDivider, SocialButtons } from "../components/auth/AuthShell";
 import { Button, Input } from "../components/ui";
@@ -77,7 +78,7 @@ export default function LoginPage() {
 
           {message && !error && !isExpired && (
             <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-center text-sm font-semibold text-primary">
-              ℹ️ {message}
+              <span className="inline-flex items-center justify-center gap-1.5"><InfoCircle size={16} variant="Bold" /> {message}</span>
             </div>
           )}
 

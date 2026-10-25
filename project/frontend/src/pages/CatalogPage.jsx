@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Scissor, MagicStar } from "iconsax-reactjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatedContent } from "../components/animated";
@@ -111,8 +112,8 @@ function SkeletonCard() {
 function EmptyState({ hasFilters, onClear }) {
   return (
     <div className="col-span-full flex flex-col items-center justify-center py-24 text-center">
-      <div className="mb-4 flex size-20 items-center justify-center rounded-full bg-primary/10 text-4xl">
-        ✂️
+      <div className="mb-4 flex size-20 items-center justify-center rounded-full bg-primary/10 text-4xl text-primary">
+        <Scissor size={36} variant="Bulk" />
       </div>
       <h3 className="text-xl font-bold text-ink">Không tìm thấy kiểu tóc</h3>
       <p className="mt-2 max-w-xs text-sm text-mauve">
@@ -221,7 +222,7 @@ function HairstyleCatalogCard({
 
         {current.sampleByAi && (
           <div className="absolute left-2.5 bottom-2.5 rounded-full bg-ink/75 px-2.5 py-0.5 text-[10px] font-semibold text-white backdrop-blur-md shadow z-10">
-            ✨ Ảnh minh hoạ do AI tạo
+            <span className="inline-flex items-center gap-1"><MagicStar size={11} variant="Bold" /> Ảnh minh hoạ do AI tạo</span>
           </div>
         )}
 

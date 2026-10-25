@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { MagicStar, Lock1, Message } from "iconsax-reactjs";
 import { AI_STYLIST_ENABLED } from "../lib/features";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../lib/api";
@@ -112,7 +113,7 @@ function AiStylistPanelInner({ hairstyleId = null, defaultOpen = false, classNam
       >
         <div className="flex items-center gap-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary/20 via-primary/10 to-transparent text-primary text-xl">
-            ✨
+            <MagicStar size={20} variant="Bulk" />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -155,7 +156,7 @@ function AiStylistPanelInner({ hairstyleId = null, defaultOpen = false, classNam
                 </div>
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 backdrop-blur-xs p-4 text-center">
                   <div className="mb-2 size-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary text-xl">
-                    🔒
+                    <Lock1 size={20} variant="Bold" />
                   </div>
                   <p className="text-sm font-bold text-ink">
                     Mở khóa AI Stylist riêng của bạn
@@ -195,14 +196,14 @@ function AiStylistPanelInner({ hairstyleId = null, defaultOpen = false, classNam
                       }`}
                     >
                       <span className={`text-[11px] font-bold mb-1 ${msg.role === "user" ? "text-white/80" : "text-primary"}`}>
-                        {msg.role === "user" ? "Bạn" : "✨ AI Stylist"}
+                        {msg.role === "user" ? "Bạn" : <span className="inline-flex items-center gap-1"><MagicStar size={12} variant="Bold" /> AI Stylist</span>}
                       </span>
                       <p className="whitespace-pre-line leading-relaxed">{msg.text}</p>
                     </div>
                   ))}
                   {isConsulting && (
                     <div className="mr-auto flex items-center gap-2 rounded-2xl border border-divider/10 bg-white p-3 text-xs text-mauve animate-pulse">
-                      <span>✨</span> AI Stylist đang phân tích và viết gợi ý...
+                      <MagicStar size={14} variant="Bold" className="text-primary" /> AI Stylist đang phân tích và viết gợi ý...
                     </div>
                   )}
                 </div>
@@ -231,7 +232,7 @@ function AiStylistPanelInner({ hairstyleId = null, defaultOpen = false, classNam
                     onClick={() => handleSend(prompt)}
                     className="rounded-full border border-divider/15 bg-white px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
                   >
-                    💬 {prompt}
+                    <Message size={13} className="mr-1 inline -mt-0.5" />{prompt}
                   </button>
                 ))}
               </div>
@@ -288,7 +289,7 @@ function AiStylistPanelInner({ hairstyleId = null, defaultOpen = false, classNam
 function AiStylistComingSoon({ className = "" }) {
   return (
     <div className={`flex items-center gap-4 rounded-3xl border border-dashed border-line bg-canvas/60 p-5 ${className}`}>
-      <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-xl">✨</div>
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"><MagicStar size={20} variant="Bulk" /></div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="font-display font-bold text-ink">AI Stylist 1:1</h3>

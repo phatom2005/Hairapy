@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TickCircle, Star1 } from "iconsax-reactjs";
 import useAuthStore from "../store/useAuthStore";
 import api from "../lib/api";
 import { trackEvent } from "../lib/analytics";
@@ -19,7 +20,7 @@ export default function FeedbackWidget({ feature }) {
     return (
       <Card className="border border-emerald-200 bg-emerald-50/50 p-5 text-center rounded-2xl">
         <div className="flex flex-col items-center justify-center gap-1.5 text-emerald-700">
-          <span className="text-2xl">✨</span>
+          <TickCircle size={28} variant="Bold" />
           <p className="font-bold text-sm">Cảm ơn bạn đã đánh giá!</p>
           <p className="text-xs text-emerald-600">
             Ý kiến đóng góp của bạn giúp Hairapy ngày càng hoàn thiện hơn.
@@ -83,7 +84,7 @@ export default function FeedbackWidget({ feature }) {
                   aria-label={`${star} sao - ${starLabels[star - 1]}`}
                   className="p-1 text-2xl transition-transform hover:scale-125 focus:outline-none"
                 >
-                  <span className={active ? "text-amber-400" : "text-gray-300"}>★</span>
+                  <Star1 size={26} variant="Bold" className={active ? "text-amber-400" : "text-gray-300"} />
                 </button>
               );
             })}

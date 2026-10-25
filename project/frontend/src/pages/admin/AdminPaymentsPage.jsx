@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { Danger } from "iconsax-reactjs";
 import api from "../../lib/api";
 import { Card, Button } from "../../components/ui";
 import ConfirmDialog from "../../components/admin/ConfirmDialog";
@@ -398,7 +399,7 @@ export default function AdminPaymentsPage() {
                         </span>
                       ) : p.status === "PAID" ? (
                         <span className="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-black text-rose-700 border border-rose-300 animate-pulse">
-                          Chưa cấp ⚠️
+                          <Danger size={12} variant="Bold" className="mr-1" />Chưa cấp
                         </span>
                       ) : (
                         <span className="text-xs text-muted font-bold">—</span>

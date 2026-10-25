@@ -1,4 +1,5 @@
 import QuotaBadge from "../components/QuotaBadge";
+import { Danger } from "iconsax-reactjs";
 import { trackEvent } from "../lib/analytics";
 import { useRef, useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -212,7 +213,7 @@ export default function ScanPage() {
 
               {error && (
                 <div className="max-w-lg rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-sm font-medium text-red-500">
-                  ⚠️ {error}
+                  <span className="flex items-start gap-2"><Danger size={16} variant="Bold" className="mt-px shrink-0" /><span>{error}</span></span>
                 </div>
               )}
             </div>

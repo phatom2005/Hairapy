@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { MagicStar } from "iconsax-reactjs";
 import { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { AnimatedContent, BorderGlow, GlareHover, SpotlightCard } from "../components/animated";
@@ -92,7 +93,7 @@ function HairstyleRecCard({ group, idx, savedIds, handleToggleSave, handleTrySty
             )}
             {r.sampleByAi && (
               <div className="absolute left-3 bottom-3 rounded-full bg-ink/75 px-2 py-0.5 text-[9px] font-semibold text-white backdrop-blur-md shadow">
-                ✨ AI
+                <span className="inline-flex items-center gap-0.5"><MagicStar size={10} variant="Bold" /> AI</span>
               </div>
             )}
 

@@ -248,7 +248,8 @@ export default function ScanPage() {
               <img
                 src={previewUrl || SCAN_PORTRAIT}
                 alt="Đang quét AI"
-                className="aspect-[3/4] w-full object-cover transition-all duration-300"
+                // Ảnh người dùng: hiện trọn khung hình (không cắt mất tóc/cằm) — chỉ ảnh minh hoạ mặc định mới cover
+                className={`aspect-[3/4] w-full transition-all duration-300 ${previewUrl ? "object-contain bg-ink/5" : "object-cover"}`}
               />
 
               {analyzing && (

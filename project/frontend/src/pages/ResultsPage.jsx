@@ -349,7 +349,7 @@ export default function ResultsPage() {
             <img
               src={previewUrl}
               alt="Khuôn mặt người dùng"
-              className="aspect-square w-full rounded-2xl object-cover border border-line"
+              className="aspect-[3/4] w-full rounded-2xl object-contain bg-canvas border border-line"
             />
 
             {/* Thông tin dáng mặt + cho phép người dùng tự đổi */}

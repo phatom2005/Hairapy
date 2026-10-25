@@ -16,8 +16,9 @@ import AiReportButton from "../components/AiReportButton";
 import BeforeAfter from "../components/BeforeAfter";
 import PremiumGateModal from "../components/PremiumGateModal";
 import AiStylistPanel from "../components/AiStylistPanel";
+import HairColorStudio from "../components/HairColorStudio";
 
-import { HAIR_COLORS, swatchBg } from "../lib/hairColors";
+import { COLOR_BY_VALUE } from "../lib/hairColors";
 
 const FACE_SHAPE_MAP = {
   Oval: "Trái xoan",
@@ -54,6 +55,7 @@ export default function SwapPage() {
   const [resultImage, setResultImage] = useState(null);
   const [error, setError] = useState(null);
   const [downloading, setDownloading] = useState(false);
+  const [previewTab, setPreviewTab] = useState("compare"); // "compare" | "recolor"
 
   // Lưu lịch sử các kiểu đã thử trong phiên (tối đa 10)
   const [sessionResults, setSessionResults] = useState([]);
@@ -281,7 +283,7 @@ export default function SwapPage() {
     }
   };
 
-  const handleApply = async () => {
+  const handleApply = async (overrideColor) => {
     const token = localStorage.getItem("token");
     if (!token) {
       setError("Vui lòng đăng nhập để sử dụng tính năng thử kiểu tóc.");
@@ -304,6 +306,11 @@ export default function SwapPage() {
       return;
     }
 
+    const chosenColor = typeof overrideColor === "string" ? overrideColor : hairColor;
+    if (typeof overrideColor === "string") {
+      setHairColor(overrideColor);
+    }
+
     setLoading(true);
     setError(null);
     setResultImage(null);
@@ -321,8 +328,8 @@ export default function SwapPage() {
       const formData = new FormData();
       formData.append("image", uploadFile);
       formData.append("hairstyleId", activeStyle.id);
-      if (hairColor) {
-        formData.append("hairColor", hairColor);
+      if (chosenColor) {
+        formData.append("hairColor", chosenColor);
       }
 
       const response = await api.post("/swap/submit", formData, {
@@ -337,7 +344,7 @@ export default function SwapPage() {
 
       trackEvent("hair_swap", {
         hairstyle_id: activeStyle.id,
-        hair_color: hairColor || "default",
+        hair_color: chosenColor || "default",
       });
 
       pollTimeoutRef.current = setTimeout(
@@ -476,42 +483,20 @@ export default function SwapPage() {
             </div>
           )}
 
-          <div className="flex flex-col gap-2">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted">
-              Màu tóc
-              <span className="ml-2 normal-case tracking-normal text-ink font-semibold">
-                {hairColor ? HAIR_COLORS.find((c) => c.value === hairColor)?.label : "Màu gốc"}
+          {hairColor && (
+            <div className="flex items-center justify-between rounded-2xl border border-line bg-canvas p-3 text-xs">
+              <span className="text-mauve">
+                Màu AI: <b className="text-ink">{COLOR_BY_VALUE[hairColor]?.label || hairColor}</b>
               </span>
-            </p>
-            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => setHairColor("")}
-                className={`rounded-full border-2 px-3 py-1 text-xs font-semibold transition cursor-pointer ${
-                  hairColor === "" ? "border-ink bg-ink text-white" : "border-line text-mauve hover:text-ink"
-                }`}
+                className="text-xs font-bold text-primary hover:underline cursor-pointer"
               >
-                Màu gốc
+                Về màu gốc
               </button>
-              {HAIR_COLORS.map((c) => (
-                <button
-                  key={c.value}
-                  type="button"
-                  title={c.label}
-                  aria-label={c.label}
-                  aria-pressed={hairColor === c.value}
-                  onClick={() => {
-                    setHairColor(c.value);
-                    trackEvent("select_hair_color", { hair_color: c.value });
-                  }}
-                  style={{ background: swatchBg(c.tones) }}
-                  className={`size-9 rounded-full border-2 shadow-inner transition hover:scale-110 cursor-pointer ${
-                    hairColor === c.value ? "border-ink ring-2 ring-ink/30" : "border-line"
-                  }`}
-                />
-              ))}
             </div>
-          </div>
+          )}
 
           <div className="flex flex-col gap-2">
             {hairSwapQuota && !hairSwapQuota.unlimited && (
@@ -616,66 +601,112 @@ export default function SwapPage() {
             </div>
           ) : (
             /* Khung Preview khi đã có ảnh */
-            <div className="relative overflow-hidden rounded-[32px] shadow-2xl ring-4 ring-pink/40 bg-ink">
-              {activeResultImage ? (
-                <BeforeAfter
-                  beforeImage={previewUrl}
-                  afterImage={activeResultImage}
-                  className="aspect-[3/4] w-full"
-                />
-              ) : (
-                <img
-                  src={previewUrl}
-                  alt="Ảnh chân dung gốc"
-                  className="aspect-[3/4] w-full object-cover transition-all duration-300"
-                />
-              )}
-
-              {loading && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink/75 backdrop-blur-sm transition-opacity duration-300 z-30">
-                  <span className="size-14 animate-spin rounded-full border-4 border-pink border-t-transparent shadow-lg" />
-                  <p className="mt-4 font-display font-semibold text-white tracking-wide text-lg">
-                    AI đang tạo kiểu tóc mới...
-                  </p>
-                  <p className="text-xs text-white/70 mt-1 max-w-xs text-center px-4">
-                    Thường mất 20–60 giây, bạn có thể rời trang — ảnh sẽ được lưu vào Hồ sơ.
-                  </p>
+            <div className="flex flex-col gap-4">
+              {/* Header điều khiển preview & Tabs */}
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-canvas p-3">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`size-2.5 rounded-full ${loading ? "bg-amber-400 animate-pulse" : activeResultImage ? "bg-lime" : "bg-pink"}`}
+                  />
+                  <span className="text-xs font-bold text-ink">
+                    {loading
+                      ? "AI đang xử lý..."
+                      : activeResultImage
+                      ? "Đã tạo kiểu tóc"
+                      : "Ảnh gốc sẵn sàng"}
+                  </span>
                 </div>
-              )}
 
-              {/* Tag trạng thái */}
-              <div className="absolute left-6 top-6 flex items-center gap-2 rounded-full bg-ink/75 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md z-30">
-                <span
-                  className={`size-2 rounded-full ${loading ? "bg-amber-400 animate-pulse" : activeResultImage ? "bg-lime" : "bg-pink"}`}
-                />
-                {loading
-                  ? "AI đang xử lý..."
-                  : activeResultImage
-                  ? "Đã ghép kiểu tóc"
-                  : "Ảnh gốc sẵn sàng"}
+                <div className="flex items-center gap-2">
+                  {activeResultImage && (
+                    <div className="flex rounded-xl bg-line/40 p-1 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewTab("compare")}
+                        className={`rounded-lg px-3 py-1 font-semibold transition cursor-pointer ${
+                          previewTab === "compare"
+                            ? "bg-white text-ink shadow-xs"
+                            : "text-mauve hover:text-ink"
+                        }`}
+                      >
+                        Trước / Sau
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewTab("recolor")}
+                        className={`rounded-lg px-3 py-1 font-semibold transition cursor-pointer ${
+                          previewTab === "recolor"
+                            ? "bg-white text-ink shadow-xs"
+                            : "text-mauve hover:text-ink"
+                        }`}
+                      >
+                        Thử màu tức thì
+                      </button>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="rounded-xl border border-line bg-white px-3 py-1.5 text-xs font-semibold text-mauve hover:text-ink hover:border-primary transition cursor-pointer"
+                  >
+                    Đổi ảnh khác
+                  </button>
+                </div>
               </div>
 
-              {/* Nút đổi ảnh khác */}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute right-6 top-6 rounded-full bg-black/60 backdrop-blur-md px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-black/80 transition z-30 cursor-pointer"
-              >
-                Đổi ảnh khác
-              </button>
+              {/* Vùng hiển thị chính */}
+              <div className="relative">
+                {activeResultImage ? (
+                  previewTab === "compare" ? (
+                    <div className="relative overflow-hidden rounded-[32px] shadow-2xl ring-4 ring-pink/40 bg-ink">
+                      <BeforeAfter
+                        beforeImage={previewUrl}
+                        afterImage={activeResultImage}
+                        className="aspect-[3/4] w-full"
+                      />
+                      <div className="absolute inset-x-6 bottom-6 flex items-center justify-between rounded-2xl bg-white/95 px-5 py-3 shadow-lg backdrop-blur-md z-30">
+                        <div className="max-w-[75%]">
+                          <p className="text-sm font-bold text-ink truncate" title={activeStyle?.name}>
+                            {activeStyle?.name || "Kiểu tóc đã tạo"}
+                          </p>
+                          <p className="text-xs text-muted">Kéo thanh trượt để so sánh trước / sau</p>
+                        </div>
+                        {activeStyle?.premiumOnly && (
+                          <Badge variant="premium" className="text-[10px]">Trả phí</Badge>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <HairColorStudio
+                      imageUrl={activeResultImage}
+                      onPickAiColor={(colorVal) => {
+                        setHairColor(colorVal);
+                        handleApply(colorVal);
+                      }}
+                    />
+                  )
+                ) : (
+                  <HairColorStudio
+                    imageUrl={previewUrl}
+                    onPickAiColor={(colorVal) => {
+                      setHairColor(colorVal);
+                      handleApply(colorVal);
+                    }}
+                  />
+                )}
 
-              {/* Tên kiểu tóc đang hiển thị */}
-              <div className="absolute inset-x-6 bottom-6 flex items-center justify-between rounded-2xl bg-white/95 px-5 py-3 shadow-lg backdrop-blur-md z-30">
-                <div className="max-w-[75%]">
-                  <p className="text-sm font-bold text-ink truncate" title={activeStyle?.name}>
-                    {activeStyle?.name || "Chưa chọn kiểu tóc"}
-                  </p>
-                  <p className="text-xs text-muted">
-                    {activeResultImage ? "Kéo thanh trượt để so sánh trước/sau" : "Bấm Áp dụng để xem diện mạo mới"}
-                  </p>
-                </div>
-                {activeStyle?.premiumOnly && (
-                  <Badge variant="premium" className="text-[10px]">Trả phí</Badge>
+                {/* Overlay khi AI đang tạo kiểu */}
+                {loading && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center rounded-[32px] bg-ink/75 backdrop-blur-sm transition-opacity duration-300 z-40">
+                    <span className="size-14 animate-spin rounded-full border-4 border-pink border-t-transparent shadow-lg" />
+                    <p className="mt-4 font-display font-semibold text-white tracking-wide text-lg">
+                      AI đang tạo kiểu tóc mới...
+                    </p>
+                    <p className="text-xs text-white/70 mt-1 max-w-xs text-center px-4">
+                      Thường mất 20–60 giây, bạn có thể rời trang — ảnh sẽ được lưu vào Hồ sơ.
+                    </p>
+                  </div>
                 )}
               </div>
             </div>

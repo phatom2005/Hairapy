@@ -131,9 +131,14 @@ const useAuthStore = create((set, get) => ({
   },
 
   /**
-   * Đăng xuất, xóa toàn bộ thông tin xác thực khỏi store và localStorage.
+   * Đăng xuất, gọi backend huỷ phiên, xóa toàn bộ thông tin xác thực khỏi store và localStorage.
    */
-  logout: () => {
+  logout: async () => {
+    try {
+      await api.post("/auth/logout", null, { timeout: 3000 });
+    } catch {
+      /* ignore network error on logout */
+    }
     localStorage.removeItem("token");
     try {
       useScanStore.getState().reset();

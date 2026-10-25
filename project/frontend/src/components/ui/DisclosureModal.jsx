@@ -1,4 +1,5 @@
 import Button from "./Button";
+import { TickCircle } from "iconsax-reactjs";
 
 export default function DisclosureModal({ isOpen, onClose, onAccept }) {
   if (!isOpen) return null;
@@ -50,21 +51,21 @@ export default function DisclosureModal({ isOpen, onClose, onAccept }) {
 
           <div className="rounded-2xl bg-canvas p-4 space-y-3">
             <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-pink/20 text-pink text-xs font-bold">✓</span>
+              <TickCircle size={20} variant="Bold" className="mt-0.5 shrink-0 text-pink" />
               <p className="text-ink">
                 <strong className="font-semibold text-ink">Xử lý trực tiếp trên thiết bị:</strong> Phân tích hình dáng khuôn mặt chạy 100% trong trình duyệt của bạn (không tải ảnh lên máy chủ).
               </p>
             </div>
             
             <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-pink/20 text-pink text-xs font-bold">✓</span>
+              <TickCircle size={20} variant="Bold" className="mt-0.5 shrink-0 text-pink" />
               <p className="text-ink">
                 <strong className="font-semibold text-ink">Tự động xóa ảnh:</strong> Ảnh thử kiểu tóc (Hair Swap) gửi lên server sẽ được tự động xóa sạch hoàn toàn sau 24 giờ.
               </p>
             </div>
 
             <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-pink/20 text-pink text-xs font-bold">✓</span>
+              <TickCircle size={20} variant="Bold" className="mt-0.5 shrink-0 text-pink" />
               <p className="text-ink">
                 <strong className="font-semibold text-ink">Không lưu trữ sinh trắc học:</strong> Dữ liệu đặc điểm khuôn mặt của bạn KHÔNG được lưu trữ dưới bất kỳ hình thức nào.
               </p>

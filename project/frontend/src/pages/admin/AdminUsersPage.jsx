@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { TickCircle, CloseCircle } from "iconsax-reactjs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../lib/api";
 import { Card, Button, Input } from "../../components/ui";
@@ -209,11 +210,11 @@ export default function AdminUsersPage() {
                       <td className="px-5 py-4">
                         {u.emailVerified ? (
                           <span className="inline-flex items-center gap-1 font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full text-[10px]">
-                            ✓ Đã xác minh
+                            <TickCircle size={12} variant="Bold" />Đã xác minh
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 font-bold text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-full text-[10px]">
-                            ✗ Chưa
+                            <CloseCircle size={12} variant="Bold" />Chưa
                           </span>
                         )}
                       </td>

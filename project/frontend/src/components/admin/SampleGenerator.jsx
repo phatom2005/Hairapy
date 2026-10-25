@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Profile, Man, Woman, MagicStar, Refresh2, TickCircle, Danger, LampOn, Map1, Add } from "iconsax-reactjs";
 import api from "../../lib/api";
 import { Card, Button, Badge } from "../ui";
 import { HAIR_COLORS, swatchBg } from "../../lib/hairColors";
@@ -26,7 +27,7 @@ export function ModelPhotosPanel({ models, onModelChange }) {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-line pb-3">
           <div>
             <h3 className="font-display text-lg font-bold text-ink flex items-center gap-2">
-              <span>👤</span> Ảnh người mẫu chuẩn cho AI
+              <Profile size={20} variant="Bulk" className="text-primary" /> Ảnh người mẫu chuẩn cho AI
             </h3>
             <p className="text-xs text-mauve">
               Ảnh dùng làm khuôn mặt gốc để AILab tạo ảnh mẫu catalog chân thực, đồng bộ.
@@ -45,7 +46,7 @@ export function ModelPhotosPanel({ models, onModelChange }) {
               {models.male ? (
                 <img src={models.male} alt="Người mẫu Nam" className="size-full object-cover" />
               ) : (
-                <span className="text-2xl text-muted">👨</span>
+                <Man size={30} className="text-muted" />
               )}
             </div>
             <div className="flex-1 min-w-0">
@@ -74,7 +75,7 @@ export function ModelPhotosPanel({ models, onModelChange }) {
               {models.female ? (
                 <img src={models.female} alt="Người mẫu Nữ" className="size-full object-cover" />
               ) : (
-                <span className="text-2xl text-muted">👩</span>
+                <Woman size={30} className="text-muted" />
               )}
             </div>
             <div className="flex-1 min-w-0">
@@ -123,7 +124,7 @@ export function SampleComparisonModal({ open, item, candidateUrl, loading, onApp
             <h3 className="font-display text-xl font-bold text-ink">So sánh ảnh mẫu AI</h3>
             <p className="text-xs text-mauve">Kiểu tóc: <strong className="text-ink">{item.name}</strong> ({item.ailabProStyle || "Chưa gán mã AI"})</p>
           </div>
-          <button type="button" onClick={onClose} className="text-muted hover:text-ink text-xl font-bold p-1">✕</button>
+          <button type="button" onClick={onClose} className="text-muted hover:text-ink text-xl font-bold p-1"><Add size={22} className="rotate-45" /></button>
         </div>
 
         {/* Comparison images */}
@@ -142,7 +143,7 @@ export function SampleComparisonModal({ open, item, candidateUrl, loading, onApp
           {/* Ảnh AI mới */}
           <div className="flex flex-col items-center">
             <span className="text-xs font-bold text-brand mb-2 uppercase tracking-wider flex items-center gap-1">
-              <span>✨</span> Ảnh AI mới tạo
+              <MagicStar size={14} variant="Bold" /> Ảnh AI mới tạo
             </span>
             <div className="aspect-[3/4] w-full rounded-2xl overflow-hidden border-2 border-brand bg-canvas shadow-md">
               <img src={candidateUrl} alt="Ứng viên AI" className="size-full object-cover" />
@@ -186,7 +187,7 @@ export function SampleComparisonModal({ open, item, candidateUrl, loading, onApp
               onClick={onRegenerate}
               disabled={loading}
             >
-              🔄 Tạo lại
+              <Refresh2 size={14} className="mr-1 inline -mt-0.5" />Tạo lại
             </Button>
             <Button
               variant="brand"
@@ -195,7 +196,7 @@ export function SampleComparisonModal({ open, item, candidateUrl, loading, onApp
               onClick={() => onApply(candidateUrl, activateStyle)}
               disabled={loading}
             >
-              {loading ? "Đang lưu..." : "✓ Dùng ảnh này"}
+              {loading ? "Đang lưu..." : <><TickCircle size={14} variant="Bold" className="mr-1 inline -mt-0.5" />Dùng ảnh này</>}
             </Button>
           </div>
         </div>
@@ -319,14 +320,14 @@ export function BatchSampleModal({ open, stylesWithoutAi, models, onFinish, onCl
             <h3 className="font-display text-xl font-bold text-ink">Tạo ảnh mẫu AI hàng loạt</h3>
             <p className="text-xs text-mauve">Tự động gọi AILab tuần tự cho các kiểu chưa có ảnh AI</p>
           </div>
-          <button type="button" onClick={onClose} className="text-muted hover:text-ink text-xl font-bold p-1">✕</button>
+          <button type="button" onClick={onClose} className="text-muted hover:text-ink text-xl font-bold p-1"><Add size={22} className="rotate-45" /></button>
         </div>
 
         {stage === "confirm" && (
           <div className="space-y-4 my-auto py-4">
             <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 text-amber-900 text-sm leading-relaxed">
               <p className="font-bold text-base flex items-center gap-1.5 mb-1">
-                <span>⚠️</span> Cảnh báo chi phí AILab
+                <Danger size={18} variant="Bold" /> Cảnh báo chi phí AILab
               </p>
               Hệ thống sẽ thực hiện tạo ảnh mẫu cho <strong>{stylesWithoutAi.length}</strong> kiểu tóc chưa có ảnh AI.
               Mỗi kiểu tóc sẽ tiêu tốn khoảng <strong>1 credit AILab thật</strong>. Quá trình chạy hoàn toàn <strong>tuần tự</strong> (mỗi kiểu mất 20–40 giây).
@@ -414,7 +415,7 @@ export function BatchSampleModal({ open, stylesWithoutAi, models, onFinish, onCl
                   className="rounded-xl px-4 text-xs font-bold"
                   onClick={handleApplyAll}
                 >
-                  ✓ Dùng tất cả & Hiện kiểu
+                  <TickCircle size={14} variant="Bold" className="mr-1 inline -mt-0.5" />Dùng tất cả & Hiện kiểu
                 </Button>
               )}
             </div>
@@ -547,7 +548,7 @@ export function VariantModal({ open, baseStyle, existingVariants = [], onSubmit,
             <h3 className="font-display text-xl font-bold text-ink">Thêm biến thể màu</h3>
             <p className="text-xs text-mauve">Kiểu gốc: <strong className="text-ink">{baseStyle.name}</strong> (Tối đa 6 màu mỗi lần)</p>
           </div>
-          <button type="button" onClick={onClose} className="text-muted hover:text-ink text-xl font-bold p-1">✕</button>
+          <button type="button" onClick={onClose} className="text-muted hover:text-ink text-xl font-bold p-1"><Add size={22} className="rotate-45" /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto flex-1 pr-1">
@@ -562,7 +563,7 @@ export function VariantModal({ open, baseStyle, existingVariants = [], onSubmit,
               className="rounded-xl px-3 py-1 text-xs font-bold text-brand"
               onClick={handleSuggest}
             >
-              💡 Gợi ý biến thể phù hợp
+              <LampOn size={14} variant="Bold" className="mr-1 inline -mt-0.5" />Gợi ý biến thể phù hợp
             </Button>
           </div>
 
@@ -623,7 +624,7 @@ export function RoadmapBanner() {
     <Card className="border border-line bg-gradient-to-r from-canvas to-brand/5 p-4">
       <div className="flex items-center justify-between cursor-pointer" onClick={() => setOpen(!open)}>
         <div className="flex items-center gap-2.5">
-          <span className="text-xl">🗺️</span>
+          <Map1 size={22} variant="Bulk" className="shrink-0 text-primary" />
           <div>
             <h4 className="font-display text-sm font-bold text-ink">Gợi ý lộ trình phủ ảnh mẫu AI & biến thể màu</h4>
             <p className="text-xs text-mauve">Chiến lược tối ưu credit AILab để catalog đạt 100–140 mẫu tóc phong phú</p>

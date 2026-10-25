@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { MagicStar, LampOn } from "iconsax-reactjs";
 import { Badge, Button } from "./ui";
 import { COLOR_BY_VALUE, swatchBg } from "../lib/hairColors";
 
@@ -82,7 +83,7 @@ export default function HairstyleDetailModal({
           {/* Nhãn AI Sample góc dưới nếu có */}
           {isAiSample && (
             <div className="absolute left-3 bottom-3 rounded-full bg-ink/75 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-md shadow">
-              ✨ Ảnh minh hoạ do AI tạo
+              <span className="inline-flex items-center gap-1"><MagicStar size={12} variant="Bold" /> Ảnh minh hoạ do AI tạo</span>
             </div>
           )}
         </div>
@@ -124,7 +125,7 @@ export default function HairstyleDetailModal({
           {/* Dòng ghi chú kết quả AI nếu sampleByAi */}
           {isAiSample && (
             <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs font-medium text-primary">
-              💡 Kết quả thử trên ảnh của bạn sẽ tương tự ảnh này.
+              <span className="flex items-start gap-1.5"><LampOn size={14} variant="Bold" className="mt-px shrink-0" /> Kết quả thử trên ảnh của bạn sẽ tương tự ảnh này.</span>
             </div>
           )}
 

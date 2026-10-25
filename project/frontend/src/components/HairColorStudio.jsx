@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { Brush, TickCircle } from "iconsax-reactjs";
 import { HAIR_COLORS, COLOR_BY_VALUE, swatchBg } from "../lib/hairColors";
 import { getHairMask } from "../lib/hairSegmenter";
 import { recolorHair } from "../lib/recolor";
@@ -303,7 +304,7 @@ export default function HairColorStudio({ imageUrl, onPickAiColor, className = "
         {isDragOver && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-primary/20 backdrop-blur-xs text-white p-4 text-center pointer-events-none transition-all">
             <div className="size-14 rounded-full bg-white text-primary flex items-center justify-center text-2xl shadow-lg mb-2">
-              🎨
+              <Brush size={26} variant="Bold" />
             </div>
             <p className="font-display text-lg font-bold drop-shadow-md">
               Thả vào đây để đổi màu tóc
@@ -388,7 +389,7 @@ export default function HairColorStudio({ imageUrl, onPickAiColor, className = "
               >
                 {isSelected && (
                   <span className="absolute inset-0 flex items-center justify-center text-white text-xs drop-shadow-md">
-                    ✓
+                    <TickCircle size={16} variant="Bold" />
                   </span>
                 )}
               </button>

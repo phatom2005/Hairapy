@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { Star1 } from "iconsax-reactjs";
 import api from "../../lib/api";
 import { Card, Badge, Button, Input } from "../../components/ui";
 import ConfirmDialog from "../../components/admin/ConfirmDialog";
@@ -243,7 +244,7 @@ export default function AdminSalonsPage() {
                     <td className="px-6 py-3 font-semibold text-ink">{item.name}</td>
                     <td className="px-6 py-3 text-mauve">{item.district}</td>
                     <td className="px-6 py-3 text-mauve">{formatVnd(item.priceFrom)}</td>
-                    <td className="px-6 py-3 text-mauve">{item.rating?.toFixed(1) ?? "0.0"} ★</td>
+                    <td className="px-6 py-3 text-mauve"><span className="inline-flex items-center gap-1">{item.rating?.toFixed(1) ?? "0.0"} <Star1 size={12} variant="Bold" className="text-amber-500" /></span></td>
                     <td className="px-6 py-3">
                       {item.verified ? (
                         <Badge variant="new">Đã xác thực</Badge>

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { MagicStar } from "iconsax-reactjs";
 import { Link, useLocation } from "react-router-dom";
 import { trackEvent } from "../lib/analytics";
 import { Button, Badge } from "./ui";
@@ -58,7 +59,7 @@ export default function PremiumGateModal({
 
           {isStylist ? (
             <div className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-pink/15 text-pink text-2xl font-bold">
-              ✨
+              <MagicStar size={30} variant="Bulk" />
             </div>
           ) : style?.imageUrl ? (
             <div className="relative mb-4 size-28 overflow-hidden rounded-2xl border border-line shadow-md">

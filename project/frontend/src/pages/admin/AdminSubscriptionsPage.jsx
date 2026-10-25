@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { Add } from "iconsax-reactjs";
 import api from "../../lib/api";
 import { Card, Button } from "../../components/ui";
 import ConfirmDialog from "../../components/admin/ConfirmDialog";
@@ -286,7 +287,7 @@ export default function AdminSubscriptionsPage() {
                 onClick={() => setShowGrantModal(false)}
                 className="text-muted hover:text-ink text-xl font-bold p-1"
               >
-                ✕
+                <Add size={22} className="rotate-45" />
               </button>
             </div>
 

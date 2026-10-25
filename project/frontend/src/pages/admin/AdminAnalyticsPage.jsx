@@ -7,7 +7,7 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
-import { People, Crown1, TrendUp, Activity } from "iconsax-reactjs";
+import { People, Crown1, TrendUp, Activity, Heart } from "iconsax-reactjs";
 import api from "../../lib/api";
 
 // Màu chart — hardcode hex giống AdminDashboardPage
@@ -156,7 +156,7 @@ function FaceShapeCard({ ranking }) {
               {h.premiumOnly && <span className="ml-1.5 text-[10px] font-bold text-magenta">PREMIUM</span>}
             </p>
             <span className="shrink-0 text-xs text-mauve" title="Lượt lưu yêu thích · lượt thử AI">
-              ♥ <b className="text-ink">{nf.format(h.saved)}</b> · AI <b className="text-ink">{nf.format(h.tried)}</b>
+              <Heart size={12} variant="Bold" className="inline -mt-0.5 text-pink" /> <b className="text-ink">{nf.format(h.saved)}</b> · AI <b className="text-ink">{nf.format(h.tried)}</b>
             </span>
           </li>
         ))}

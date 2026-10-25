@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { Star1 } from "iconsax-reactjs";
 import api from "../../lib/api";
 import { Card, Button } from "../../components/ui";
 
@@ -60,9 +61,7 @@ export default function AdminFeedbackPage() {
     return (
       <div className="flex items-center gap-1 text-amber-400">
         {[1, 2, 3, 4, 5].map((star) => (
-          <span key={star} className={star <= rating ? "text-amber-500 font-bold" : "text-gray-300"}>
-            ★
-          </span>
+          <Star1 key={star} size={16} variant="Bold" className={star <= rating ? "text-amber-500" : "text-gray-300"} />
         ))}
         <span className="ml-1 text-xs font-bold text-ink">{rating} / 5</span>
       </div>

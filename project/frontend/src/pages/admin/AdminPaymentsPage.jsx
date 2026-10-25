@@ -1,6 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 import api from "../../lib/api";
 import { Card, Button } from "../../components/ui";
+import ConfirmDialog from "../../components/admin/ConfirmDialog";
+import UserDetailDrawer from "../../components/admin/UserDetailDrawer";
+import { PLAN_LABEL } from "../../lib/plans";
 
 export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState([]);
@@ -23,6 +26,10 @@ export default function AdminPaymentsPage() {
   const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(true);
   const [summaryLoading, setSummaryLoading] = useState(true);
+  const [actionLoadingId, setActionLoadingId] = useState(null);
+
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [confirmMarkPaidItem, setConfirmMarkPaidItem] = useState(null); // { id, orderCode, email }
 
   const formatVND = (amount) => new Intl.NumberFormat("vi-VN").format(amount ?? 0) + " ₫";
 
@@ -122,6 +129,39 @@ export default function AdminPaymentsPage() {
     setKeyword("");
     setSearchInput("");
     setPage(0);
+  };
+
+  // Đối soát đơn hàng với cổng PayOS
+  const handleReconcile = async (paymentId, orderCode) => {
+    setActionLoadingId(paymentId);
+    try {
+      const res = await api.post(`/admin/payments/${paymentId}/reconcile`);
+      alert(`Đối soát #${orderCode} thành công. Trạng thái hiện tại: ${res.data.status}`);
+      fetchPayments();
+      fetchSummary();
+    } catch (err) {
+      console.error("Lỗi đối soát PayOS:", err);
+      alert(err.response?.data?.message || err.response?.data?.error || "Đối soát PayOS thất bại.");
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Xác nhận đã thanh toán thủ công
+  const handleConfirmMarkPaid = async (note) => {
+    if (!confirmMarkPaidItem) return;
+    setActionLoadingId(confirmMarkPaidItem.id);
+    try {
+      await api.post(`/admin/payments/${confirmMarkPaidItem.id}/mark-paid`, { note });
+      setConfirmMarkPaidItem(null);
+      fetchPayments();
+      fetchSummary();
+    } catch (err) {
+      console.error("Lỗi đánh dấu thanh toán:", err);
+      alert(err.response?.data?.message || err.response?.data?.error || "Xác nhận thanh toán thất bại.");
+    } finally {
+      setActionLoadingId(null);
+    }
   };
 
   const renderStatusBadge = (status) => {
@@ -230,8 +270,8 @@ export default function AdminPaymentsPage() {
                 className="w-full rounded-2xl border-2 border-line bg-white py-2 px-3 text-sm font-semibold text-ink outline-none transition focus:border-brand"
               >
                 <option value="">Tất cả gói</option>
-                <option value="PRO">PRO</option>
-                <option value="PREMIUM">PREMIUM</option>
+                <option value="PRO">Gói Tuần (PRO)</option>
+                <option value="PREMIUM">Gói Tháng (PREMIUM)</option>
               </select>
             </label>
 
@@ -289,7 +329,7 @@ export default function AdminPaymentsPage() {
               <button
                 type="button"
                 onClick={handleResetFilters}
-                className="font-bold text-magenta hover:underline"
+                className="font-bold text-magenta hover:underline cursor-pointer"
               >
                 Xóa tất cả bộ lọc
               </button>
@@ -318,9 +358,11 @@ export default function AdminPaymentsPage() {
                   <th className="px-5 py-4">Gói</th>
                   <th className="px-5 py-4">Số tiền</th>
                   <th className="px-5 py-4">Trạng thái</th>
+                  <th className="px-5 py-4 text-center">Đã cấp gói</th>
                   <th className="px-5 py-4">Thời gian tạo</th>
                   <th className="px-5 py-4">Thời gian thanh toán</th>
                   <th className="px-5 py-4">Mã GD PayOS</th>
+                  <th className="px-5 py-4 text-center">Hành động</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
@@ -329,19 +371,69 @@ export default function AdminPaymentsPage() {
                     <td className="px-5 py-4 font-mono font-bold text-ink">#{p.orderCode}</td>
                     <td className="px-5 py-4">
                       <div className="font-semibold text-ink">{p.userName || "—"}</div>
-                      <div className="text-xs text-mauve">{p.userEmail}</div>
+                      {p.userId ? (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedUserId(p.userId)}
+                          className="text-xs font-medium text-brand hover:underline cursor-pointer text-left block"
+                          title="Bấm để xem chi tiết người dùng"
+                        >
+                          {p.userEmail}
+                        </button>
+                      ) : (
+                        <div className="text-xs text-mauve">{p.userEmail}</div>
+                      )}
                     </td>
                     <td className="px-5 py-4">
                       <span className="font-extrabold text-magenta text-xs tracking-wider">
-                        {p.plan}
+                        {PLAN_LABEL[p.plan] || p.plan}
                       </span>
                     </td>
                     <td className="px-5 py-4 font-bold text-ink">{formatVND(p.amount)}</td>
                     <td className="px-5 py-4">{renderStatusBadge(p.status)}</td>
+                    <td className="px-5 py-4 text-center">
+                      {p.subscriptionGranted ? (
+                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700 border border-emerald-200">
+                          Đã cấp
+                        </span>
+                      ) : p.status === "PAID" ? (
+                        <span className="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-black text-rose-700 border border-rose-300 animate-pulse">
+                          Chưa cấp ⚠️
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted font-bold">—</span>
+                      )}
+                    </td>
                     <td className="px-5 py-4 text-xs text-muted">{formatDateTime(p.createdAt)}</td>
                     <td className="px-5 py-4 text-xs text-muted">{formatDateTime(p.paidAt)}</td>
                     <td className="px-5 py-4 font-mono text-xs text-mauve">
                       {p.payosTransactionId || "—"}
+                    </td>
+                    <td className="px-5 py-4 text-center">
+                      {p.status === "PENDING" || p.status === "CANCELLED" ? (
+                        <div className="flex items-center justify-center gap-1.5 flex-nowrap">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="px-2.5 py-1 text-xs rounded-xl font-bold hover:border-brand cursor-pointer whitespace-nowrap"
+                            disabled={actionLoadingId === p.id}
+                            onClick={() => handleReconcile(p.id, p.orderCode)}
+                          >
+                            {actionLoadingId === p.id ? "Đang xử lý..." : "Đối soát PayOS"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="px-2.5 py-1 text-xs rounded-xl font-bold text-emerald-700 hover:bg-emerald-50 cursor-pointer whitespace-nowrap"
+                            disabled={actionLoadingId === p.id}
+                            onClick={() => setConfirmMarkPaidItem({ id: p.id, orderCode: p.orderCode, email: p.userEmail })}
+                          >
+                            Xác nhận đã thanh toán
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted font-bold">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -379,6 +471,31 @@ export default function AdminPaymentsPage() {
           </div>
         </div>
       )}
+
+      {/* User Detail Drawer */}
+      {selectedUserId && (
+        <UserDetailDrawer
+          userId={selectedUserId}
+          onClose={() => setSelectedUserId(null)}
+          onUserUpdated={() => {
+            fetchPayments();
+            fetchSummary();
+          }}
+        />
+      )}
+
+      {/* Confirm mark paid Dialog */}
+      <ConfirmDialog
+        open={!!confirmMarkPaidItem}
+        title="Xác nhận đã thanh toán"
+        message={`Xác nhận thanh toán thủ công cho đơn #${confirmMarkPaidItem?.orderCode} (${confirmMarkPaidItem?.email})? Hệ thống sẽ cập nhật trạng thái PAID và cấp gói dịch vụ tương ứng.`}
+        confirmText="Xác nhận đã thanh toán"
+        requireReason
+        reasonPlaceholder="Nhập ghi chú đối soát/thanh toán (bắt buộc)..."
+        loading={actionLoadingId === confirmMarkPaidItem?.id}
+        onConfirm={handleConfirmMarkPaid}
+        onCancel={() => setConfirmMarkPaidItem(null)}
+      />
     </div>
   );
 }

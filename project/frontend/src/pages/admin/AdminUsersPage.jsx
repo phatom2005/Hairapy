@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import api from "../../lib/api";
 import { Card, Badge, Button, Input } from "../../components/ui";
 import useAuthStore from "../../store/useAuthStore";
+import ConfirmDialog from "../../components/admin/ConfirmDialog";
 
 export default function AdminUsersPage() {
   const currentUser = useAuthStore((s) => s.user);
@@ -56,6 +57,8 @@ export default function AdminUsersPage() {
     };
   }, [fetchUsers]);
 
+  const [confirmRoleChange, setConfirmRoleChange] = useState(null); // { user, newRole }
+
   // Toggle role người dùng
   const handleToggleRole = (user) => {
     const isSelf = currentUser?.email && user.email?.toLowerCase() === currentUser.email.toLowerCase();
@@ -65,15 +68,18 @@ export default function AdminUsersPage() {
     }
 
     const newRole = user.role === "ADMIN" ? "USER" : "ADMIN";
-    const confirmMessage = `Bạn có chắc chắn muốn chuyển vai trò của ${user.fullName || user.email} từ ${user.role} thành ${newRole}?`;
+    setConfirmRoleChange({ user, newRole });
+  };
 
-    if (!window.confirm(confirmMessage)) return;
-
+  const handleConfirmRoleChange = () => {
+    if (!confirmRoleChange) return;
+    const { user, newRole } = confirmRoleChange;
     setActionLoading(true);
     api
       .put(`/admin/users/${user.id}/role`, { role: newRole })
       .then(() => {
         setActionLoading(false);
+        setConfirmRoleChange(null);
         fetchUsers();
       })
       .catch((err) => {
@@ -192,6 +198,16 @@ export default function AdminUsersPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmRoleChange}
+        title="Đổi vai trò người dùng"
+        message={`Bạn có chắc chắn muốn chuyển vai trò của ${confirmRoleChange?.user?.fullName || confirmRoleChange?.user?.email} từ ${confirmRoleChange?.user?.role} thành ${confirmRoleChange?.newRole}?`}
+        confirmText="Đổi vai trò"
+        loading={actionLoading}
+        onConfirm={handleConfirmRoleChange}
+        onCancel={() => setConfirmRoleChange(null)}
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import Cropper from "react-easy-crop";
 import api from "../../lib/api";
 import { Card, Badge, Button, Input } from "../../components/ui";
 import { getCroppedImg } from "../../lib/cropImage.js";
+import ConfirmDialog from "../../components/admin/ConfirmDialog";
 
 const FACE_SHAPES = ["Oval", "Round", "Square", "Heart", "Oblong", "Diamond"];
 const HAIR_LENGTHS = ["Ngắn", "Vừa", "Dài"];
@@ -231,19 +232,27 @@ export default function AdminCatalogPage() {
     }
   };
 
+  const [confirmDelete, setConfirmDelete] = useState(null); // { id, name }
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   // Xóa kiểu tóc
   const handleDelete = (id, name) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa kiểu tóc "${name}" khỏi kho?`)) return;
+    setConfirmDelete({ id, name });
+  };
 
-    api
-      .delete(`/admin/catalog/${id}`)
-      .then(() => {
-        fetchCatalog();
-      })
-      .catch((err) => {
-        console.error(err);
-        alert("Xóa kiểu tóc thất bại.");
-      });
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleteLoading(true);
+    try {
+      await api.delete(`/admin/catalog/${confirmDelete.id}`);
+      setConfirmDelete(null);
+      fetchCatalog();
+    } catch (err) {
+      console.error(err);
+      alert("Xóa kiểu tóc thất bại.");
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   return (
@@ -611,6 +620,17 @@ export default function AdminCatalogPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title="Xóa kiểu tóc"
+        message={`Bạn có chắc chắn muốn xóa kiểu tóc "${confirmDelete?.name}" khỏi kho không?`}
+        confirmText="Xóa kiểu tóc"
+        danger
+        loading={deleteLoading}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }

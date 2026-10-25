@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import api from "../../lib/api";
 import { Card, Badge, Button, Input } from "../../components/ui";
+import ConfirmDialog from "../../components/admin/ConfirmDialog";
 
 const DISTRICT_OPTS = ["Quận 1", "Quận 3", "Quận 7", "Bình Thạnh", "Gò Vấp", "Phú Nhuận"];
 const SERVICE_OPTS = ["Cắt tóc", "Nhuộm tóc", "Uốn/Duỗi tóc", "Phục hồi tóc", "Combo trọn gói"];
@@ -170,16 +171,26 @@ export default function AdminSalonsPage() {
     }
   };
 
-  const handleDelete = (id, name) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa salon "${name}"?`)) return;
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
-    api
-      .delete(`/admin/salons/${id}`)
-      .then(() => fetchSalons())
-      .catch((err) => {
-        console.error(err);
-        alert("Xóa salon thất bại.");
-      });
+  const handleDelete = (id, name) => {
+    setConfirmDelete({ id, name });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/admin/salons/${confirmDelete.id}`);
+      setConfirmDelete(null);
+      fetchSalons();
+    } catch (err) {
+      console.error(err);
+      alert("Xóa salon thất bại.");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const formatVnd = (v) => (v == null ? "-" : `${Number(v).toLocaleString("vi-VN")}đ`);
@@ -450,6 +461,17 @@ export default function AdminSalonsPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title="Xóa salon"
+        message={`Bạn có chắc chắn muốn xóa salon "${confirmDelete?.name}" không? Hành động này không thể hoàn tác.`}
+        confirmText="Xóa salon"
+        danger
+        loading={deleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }

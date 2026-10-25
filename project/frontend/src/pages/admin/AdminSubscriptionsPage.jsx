@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import api from "../../lib/api";
 import { Card, Button } from "../../components/ui";
+import ConfirmDialog from "../../components/admin/ConfirmDialog";
 
 export default function AdminSubscriptionsPage() {
   const [subscriptions, setSubscriptions] = useState([]);
@@ -49,24 +50,26 @@ export default function AdminSubscriptionsPage() {
     };
   }, [fetchSubscriptions]);
 
+  const [confirmCancelSub, setConfirmCancelSub] = useState(null); // { subId, email }
+
   // Hủy gói subscription
   const handleCancelSubscription = (subId, email) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn hủy gói dịch vụ hoạt động của người dùng ${email}?`)) {
-      return;
-    }
+    setConfirmCancelSub({ subId, email });
+  };
 
+  const handleConfirmCancel = async (reason) => {
+    if (!confirmCancelSub) return;
     setActionLoading(true);
-    api
-      .put(`/admin/subscriptions/${subId}/cancel`)
-      .then(() => {
-        setActionLoading(false);
-        fetchSubscriptions();
-      })
-      .catch((err) => {
-        setActionLoading(false);
-        console.error(err);
-        alert("Hủy gói đăng ký thất bại.");
-      });
+    try {
+      await api.put(`/admin/subscriptions/${confirmCancelSub.subId}/cancel`, { reason });
+      setConfirmCancelSub(null);
+      fetchSubscriptions();
+    } catch (err) {
+      console.error(err);
+      alert("Hủy gói đăng ký thất bại.");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const openGrantModal = () => {
@@ -336,6 +339,19 @@ export default function AdminSubscriptionsPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmCancelSub}
+        title="Hủy gói dịch vụ"
+        message={`Bạn có chắc chắn muốn hủy gói dịch vụ hoạt động của người dùng ${confirmCancelSub?.email}?`}
+        confirmText="Hủy gói"
+        danger
+        requireReason
+        reasonPlaceholder="Nhập lý do hủy gói (ví dụ: Khách yêu cầu hoàn tiền)..."
+        loading={actionLoading}
+        onConfirm={handleConfirmCancel}
+        onCancel={() => setConfirmCancelSub(null)}
+      />
     </div>
   );
 }

@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatedContent, SpotlightCard } from "../components/animated";
-import { ArrowRight } from "../components/icons";
-import { CameraIcon } from "../components/icons";
 import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/Navbar";
 import { Badge, Button, Card, Section, SectionHeading } from "../components/ui";
@@ -12,6 +10,7 @@ import { PROFILE_IMG } from "../lib/figmaAssets";
 import useAuthStore from "../store/useAuthStore";
 import { useScanStore } from "../store/useScanStore";
 import PremiumGateModal from "../components/PremiumGateModal";
+import { PLAN_LABEL } from "../lib/plans";
 
 // Bản đồ dịch dáng mặt sang tiếng Việt (đồng bộ với ResultsPage.jsx)
 const FACE_SHAPE_MAP = {
@@ -33,9 +32,23 @@ const TABS = [
 export default function ProfilePage() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { setSelectedHairstyle } = useScanStore();
-  const [activeTab, setActiveTab] = useState("overview");
+  const { setSelectedHairstyle, hydrateFromHistory } = useScanStore();
+
+  const tabParam = searchParams.get("tab");
+  const activeTab = ["overview", "history", "swaps", "saved"].includes(tabParam)
+    ? tabParam
+    : "overview";
+
+  const setActiveTab = (tab) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", tab);
+      return next;
+    });
+  };
+
   const [gateStyle, setGateStyle] = useState(null);
 
   const userName = user?.fullName || (user?.email ? user.email.split("@")[0] : "Người dùng");
@@ -93,12 +106,7 @@ export default function ProfilePage() {
     enabled: !!latestFaceShape,
   });
 
-  const displayMetrics = [
-    { label: "Dáng mặt gần nhất", value: latestFaceShapeVi },
-    { label: "Tổng lượt quét", value: scanData?.totalScans?.toString() || "0" },
-    { label: "Kiểu tóc đã lưu", value: savedStyles.length.toString() },
-    { label: "Gói hiện tại", value: userRole },
-  ];
+
 
   const handleTryStyle = (style) => {
     const isPaidUser = user?.plan && user.plan !== "FREE";
@@ -149,14 +157,6 @@ export default function ProfilePage() {
               <div className="relative shrink-0">
                 <img src={PROFILE_IMG} alt={userName}
                   className="size-24 rounded-full border-4 border-white object-cover shadow-lg" />
-                <button
-                  type="button"
-                  disabled
-                  title="Tính năng đang phát triển, sắp ra mắt"
-                  className="absolute -bottom-1 -right-1 flex size-7 cursor-not-allowed items-center justify-center rounded-full border border-line bg-white text-mauve/60 shadow"
-                >
-                  <CameraIcon size={14} />
-                </button>
               </div>
               <div className="flex-1 text-center sm:text-left">
                 <div className="flex flex-col items-center gap-2 sm:flex-row">
@@ -174,14 +174,62 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {displayMetrics.map((m) => (
-                <div key={m.label} className="rounded-2xl border border-line bg-white p-4">
-                  <p className="text-xs text-muted">{m.label}</p>
-                  <p className="mt-1 text-lg font-bold text-ink">{m.value}</p>
+            {(() => {
+              const userPlan = user?.plan || "FREE";
+              const planLabel = PLAN_LABEL[userPlan] || "Miễn phí";
+              let planSubtitle = "";
+              let isExpiringSoon = false;
+              if (user?.planEndDate && userPlan !== "FREE") {
+                const end = new Date(user.planEndDate);
+                const now = new Date();
+                const diffDays = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+                const formattedEnd = end.toLocaleDateString("vi-VN", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                });
+                planSubtitle = `đến ${formattedEnd}`;
+                if (diffDays <= 3) {
+                  isExpiringSoon = true;
+                }
+              }
+
+              return (
+                <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div className="rounded-2xl border border-line bg-white p-4">
+                    <p className="text-xs text-muted">Dáng mặt gần nhất</p>
+                    <p className="mt-1 text-lg font-bold text-ink">{latestFaceShapeVi}</p>
+                  </div>
+                  <div className="rounded-2xl border border-line bg-white p-4">
+                    <p className="text-xs text-muted">Tổng lượt quét</p>
+                    <p className="mt-1 text-lg font-bold text-ink">{scanData?.totalScans?.toString() || "0"}</p>
+                  </div>
+                  <div className="rounded-2xl border border-line bg-white p-4">
+                    <p className="text-xs text-muted">Kiểu tóc đã lưu</p>
+                    <p className="mt-1 text-lg font-bold text-ink">{savedStyles.length.toString()}</p>
+                  </div>
+                  <div className="rounded-2xl border border-line bg-white p-4 flex flex-col justify-between">
+                    <div>
+                      <p className="text-xs text-muted">Gói hiện tại</p>
+                      <p className="mt-1 text-lg font-bold text-ink">
+                        {planLabel} {planSubtitle && <span className="text-xs font-normal text-mauve">({planSubtitle})</span>}
+                      </p>
+                    </div>
+                    {isExpiringSoon && (
+                      <div className="mt-2 flex items-center justify-between pt-1 border-t border-divider/10">
+                        <span className="text-[11px] font-bold text-amber-500">Sắp hết hạn</span>
+                        <Link
+                          to={`/checkout?plan=${userPlan}`}
+                          className="text-xs font-bold text-primary hover:underline"
+                        >
+                          Gia hạn →
+                        </Link>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              ))}
-            </div>
+              );
+            })()}
           </div>
         </AnimatedContent>
       </section>
@@ -210,7 +258,7 @@ export default function ProfilePage() {
         <AnimatedContent key="overview">
           <Section className="bg-transparent">
             <SectionHeading center={false} title="Đề xuất cho bạn"
-              action={<Link to="/catalog" className="flex shrink-0 items-center gap-2 font-bold text-primary">Xem tất cả <ArrowRight /></Link>} />
+              action={<Link to="/catalog" className="flex shrink-0 items-center gap-2 font-bold text-primary">Xem tất cả →</Link>} />
 
             {recsLoading ? (
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
@@ -243,7 +291,14 @@ export default function ProfilePage() {
                           <h4 className="font-bold text-ink">{r.name}</h4>
                           <p className="text-sm text-mauve line-clamp-2 mt-1">{r.description}</p>
                           <div className="mt-4 flex gap-2">
-                            <Button onClick={() => handleTryStyle(r)} size="sm" className="w-full text-xs">Thử ngay</Button>
+                            <Button
+                              onClick={() => handleTryStyle(r)}
+                              disabled={r.active === false}
+                              size="sm"
+                              className="w-full text-xs"
+                            >
+                              {r.active === false ? "Ngừng hỗ trợ" : "Thử ngay"}
+                            </Button>
                           </div>
                         </div>
                       </Card>
@@ -272,14 +327,27 @@ export default function ProfilePage() {
               <div className="flex flex-col gap-3">
                 {scans.map((s, idx) => (
                   <AnimatedContent key={s.id} delay={Math.min(idx * 0.05, 0.5)}>
-                    <Card padded={false} className="flex items-center gap-4 overflow-hidden p-3">
-                      <img src={s.imageUrl} alt={`Quét ngày ${formatScanDate(s.createdAt)}`}
-                        className="size-14 shrink-0 rounded-xl object-cover"
-                        onError={(e) => { e.target.src = "https://placehold.co/100x100?text=Scan"; }} />
-                      <div className="flex-1">
-                        <p className="font-bold text-ink">Dáng mặt: {FACE_SHAPE_MAP[s.faceShape] || s.faceShape}</p>
-                        <p className="text-xs text-muted mt-0.5">Chất tóc: {s.hairType || "Chưa xác định"} · {formatScanDate(s.createdAt)}</p>
+                    <Card padded={false} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 overflow-hidden p-3.5">
+                      <div className="flex items-center gap-4">
+                        <img src={s.imageUrl} alt={`Quét ngày ${formatScanDate(s.createdAt)}`}
+                          className="size-14 shrink-0 rounded-xl object-cover"
+                          onError={(e) => { e.target.src = "https://placehold.co/100x100?text=Scan"; }} />
+                        <div>
+                          <p className="font-bold text-ink">Dáng mặt: {FACE_SHAPE_MAP[s.faceShape] || s.faceShape}</p>
+                          <p className="text-xs text-muted mt-0.5">Chất tóc: {s.hairType || "Chưa xác định"} · {formatScanDate(s.createdAt)}</p>
+                        </div>
                       </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          await hydrateFromHistory(s);
+                          navigate("/swap");
+                        }}
+                        className="text-xs shrink-0 self-end sm:self-center"
+                      >
+                        Dùng ảnh này để thử tóc
+                      </Button>
                     </Card>
                   </AnimatedContent>
                 ))}
@@ -380,7 +448,14 @@ export default function ProfilePage() {
                           <p className="text-xs text-muted mt-1">Độ dài: {sv.hairLength} | Dáng mặt: {sv.faceShape}</p>
                           <div className="mt-3 flex gap-2">
                             <Button to={`/results?hairstyleId=${sv.id}`} size="sm" variant="outline" className="flex-1 px-2 py-2 text-xs">Xem chi tiết</Button>
-                            <Button onClick={() => handleTryStyle(sv)} size="sm" className="flex-1 px-2 py-2 text-xs">Thử lại ngay</Button>
+                            <Button
+                              onClick={() => handleTryStyle(sv)}
+                              disabled={sv.active === false}
+                              size="sm"
+                              className="flex-1 px-2 py-2 text-xs"
+                            >
+                              {sv.active === false ? "Ngừng hỗ trợ" : "Thử lại ngay"}
+                            </Button>
                           </div>
                         </div>
                       </Card>

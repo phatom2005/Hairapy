@@ -8,7 +8,7 @@ import Navbar from "../components/layout/Navbar";
 import { Badge, Button, Card } from "../components/ui";
 import api from "../lib/api";
 import useAuthStore from "../store/useAuthStore";
-import { PLANS } from "../lib/plans";
+import { PLANS, PLAN_LABEL, getPlanCta } from "../lib/plans";
 
 export default function CheckoutPage() {
   const [searchParams] = useSearchParams();
@@ -21,7 +21,19 @@ export default function CheckoutPage() {
 
   // Xác định thông tin chi tiết của gói từ PLANS (nguồn sự thật duy nhất)
   const targetPlan = PLANS.find((p) => p.code === plan) || PLANS.find((p) => p.code === "PRO") || PLANS[1];
-  const isDowngradeBlocked = user?.plan === "PREMIUM" && plan === "PRO";
+
+  const userPlan = user?.plan || "FREE";
+  const cta = getPlanCta(plan, userPlan);
+  const isDisabled = cta.disabled;
+  const disabledHint = cta.hint;
+  const isPaidUser = userPlan !== "FREE";
+  const formattedEndDate = user?.planEndDate
+    ? new Date(user.planEndDate).toLocaleDateString("vi-VN", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
+    : "";
 
   const planName = targetPlan.name;
   const planPrice = targetPlan.price;
@@ -125,9 +137,15 @@ export default function CheckoutPage() {
                         </div>
                       </div>
 
-                      {isDowngradeBlocked && (
+                      {isPaidUser && (
+                        <div className="p-3.5 mb-4 rounded-2xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold leading-relaxed">
+                          Bạn đang dùng {PLAN_LABEL[userPlan] || userPlan} {formattedEndDate ? `đến ${formattedEndDate}` : ""}. Gói mới sẽ được cộng dồn vào hạn hiện tại.
+                        </div>
+                      )}
+
+                      {isDisabled && (
                         <div className="p-4 mb-6 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-medium">
-                          Bạn đang dùng Gói Tháng. Không thể hạ xuống Gói Tuần.
+                          {disabledHint || "Gói này hiện không khả dụng cho tài khoản của bạn."}
                         </div>
                       )}
 
@@ -142,7 +160,7 @@ export default function CheckoutPage() {
                       {/* Nút thanh toán */}
                       <Button
                         onClick={handlePayment}
-                        disabled={loading || isDowngradeBlocked}
+                        disabled={loading || isDisabled}
                         variant="pink"
                         className="w-full justify-center py-3.5 mb-4 text-sm font-bold tracking-wide"
                       >
@@ -151,7 +169,7 @@ export default function CheckoutPage() {
                             <span className="size-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                             Đang kết nối...
                           </div>
-                        ) : isDowngradeBlocked ? (
+                        ) : isDisabled ? (
                           "Không khả dụng"
                         ) : (
                           "Thanh toán qua VietQR"

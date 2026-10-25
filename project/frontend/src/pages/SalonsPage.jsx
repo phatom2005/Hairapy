@@ -226,9 +226,6 @@ export default function SalonsPage() {
                             <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Giá từ</p>
                             <p className="font-bold text-magenta">{formatPrice(sl.priceFrom)}</p>
                           </div>
-                          <Button size="sm" disabled title="Tính năng đặt lịch sẽ sớm ra mắt" className="opacity-50 cursor-not-allowed">
-                            Đặt lịch ngay
-                          </Button>
                         </div>
                       </div>
                     </Card>

@@ -41,6 +41,12 @@ class AccountDeletionServiceTest {
     private CloudinaryService cloudinaryService;
     @Mock
     private AiContentReportRepository aiContentReportRepository;
+    @Mock
+    private BookingRequestRepository bookingRequestRepository;
+    @Mock
+    private SalonApplicationRepository salonApplicationRepository;
+    @Mock
+    private SalonRepository salonRepository;
 
     private AccountDeletionService accountDeletionService;
 
@@ -57,7 +63,10 @@ class AccountDeletionServiceTest {
                 feedbackRepository,
                 swapHistoryRepository,
                 cloudinaryService,
-                aiContentReportRepository
+                aiContentReportRepository,
+                bookingRequestRepository,
+                salonApplicationRepository,
+                salonRepository
         );
     }
 
@@ -91,6 +100,9 @@ class AccountDeletionServiceTest {
         verify(usageHistoryRepository).deleteByUserId(42L);
         verify(subscriptionRepository).deleteByUserId(42L);
         verify(feedbackRepository).clearCommentsByUserId(42L);
+        verify(bookingRequestRepository).deleteByUserId(42L);
+        verify(salonApplicationRepository).deleteByUserId(42L);
+        verify(salonRepository).findByOwnerId(42L);
 
         // Verify user anonymized
         assertEquals("deleted-42@deleted.hairapy.invalid", user.getEmail());

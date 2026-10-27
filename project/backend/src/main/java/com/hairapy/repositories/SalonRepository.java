@@ -20,4 +20,8 @@ public interface SalonRepository extends JpaRepository<Salon, Long> {
     List<Salon> findByActiveTrue();
 
     long countByActiveTrueAndPartnerUntilAfter(java.time.LocalDateTime now);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE Salon s SET s.viewCount = s.viewCount + 1 WHERE s.id = :id")
+    void incrementViewCount(@org.springframework.data.repository.query.Param("id") Long id);
 }

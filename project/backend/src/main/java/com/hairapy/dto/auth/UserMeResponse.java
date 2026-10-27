@@ -16,5 +16,6 @@ public record UserMeResponse(
     String plan,               // FREE | PRO | PREMIUM — gói đang thực sự hưởng
     LocalDateTime planEndDate, // null nếu FREE (hoặc Admin/Tester)
     String provider,           // LOCAL | GOOGLE | FACEBOOK
-    boolean hasPassword        // passwordHash != null
+    boolean hasPassword,       // passwordHash != null
+    Long salonId               // null nếu không phải chủ salon
 ) {}

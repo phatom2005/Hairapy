@@ -34,6 +34,7 @@ public class AuthService {
     private final GoogleAuthService googleAuthService;
     private final FacebookAuthService facebookAuthService;
     private final EmailVerificationService emailVerificationService;
+    private final com.hairapy.repositories.SalonRepository salonRepository;
 
     /**
      * Đăng ký tài khoản người dùng mới.
@@ -116,6 +117,9 @@ public class AuthService {
         if (user.getRole() == Role.TESTER) {
             return "TESTER";
         }
+        if (user.getRole() == Role.SALON_OWNER) {
+            return "SALON_OWNER";
+        }
         if (subscriptionService.isPaidUser(user.getId())) {
             return "PREMIUM";
         }
@@ -150,11 +154,16 @@ public class AuthService {
             plan = sub.map(s -> s.getPlan().name()).orElse("FREE");
             planEndDate = sub.map(com.hairapy.models.Subscription::getEndDate).orElse(null);
         }
+        Long salonId = salonRepository.findByOwnerId(user.getId())
+                .map(com.hairapy.models.Salon::getId)
+                .orElse(null);
+
         return new com.hairapy.dto.auth.UserMeResponse(
                 user.getEmail(), effectiveRole, user.getFullName(), user.getPhone(), user.getDateOfBirth(),
                 plan, planEndDate,
                 user.getProvider() == null ? "LOCAL" : user.getProvider().name(),
-                user.getPasswordHash() != null);
+                user.getPasswordHash() != null,
+                salonId);
     }
 
     /**

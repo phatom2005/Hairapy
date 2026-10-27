@@ -25,6 +25,9 @@ public interface SwapHistoryRepository extends JpaRepository<SwapHistory, Long> 
     List<SwapHistory> findByUserId(@Param("userId") Long userId);
 
     List<SwapHistory> findByCreatedAtBefore(LocalDateTime cutoff);
+ 
+    @Query("SELECT CASE WHEN COUNT(s) > 0 THEN true ELSE false END FROM SwapHistory s WHERE s.user.id = :userId AND s.imageUrl = :imageUrl")
+    boolean existsByUserIdAndImageUrl(@Param("userId") Long userId, @Param("imageUrl") String imageUrl);
 
     @Modifying
     @Query("DELETE FROM SwapHistory s WHERE s.user.id = :userId")

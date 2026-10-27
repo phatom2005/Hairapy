@@ -37,6 +37,9 @@ public class AdminDashboardController {
     private final UsageHistoryRepository usageHistoryRepository;
     private final PaymentRepository paymentRepository;
     private final FeedbackRepository feedbackRepository;
+    private final com.hairapy.repositories.SalonRepository salonRepository;
+    private final com.hairapy.repositories.SalonPartnerPaymentRepository salonPartnerPaymentRepository;
+    private final com.hairapy.repositories.BookingRequestRepository bookingRequestRepository;
 
     /**
      * Lấy dữ liệu thống kê tổng quan cho trang chủ quản trị có lọc theo period.
@@ -135,6 +138,18 @@ public class AdminDashboardController {
         }
         List<Long> ratingDistribution = List.of(dist[0], dist[1], dist[2], dist[3], dist[4]);
 
+        // Thống kê Salon đối tác
+        LocalDateTime now = LocalDateTime.now();
+        long activePartnerSalons = salonRepository.countByActiveTrueAndPartnerUntilAfter(now);
+        long salonRevenue = salonPartnerPaymentRepository.sumAmountSince(since);
+        long bookingsInPeriod = bookingRequestRepository.countByCreatedAtBetween(since, now);
+        long completedBookingsInPeriod = bookingRequestRepository.countByStatusAndCreatedAtBetween(
+                com.hairapy.models.BookingStatus.COMPLETED, since, now);
+        long swapsInPeriod = usageHistoryRepository.countByFeatureSince("HAIR_SWAP", since);
+        double tryOnToBookingRate = swapsInPeriod > 0
+                ? Math.round(((double) bookingsInPeriod / swapsInPeriod * 100.0) * 10.0) / 10.0
+                : 0.0;
+
         DashboardStatsResponse stats = new DashboardStatsResponse(
                 totalUsers,
                 totalAdmins,
@@ -157,7 +172,12 @@ public class AdminDashboardController {
                 ratingCount,
                 ratingTotalStars,
                 ratingAverage,
-                ratingDistribution
+                ratingDistribution,
+                activePartnerSalons,
+                salonRevenue,
+                bookingsInPeriod,
+                completedBookingsInPeriod,
+                tryOnToBookingRate
         );
 
         return ResponseEntity.ok(stats);

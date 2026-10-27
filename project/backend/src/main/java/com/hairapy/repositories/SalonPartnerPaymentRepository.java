@@ -17,6 +17,9 @@ public interface SalonPartnerPaymentRepository extends JpaRepository<SalonPartne
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM SalonPartnerPayment p WHERE p.createdAt >= :start AND p.createdAt < :end")
     long sumAmountBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM SalonPartnerPayment p WHERE p.createdAt >= :since")
+    long sumAmountSince(@Param("since") LocalDateTime since);
+
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM SalonPartnerPayment p")
     long sumAllAmount();
 }

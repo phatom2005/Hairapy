@@ -29,5 +29,12 @@ public record DashboardStatsResponse(
     long ratingCount,               // số lượt đánh giá
     long ratingTotalStars,          // TỔNG SỐ SAO (cộng dồn)
     double ratingAverage,           // làm tròn 1 chữ số, 0.0 nếu chưa có đánh giá (KHÔNG NaN)
-    List<Long> ratingDistribution   // đúng 5 phần tử: số lượt 1★..5★, thiếu thì điền 0
+    List<Long> ratingDistribution,  // đúng 5 phần tử: số lượt 1★..5★, thiếu thì điền 0
+
+    // Thống kê mảng Salon đối tác (Phase 4)
+    long activePartnerSalons,        // số salon đang có hạn đối tác active
+    long salonRevenue,              // doanh thu từ salon đối tác trong kỳ (VND, mô phỏng)
+    long bookingsInPeriod,          // số yêu cầu đặt lịch tạo trong kỳ
+    long completedBookingsInPeriod, // số yêu cầu đặt lịch đã hoàn thành trong kỳ
+    double tryOnToBookingRate       // tỉ lệ đặt lịch / lượt thử tóc trong kỳ (%)
 ) {}

@@ -26,6 +26,8 @@ public class AdminSalonController {
 
     private final SalonRepository salonRepository;
     private final CloudinaryService cloudinaryService;
+    private final com.hairapy.repositories.UserRepository userRepository;
+    private final com.hairapy.repositories.SalonPartnerPaymentRepository salonPartnerPaymentRepository;
 
     /**
      * Lấy danh sách salon có phân trang cho admin.
@@ -138,6 +140,122 @@ public class AdminSalonController {
 
         salonRepository.delete(salon);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Ẩn / hiện salon.
+     */
+    @PatchMapping("/{id}/active")
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<AdminSalonResponse> toggleActive(@PathVariable Long id) {
+        Salon salon = salonRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy salon với ID: " + id));
+        salon.setActive(!salon.isActive());
+        salon = salonRepository.save(salon);
+        return ResponseEntity.ok(toAdminResponse(salon));
+    }
+
+    /**
+     * Gán chủ sở hữu cho salon (user trở thành SALON_OWNER, đảm bảo 1 user - 1 salon).
+     */
+    @PutMapping("/{id}/owner")
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<?> assignOwner(
+            @PathVariable Long id,
+            @RequestBody com.hairapy.dto.admin.AssignSalonOwnerRequest request
+    ) {
+        Salon salon = salonRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy salon với ID: " + id));
+        if (request.email() == null || request.email().isBlank()) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", "Email không được để trống."));
+        }
+        com.hairapy.models.User user = userRepository.findByEmail(request.email().trim().toLowerCase())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với email: " + request.email()));
+
+        // Ràng buộc 1 user - 1 salon check ở service/controller
+        java.util.Optional<Salon> existing = salonRepository.findByOwnerId(user.getId());
+        if (existing.isPresent() && !existing.get().getId().equals(id)) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", "Người dùng này đã là chủ của một salon khác."));
+        }
+
+        salon.setOwner(user);
+        salonRepository.save(salon);
+
+        user.setRole(com.hairapy.models.Role.SALON_OWNER);
+        userRepository.save(user);
+
+        return ResponseEntity.ok(toAdminResponse(salon));
+    }
+
+    /**
+     * Ghi nhận thanh toán Gói Đối tác (MÔ PHỎNG — admin ghi nhận tay, cộng dồn partnerUntil).
+     */
+    @PostMapping("/{id}/partner-payments")
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<?> recordPartnerPayment(
+            @PathVariable Long id,
+            @RequestBody com.hairapy.dto.admin.RecordSalonPartnerPaymentRequest request
+    ) {
+        Salon salon = salonRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy salon với ID: " + id));
+
+        if (request.months() == null || request.months() < 1 || request.months() > 12) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", "Số tháng phải từ 1 đến 12."));
+        }
+        if (request.amount() == null || request.amount() < 0) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", "Số tiền không hợp lệ."));
+        }
+
+        String adminEmail = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+
+        com.hairapy.models.SalonPartnerPayment payment = com.hairapy.models.SalonPartnerPayment.builder()
+                .salon(salon)
+                .months(request.months())
+                .amount(request.amount())
+                .note(request.note())
+                .createdBy(adminEmail)
+                .createdAt(java.time.LocalDateTime.now())
+                .build();
+        payment = salonPartnerPaymentRepository.save(payment);
+
+        // Cộng dồn partnerUntil từ max(now, partnerUntil cũ)
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.LocalDateTime base = (salon.getPartnerUntil() != null && salon.getPartnerUntil().isAfter(now))
+                ? salon.getPartnerUntil() : now;
+        salon.setPartnerUntil(base.plusDays((long) request.months() * 30));
+        salonRepository.save(salon);
+
+        com.hairapy.dto.admin.SalonPartnerPaymentResponse response = new com.hairapy.dto.admin.SalonPartnerPaymentResponse(
+                payment.getId(),
+                salon.getId(),
+                payment.getMonths(),
+                payment.getAmount(),
+                payment.getNote(),
+                payment.getCreatedBy(),
+                payment.getCreatedAt()
+        );
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * Lấy lịch sử thanh toán đối tác của salon.
+     */
+    @GetMapping("/{id}/partner-payments")
+    public ResponseEntity<java.util.List<com.hairapy.dto.admin.SalonPartnerPaymentResponse>> getPartnerPayments(@PathVariable Long id) {
+        java.util.List<com.hairapy.models.SalonPartnerPayment> list = salonPartnerPaymentRepository.findBySalonIdOrderByCreatedAtDesc(id);
+        java.util.List<com.hairapy.dto.admin.SalonPartnerPaymentResponse> response = list.stream().map(p ->
+                new com.hairapy.dto.admin.SalonPartnerPaymentResponse(
+                        p.getId(),
+                        p.getSalon().getId(),
+                        p.getMonths(),
+                        p.getAmount(),
+                        p.getNote(),
+                        p.getCreatedBy(),
+                        p.getCreatedAt()
+                )
+        ).toList();
+        return ResponseEntity.ok(response);
     }
 
     public AdminSalonResponse toAdminResponse(Salon s) {

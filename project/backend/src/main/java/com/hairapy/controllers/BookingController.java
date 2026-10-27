@@ -48,6 +48,7 @@ public class BookingController {
      * Gửi yêu cầu đặt lịch tới salon đối tác.
      */
     @PostMapping
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<?> createBooking(@RequestBody CreateBookingRequest request) {
         User currentUser = usageService.getCurrentUser();
         if (currentUser == null) {
@@ -186,6 +187,7 @@ public class BookingController {
      * Lấy danh sách lịch hẹn của tôi.
      */
     @GetMapping("/my")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<Page<MyBookingResponse>> getMyBookings(
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
@@ -202,6 +204,7 @@ public class BookingController {
      * Huỷ yêu cầu đặt lịch (chỉ khi PENDING hoặc CONFIRMED và chưa qua preferredTime).
      */
     @PutMapping("/{id}/cancel")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<?> cancelBooking(@PathVariable Long id) {
         User currentUser = usageService.getCurrentUser();
         if (currentUser == null) {

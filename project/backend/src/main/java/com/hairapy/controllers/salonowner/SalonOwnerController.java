@@ -186,6 +186,7 @@ public class SalonOwnerController {
      * Cập nhật trạng thái booking (xác nhận, từ chối, hoàn thành, không đến).
      */
     @PutMapping("/bookings/{id}/status")
+    @Transactional
     public ResponseEntity<?> updateBookingStatus(
             @PathVariable Long id,
             @RequestBody UpdateBookingStatusRequest request

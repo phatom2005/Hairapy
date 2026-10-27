@@ -40,6 +40,9 @@ public interface BookingRequestRepository extends JpaRepository<BookingRequest, 
 
     long countByStatusAndCreatedAtBetween(BookingStatus status, LocalDateTime start, LocalDateTime end);
 
+    @Query("SELECT b.hairstyleName, COUNT(b) FROM BookingRequest b WHERE b.salon.id = :salonId AND b.hairstyleName IS NOT NULL GROUP BY b.hairstyleName ORDER BY COUNT(b) DESC")
+    List<Object[]> findTopRequestedHairstylesBySalonId(@Param("salonId") Long salonId, Pageable pageable);
+
     @Modifying
     @Query("DELETE FROM BookingRequest b WHERE b.user.id = :userId")
     void deleteByUserId(@Param("userId") Long userId);

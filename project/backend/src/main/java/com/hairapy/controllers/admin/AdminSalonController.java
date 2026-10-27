@@ -1,5 +1,6 @@
 package com.hairapy.controllers.admin;
 
+import com.hairapy.dto.admin.AdminSalonResponse;
 import com.hairapy.exceptions.ResourceNotFoundException;
 import com.hairapy.models.Salon;
 import com.hairapy.repositories.SalonRepository;
@@ -15,8 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Controller quản trị CRUD cho danh sách salon đối tác.
- * Cùng pattern với AdminCatalogController: hỗ trợ upload ảnh trực tiếp lên Cloudinary
- * (không cần paste URL tay), form nhận dạng multipart/form-data.
+ * Trả về DTO AdminSalonResponse thay vì entity để tránh lazy load owner.
  */
 @Slf4j
 @RestController
@@ -28,19 +28,18 @@ public class AdminSalonController {
     private final CloudinaryService cloudinaryService;
 
     /**
-     * Lấy danh sách salon có phân trang (khác /api/salons — endpoint đó không phân trang,
-     * chỉ trả toàn bộ list cho trang công khai vì dataset nhỏ).
+     * Lấy danh sách salon có phân trang cho admin.
      */
     @GetMapping
-    public ResponseEntity<Page<Salon>> getSalons(Pageable pageable) {
-        return ResponseEntity.ok(salonRepository.findAll(pageable));
+    public ResponseEntity<Page<AdminSalonResponse>> getSalons(Pageable pageable) {
+        return ResponseEntity.ok(salonRepository.findAll(pageable).map(this::toAdminResponse));
     }
 
     /**
      * Thêm mới salon — nhận multipart form (ảnh file + metadata).
      */
     @PostMapping(consumes = "multipart/form-data")
-    public ResponseEntity<Salon> createSalon(
+    public ResponseEntity<AdminSalonResponse> createSalon(
             @RequestParam("name") String name,
             @RequestParam("address") String address,
             @RequestParam("district") String district,
@@ -76,17 +75,19 @@ public class AdminSalonController {
                 .phone(phone)
                 .latitude(latitude)
                 .longitude(longitude)
+                .active(true)
+                .viewCount(0L)
                 .build();
 
         Salon saved = salonRepository.save(salon);
-        return new ResponseEntity<>(saved, HttpStatus.CREATED);
+        return new ResponseEntity<>(toAdminResponse(saved), HttpStatus.CREATED);
     }
 
     /**
      * Cập nhật salon — nhận multipart form (ảnh mới tùy chọn, giữ ảnh cũ nếu không gửi).
      */
     @PutMapping(value = "/{id}", consumes = "multipart/form-data")
-    public ResponseEntity<Salon> updateSalon(
+    public ResponseEntity<AdminSalonResponse> updateSalon(
             @PathVariable Long id,
             @RequestParam(value = "name", required = false) String name,
             @RequestParam(value = "address", required = false) String address,
@@ -124,7 +125,7 @@ public class AdminSalonController {
         }
 
         Salon updated = salonRepository.save(salon);
-        return ResponseEntity.ok(updated);
+        return ResponseEntity.ok(toAdminResponse(updated));
     }
 
     /**
@@ -137,5 +138,31 @@ public class AdminSalonController {
 
         salonRepository.delete(salon);
         return ResponseEntity.noContent().build();
+    }
+
+    public AdminSalonResponse toAdminResponse(Salon s) {
+        String ownerEmail = s.getOwner() != null ? s.getOwner().getEmail() : null;
+        return new AdminSalonResponse(
+                s.getId(),
+                s.getName(),
+                s.getAddress(),
+                s.getDistrict(),
+                s.getServiceTypes(),
+                s.getPriceFrom(),
+                s.getRating(),
+                s.isVerified(),
+                s.getImageUrl(),
+                s.getPhone(),
+                s.getLatitude(),
+                s.getLongitude(),
+                s.getDescription(),
+                s.isPartnerActive(),
+                null,
+                null,
+                ownerEmail,
+                s.getPartnerUntil(),
+                s.isActive(),
+                s.getViewCount()
+        );
     }
 }

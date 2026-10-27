@@ -12,4 +12,12 @@ public interface SalonRepository extends JpaRepository<Salon, Long> {
     // Sap xep mac dinh: salon verified len truoc, roi theo rating giam dan
     // (loc theo district/serviceType/gia/search lam o Controller vi dataset nho, giong pattern HairstyleCatalogController)
     List<Salon> findAllByOrderByVerifiedDescRatingDesc();
+
+    java.util.Optional<Salon> findByOwnerId(Long ownerId);
+
+    boolean existsByOwnerId(Long ownerId);
+
+    List<Salon> findByActiveTrue();
+
+    long countByActiveTrueAndPartnerUntilAfter(java.time.LocalDateTime now);
 }

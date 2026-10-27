@@ -1,5 +1,6 @@
 package com.hairapy.controllers;
 
+import com.hairapy.dto.salon.SalonPublicResponse;
 import com.hairapy.models.Salon;
 import com.hairapy.repositories.SalonRepository;
 import lombok.RequiredArgsConstructor;
@@ -12,8 +13,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * Controller cung cấp danh sách salon đối tác cho SalonsPage.
- * Không yêu cầu đăng nhập — salon là dữ liệu công khai (khác HairstyleCatalog).
+ * Controller cung cấp danh sách salon đối tác cho SalonsPage và mobile app.
+ * Không yêu cầu đăng nhập — salon là dữ liệu công khai.
+ * Trả về DTO SalonPublicResponse thay vì entity để tránh lazy load owner.
  */
 @RestController
 @RequestMapping("/api/salons")
@@ -24,16 +26,10 @@ public class SalonController {
 
     /**
      * Lấy danh sách salon với bộ lọc tùy chọn.
-     *
-     * @param district    lọc theo quận/huyện (tùy chọn, khớp chính xác không phân biệt hoa thường).
-     * @param serviceType lọc theo loại dịch vụ (tùy chọn, salon có chứa dịch vụ này trong danh sách).
-     * @param minPrice    giá khởi điểm tối thiểu (tùy chọn).
-     * @param maxPrice    giá khởi điểm tối đa (tùy chọn).
-     * @param search      tìm theo tên salon (tùy chọn).
-     * @return danh sách salon phù hợp, verified lên trước, rating giảm dần.
+     * Response là List<SalonPublicResponse> (mảng JSON) giữ tương thích mobile app.
      */
     @GetMapping
-    public ResponseEntity<List<Salon>> getSalons(
+    public ResponseEntity<List<SalonPublicResponse>> getSalons(
             @RequestParam(required = false) String district,
             @RequestParam(required = false) String serviceType,
             @RequestParam(required = false) Integer minPrice,
@@ -42,7 +38,8 @@ public class SalonController {
     ) {
         List<Salon> all = salonRepository.findAllByOrderByVerifiedDescRatingDesc();
 
-        List<Salon> result = all.stream()
+        List<SalonPublicResponse> result = all.stream()
+                .filter(s -> s.isActive())
                 .filter(s -> district == null || district.isBlank()
                         || district.trim().equalsIgnoreCase(s.getDistrict()))
                 .filter(s -> {
@@ -58,8 +55,30 @@ public class SalonController {
                 .filter(s -> maxPrice == null || s.getPriceFrom() <= maxPrice)
                 .filter(s -> search == null || search.isBlank()
                         || s.getName().toLowerCase().contains(search.toLowerCase()))
+                .map(s -> toPublicResponse(s, null, null))
                 .toList();
 
         return ResponseEntity.ok(result);
+    }
+
+    public static SalonPublicResponse toPublicResponse(Salon s, Integer stylePrice, Double distanceKm) {
+        return new SalonPublicResponse(
+                s.getId(),
+                s.getName(),
+                s.getAddress(),
+                s.getDistrict(),
+                s.getServiceTypes(),
+                s.getPriceFrom(),
+                s.getRating(),
+                s.isVerified(),
+                s.getImageUrl(),
+                s.getPhone(),
+                s.getLatitude(),
+                s.getLongitude(),
+                s.getDescription(),
+                s.isPartnerActive(),
+                stylePrice,
+                distanceKm
+        );
     }
 }

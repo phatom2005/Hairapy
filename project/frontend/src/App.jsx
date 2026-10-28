@@ -40,6 +40,8 @@ const AdminDashboardPage = lazy(() => import("./pages/admin/AdminDashboardPage")
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminCatalogPage from "./pages/admin/AdminCatalogPage";
 import AdminSalonsPage from "./pages/admin/AdminSalonsPage";
+import AdminSalonApplicationsPage from "./pages/admin/AdminSalonApplicationsPage";
+import AdminBookingsPage from "./pages/admin/AdminBookingsPage";
 import AdminSubscriptionsPage from "./pages/admin/AdminSubscriptionsPage";
 import AdminPaymentsPage from "./pages/admin/AdminPaymentsPage";
 import AdminFeedbackPage from "./pages/admin/AdminFeedbackPage";
@@ -178,6 +180,8 @@ export default function App() {
             <Route path="/admin/feedback" element={<AdminFeedbackPage />} />
             <Route path="/admin/ai-reports" element={<AdminAiReportsPage />} />
             <Route path="/admin/salons" element={<AdminSalonsPage />} />
+            <Route path="/admin/salon-applications" element={<AdminSalonApplicationsPage />} />
+            <Route path="/admin/bookings" element={<AdminBookingsPage />} />
             <Route path="/admin/usage" element={<AdminUsagePage />} />
             <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
             <Route path="/admin/ga" element={<AdminGaPage />} />

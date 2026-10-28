@@ -29,6 +29,12 @@ import PaymentSuccessPage from "./pages/PaymentSuccessPage";
 import PaymentCancelPage from "./pages/PaymentCancelPage";
 import AdminRoute from "./components/auth/AdminRoute";
 import AdminLayout from "./components/admin/AdminLayout";
+import SalonOwnerRoute from "./components/auth/SalonOwnerRoute";
+import SalonPortalLayout from "./components/salon/SalonPortalLayout";
+import SalonOverviewPage from "./pages/salon/SalonOverviewPage";
+import SalonBookingsPage from "./pages/salon/SalonBookingsPage";
+import SalonHairstylesPage from "./pages/salon/SalonHairstylesPage";
+import SalonProfilePage from "./pages/salon/SalonProfilePage";
 // Lazy-load dashboard để tách bundle recharts khỏi trang chính
 const AdminDashboardPage = lazy(() => import("./pages/admin/AdminDashboardPage"));
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
@@ -149,6 +155,16 @@ export default function App() {
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/payment/success" element={<PaymentSuccessPage />} />
           <Route path="/payment/cancel" element={<PaymentCancelPage />} />
+        </Route>
+
+        {/* Salon Owner Portal Routes (yêu cầu đăng nhập + role SALON_OWNER) */}
+        <Route element={<SalonOwnerRoute />}>
+          <Route element={<SalonPortalLayout />}>
+            <Route path="/salon-portal" element={<SalonOverviewPage />} />
+            <Route path="/salon-portal/bookings" element={<SalonBookingsPage />} />
+            <Route path="/salon-portal/hairstyles" element={<SalonHairstylesPage />} />
+            <Route path="/salon-portal/profile" element={<SalonProfilePage />} />
+          </Route>
         </Route>
 
         {/* Admin Routes (yêu cầu đăng nhập + role ADMIN) */}

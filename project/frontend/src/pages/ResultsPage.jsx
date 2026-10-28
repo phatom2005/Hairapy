@@ -14,6 +14,7 @@ import useAuthStore from "../store/useAuthStore";
 import FeedbackWidget from "../components/FeedbackWidget";
 import PremiumGateModal from "../components/PremiumGateModal";
 import AiStylistPanel from "../components/AiStylistPanel";
+import SalonMatchSheet from "../components/SalonMatchSheet";
 import { COLOR_BY_VALUE, swatchBg } from "../lib/hairColors";
 
 // Bản đồ dịch dáng mặt sang tiếng Việt
@@ -63,7 +64,7 @@ const REASONS_MAP = {
   ]
 };
 
-function HairstyleRecCard({ group, idx, savedIds, handleToggleSave, handleTryStyle }) {
+function HairstyleRecCard({ group, idx, savedIds, handleToggleSave, handleTryStyle, onFindSalon }) {
   const [selectedVariant, setSelectedVariant] = useState(group.base);
   const r = selectedVariant || group.base;
 
@@ -145,7 +146,7 @@ function HairstyleRecCard({ group, idx, savedIds, handleToggleSave, handleTrySty
             </div>
           )}
 
-          <div className="p-4 space-y-1">
+          <div className="p-4 space-y-2">
             <div className="flex items-center justify-between">
               <h4 className="font-bold text-ink truncate mr-2" title={r.name}>
                 {r.name}
@@ -154,7 +155,17 @@ function HairstyleRecCard({ group, idx, savedIds, handleToggleSave, handleTrySty
                 Thử ngay
               </Button>
             </div>
-            <p className="text-xs font-semibold text-muted">Phù hợp: {r.gender || "Unisex"}</p>
+            <div className="flex items-center justify-between text-xs pt-1 border-t border-divider/20">
+              <span className="font-semibold text-muted">Phù hợp: {r.gender || "Unisex"}</span>
+              <button
+                type="button"
+                onClick={() => onFindSalon?.(r)}
+                className="text-pink hover:text-pink-hover font-bold inline-flex items-center gap-1 transition cursor-pointer"
+              >
+                <span>Salon làm kiểu này</span>
+                <span>→</span>
+              </button>
+            </div>
           </div>
         </Card>
       </SpotlightCard>
@@ -184,6 +195,14 @@ export default function ResultsPage() {
   const [showShapePicker, setShowShapePicker] = useState(false);
   const [showBiometrics, setShowBiometrics] = useState(false);
   const [gateStyle, setGateStyle] = useState(null);
+  const [matchingStyle, setMatchingStyle] = useState(null);
+  const [showMatchSheet, setShowMatchSheet] = useState(false);
+
+  const handleFindSalon = (style) => {
+    trackEvent("salon_match_open", { hairstyle_id: style?.id, source: "results_page" });
+    setMatchingStyle(style);
+    setShowMatchSheet(true);
+  };
 
   const notSaved = location.state?.notSaved;
 
@@ -551,6 +570,7 @@ export default function ResultsPage() {
                     savedIds={savedIds}
                     handleToggleSave={handleToggleSave}
                     handleTryStyle={handleTryStyle}
+                    onFindSalon={handleFindSalon}
                   />
                 ))}
 
@@ -624,6 +644,16 @@ export default function ResultsPage() {
         isOpen={!!gateStyle}
         onClose={() => setGateStyle(null)}
         style={gateStyle}
+      />
+
+      <SalonMatchSheet
+        isOpen={showMatchSheet}
+        onClose={() => {
+          setShowMatchSheet(false);
+          setMatchingStyle(null);
+        }}
+        hairstyle={matchingStyle}
+        tryOnImageUrl={null}
       />
     </div>
   );

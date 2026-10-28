@@ -19,6 +19,8 @@ import PricingPage from "./pages/PricingPage";
 import SettingsPage from "./pages/SettingsPage";
 import ProfilePage from "./pages/ProfilePage";
 import SalonsPage from "./pages/SalonsPage";
+import SalonDetailPage from "./pages/SalonDetailPage";
+import ForSalonsPage from "./pages/ForSalonsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import TermsPage from "./pages/TermsPage";
 import DeleteAccountPage from "./pages/DeleteAccountPage";
@@ -132,6 +134,8 @@ export default function App() {
         <Route path="/catalog" element={<CatalogPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/salons" element={<SalonsPage />} />
+        <Route path="/salons/:id" element={<SalonDetailPage />} />
+        <Route path="/for-salons" element={<ForSalonsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/delete-account" element={<DeleteAccountPage />} />

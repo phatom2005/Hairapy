@@ -17,6 +17,7 @@ export default function HairstyleDetailModal({
   isSaved = false,
   onToggleSave = () => {},
   onTryStyle = () => {},
+  onFindSalon = null,
 }) {
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -196,6 +197,16 @@ export default function HairstyleDetailModal({
             >
               Thử kiểu này ngay
             </Button>
+            {onFindSalon && (
+              <Button
+                type="button"
+                onClick={() => onFindSalon(currentStyle)}
+                variant="outline"
+                className="w-full justify-center py-2.5 text-xs font-semibold text-pink border-pink/40 hover:bg-pink/10"
+              >
+                Cắt kiểu này ở đâu? — Tìm Salon đối tác →
+              </Button>
+            )}
             <Button
               type="button"
               onClick={onClose}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -6,6 +7,7 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
+import { MapPin, Navigation, Sparkles, Phone, Calendar, Star } from "lucide-react";
 
 // Khắc phục lỗi bundler Vite không tải được default marker icons của Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -18,10 +20,10 @@ L.Icon.Default.mergeOptions({
 import { Button, Card, Badge, Input } from "../components/ui";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
-import { StarIcon } from "../components/icons";
 import { AnimatedContent, SpotlightCard } from "../components/animated";
 import api from "../lib/api";
 import { trackEvent } from "../lib/analytics";
+import BookingForm from "../components/BookingForm";
 
 const DISTRICT_OPTS = ["Quận 1", "Quận 3", "Quận 7", "Bình Thạnh", "Gò Vấp", "Phú Nhuận"];
 const SERVICE_OPTS = ["Cắt tóc", "Nhuộm tóc", "Uốn/Duỗi tóc", "Phục hồi tóc", "Combo trọn gói"];
@@ -32,10 +34,9 @@ const PRICE_OPTS = [
   { label: "Trên 400k", min: 400000, max: null },
 ];
 
-// ─── Data hook ──────────────────────────────────────────────────────────────
-function useSalons({ district, serviceType, priceRange, search }) {
+function useSalons({ district, serviceType, priceRange, search, partnerOnly, hairstyleId, coords }) {
   return useQuery({
-    queryKey: ["salons", district, serviceType, priceRange, search],
+    queryKey: ["salons", district, serviceType, priceRange, search, partnerOnly, hairstyleId, coords],
     queryFn: async () => {
       const params = {};
       if (district) params.district = district;
@@ -46,6 +47,13 @@ function useSalons({ district, serviceType, priceRange, search }) {
         if (opt?.max != null) params.maxPrice = opt.max;
       }
       if (search) params.search = search;
+      if (partnerOnly) params.partnerOnly = true;
+      if (hairstyleId) params.hairstyleId = hairstyleId;
+      if (coords?.lat && coords?.lng) {
+        params.lat = coords.lat;
+        params.lng = coords.lng;
+      }
+
       const { data } = await api.get("/salons", { params });
       return data;
     },
@@ -54,7 +62,8 @@ function useSalons({ district, serviceType, priceRange, search }) {
 }
 
 function formatPrice(v) {
-  return `${v.toLocaleString("vi-VN")}đ`;
+  if (v == null) return "Liên hệ";
+  return `${Number(v).toLocaleString("vi-VN")}đ`;
 }
 
 function SkeletonCard() {
@@ -76,20 +85,28 @@ export default function SalonsPage() {
   const [district, setDistrict] = useState("");
   const [serviceType, setServiceType] = useState("");
   const [priceRange, setPriceRange] = useState("");
+  const [partnerOnly, setPartnerOnly] = useState(false);
+  const [selectedHairstyleId, setSelectedHairstyleId] = useState("");
+  const [coords, setCoords] = useState(null);
+  const [locating, setLocating] = useState(false);
+  const [locError, setLocError] = useState(null);
 
-  // Debounce tìm kiếm theo tên, giống pattern AdminUsersPage
+  const [bookingSalon, setBookingSalon] = useState(null);
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+
+  // Debounce tìm kiếm theo tên
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedQ(q), 300);
     return () => clearTimeout(handler);
   }, [q]);
 
-  // Fix loi Leaflet tinh sai kich thuoc container luc khoi tao. Map nam
-  // trong div "sticky ... hidden lg:block" -- luc L.map() duoc goi, container
-  // co the dang display:none hoac chua co kich thuoc that, khien Leaflet
-  // tinh sai luoi tile (chi ve 1 vung nho, mau xam) trong khi marker van duoc
-  // dat theo toa do that -- gay lech giua vung co tile va vi tri marker.
-  // Goi invalidateSize() sau khi container co kich thuoc that (mount + moi
-  // lan resize) de Leaflet tinh lai dung.
+  // Load danh sách kiểu tóc cho dropdown filter
+  const { data: hairstyles = [] } = useQuery({
+    queryKey: ["hairstyles-dropdown"],
+    queryFn: async () => (await api.get("/hairstyles")).data,
+    staleTime: 300_000,
+  });
+
   const mapRef = useRef(null);
   const mapWrapperRef = useRef(null);
 
@@ -98,13 +115,7 @@ export default function SalonsPage() {
     if (!wrapper) return;
 
     const fixMapSize = () => mapRef.current?.invalidateSize();
-
-    // Goi ngay sau frame dau (truong hop container da co kich thuoc dung
-    // luc mount, van vo hai khi goi du thua).
     const raf = requestAnimationFrame(fixMapSize);
-
-    // Theo doi container -- bat duoc ca truong hop breakpoint lg thay doi
-    // (hidden -> block) lan khi nguoi dung resize/xoay man hinh.
     const observer = new ResizeObserver(fixMapSize);
     observer.observe(wrapper);
 
@@ -119,11 +130,13 @@ export default function SalonsPage() {
     serviceType: serviceType || null,
     priceRange: priceRange || null,
     search: debouncedQ || null,
+    partnerOnly,
+    hairstyleId: selectedHairstyleId || null,
+    coords,
   });
 
-  const hasFilters = !!(district || serviceType || priceRange || debouncedQ);
+  const hasFilters = !!(district || serviceType || priceRange || debouncedQ || partnerOnly || selectedHairstyleId || coords);
 
-  // GA4: bộ lọc / từ khoá tìm salon (debouncedQ đã chờ 300ms)
   useEffect(() => {
     if (!hasFilters) return;
     trackEvent("filter_salons", {
@@ -131,14 +144,49 @@ export default function SalonsPage() {
       service_type: serviceType || "all",
       price_range: priceRange || "all",
       search_term: debouncedQ ? debouncedQ.toLowerCase().slice(0, 60) : "",
+      partner_only: partnerOnly,
+      hairstyle_id: selectedHairstyleId || "all",
     });
-  }, [district, serviceType, priceRange, debouncedQ, hasFilters]);
+  }, [district, serviceType, priceRange, debouncedQ, partnerOnly, selectedHairstyleId, hasFilters]);
+
   const clearFilters = () => {
     setQ("");
     setDistrict("");
     setServiceType("");
     setPriceRange("");
+    setPartnerOnly(false);
+    setSelectedHairstyleId("");
+    setCoords(null);
+    setLocError(null);
   };
+
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      setLocError("Trình duyệt không hỗ trợ định vị vị trí.");
+      return;
+    }
+    setLocating(true);
+    setLocError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLocating(false);
+      },
+      (err) => {
+        setLocating(false);
+        setLocError("Không thể lấy vị trí (" + (err.message || "Bị từ chối") + ")");
+      },
+      { timeout: 10000 }
+    );
+  };
+
+  const handleOpenBooking = (sl, e) => {
+    if (e) e.stopPropagation();
+    setBookingSalon(sl);
+    setIsBookingOpen(true);
+  };
+
+  const selectedHairstyleObj = hairstyles.find((h) => String(h.id) === String(selectedHairstyleId));
 
   return (
     <div className="min-h-screen">
@@ -146,39 +194,101 @@ export default function SalonsPage() {
 
       {/* Thanh tìm kiếm + filter */}
       <section className="border-b border-divider/20 bg-white px-6 py-6 sm:px-16">
-        <div className="mx-auto flex max-w-[1200px] flex-col gap-3 lg:flex-row lg:items-center">
-          <div className="flex-1">
-            <Input placeholder="Tìm kiếm salon theo tên..." value={q} onChange={(e) => setQ(e.target.value)} />
+        <div className="mx-auto flex max-w-[1200px] flex-col gap-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="flex-1">
+              <Input placeholder="Tìm kiếm salon theo tên..." value={q} onChange={(e) => setQ(e.target.value)} />
+            </div>
+            <div className="flex flex-wrap gap-2 items-center">
+              <select
+                value={district}
+                onChange={(e) => setDistrict(e.target.value)}
+                className="rounded-full border border-line bg-white px-4 py-2.5 text-sm font-semibold text-mauve outline-none"
+              >
+                <option value="">Quận / Huyện</option>
+                {DISTRICT_OPTS.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+              <select
+                value={serviceType}
+                onChange={(e) => setServiceType(e.target.value)}
+                className="rounded-full border border-line bg-white px-4 py-2.5 text-sm font-semibold text-mauve outline-none"
+              >
+                <option value="">Loại dịch vụ</option>
+                {SERVICE_OPTS.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <select
+                value={priceRange}
+                onChange={(e) => setPriceRange(e.target.value)}
+                className="rounded-full border border-line bg-white px-4 py-2.5 text-sm font-semibold text-mauve outline-none"
+              >
+                <option value="">Khoảng giá</option>
+                {PRICE_OPTS.map((p) => <option key={p.label} value={p.label}>{p.label}</option>)}
+              </select>
+              <select
+                value={selectedHairstyleId}
+                onChange={(e) => setSelectedHairstyleId(e.target.value)}
+                className="rounded-full border border-line bg-white px-4 py-2.5 text-sm font-semibold text-mauve outline-none max-w-[200px] truncate"
+              >
+                <option value="">Kiểu tóc cần làm</option>
+                {hairstyles.map((h) => (
+                  <option key={h.id} value={h.id}>
+                    {h.name} ({h.gender || "Unisex"})
+                  </option>
+                ))}
+              </select>
+              {hasFilters && (
+                <Button size="sm" variant="ghost" onClick={clearFilters}>Xoá lọc</Button>
+              )}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <select
-              value={district}
-              onChange={(e) => setDistrict(e.target.value)}
-              className="rounded-full border border-line bg-white px-4 py-2.5 text-sm font-semibold text-mauve outline-none"
-            >
-              <option value="">Quận / Huyện</option>
-              {DISTRICT_OPTS.map((d) => <option key={d} value={d}>{d}</option>)}
-            </select>
-            <select
-              value={serviceType}
-              onChange={(e) => setServiceType(e.target.value)}
-              className="rounded-full border border-line bg-white px-4 py-2.5 text-sm font-semibold text-mauve outline-none"
-            >
-              <option value="">Loại dịch vụ</option>
-              {SERVICE_OPTS.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <select
-              value={priceRange}
-              onChange={(e) => setPriceRange(e.target.value)}
-              className="rounded-full border border-line bg-white px-4 py-2.5 text-sm font-semibold text-mauve outline-none"
-            >
-              <option value="">Khoảng giá</option>
-              {PRICE_OPTS.map((p) => <option key={p.label} value={p.label}>{p.label}</option>)}
-            </select>
-            {hasFilters && (
-              <Button size="sm" variant="ghost" onClick={clearFilters}>Xoá lọc</Button>
-            )}
+
+          {/* Hàng bộ lọc nâng cao: Đối tác + Vị trí */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-divider/10 text-xs">
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer select-none font-semibold text-ink">
+                <input
+                  type="checkbox"
+                  checked={partnerOnly}
+                  onChange={(e) => setPartnerOnly(e.target.checked)}
+                  className="rounded border-line text-pink focus:ring-pink"
+                />
+                <span className="flex items-center gap-1 text-pink">
+                  <Sparkles className="w-3.5 h-3.5" /> Chỉ salon nhận đặt lịch online (Đối tác)
+                </span>
+              </label>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleGetLocation}
+                disabled={locating}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition-colors cursor-pointer ${
+                  coords
+                    ? "bg-pink/10 border-pink/30 text-pink"
+                    : "bg-white border-line text-mauve hover:text-ink"
+                }`}
+              >
+                <Navigation className={`w-3.5 h-3.5 text-pink ${locating ? "animate-spin" : ""}`} />
+                <span>{coords ? "Đã định vị gần bạn" : "Gần tôi nhất"}</span>
+              </button>
+              {coords && (
+                <button
+                  type="button"
+                  onClick={() => setCoords(null)}
+                  className="text-muted hover:text-ink text-xs underline"
+                >
+                  Bỏ vị trí
+                </button>
+              )}
+            </div>
           </div>
+
+          {locError && (
+            <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-200">
+              {locError}
+            </p>
+          )}
         </div>
       </section>
 
@@ -190,6 +300,9 @@ export default function SalonsPage() {
             <h1 className="font-display text-2xl font-bold text-ink">
               {isLoading ? "Đang tải..." : `${list.length} Salon`}
             </h1>
+            <Link to="/for-salons" className="text-xs font-bold text-pink hover:underline flex items-center gap-1">
+              Bạn là chủ salon? Trở thành đối tác Hairapy →
+            </Link>
           </div>
 
           {isError && (
@@ -211,20 +324,95 @@ export default function SalonsPage() {
                 <AnimatedContent key={sl.id} delay={idx * 0.08}>
                   <SpotlightCard className="rounded-2xl">
                     <Card padded={false} className="flex flex-col overflow-hidden sm:flex-row">
-                      <img src={sl.imageUrl} alt={sl.name} className="h-44 w-full object-cover sm:w-44" />
+                      <Link to={`/salons/${sl.id}`} className="shrink-0 relative group">
+                        <img
+                          src={sl.imageUrl || "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=300"}
+                          alt={sl.name}
+                          className="h-44 w-full object-cover sm:w-48 group-hover:scale-105 transition-transform duration-300"
+                        />
+                      </Link>
                       <div className="flex flex-1 flex-col gap-2 p-5">
-                        {sl.verified && <Badge variant="premium" className="w-fit">HAIRAPY KIỂM ĐỊNH</Badge>}
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-bold text-ink">{sl.name}</h3>
-                          <span className="flex items-center gap-1 text-sm font-bold text-ink">
-                            <StarIcon size={16} className="text-lime" /> {sl.rating}
-                          </span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {sl.partner && (
+                            <Badge variant="new" className="bg-pink text-white border-pink text-[10px] font-bold">
+                              SALON ĐỐI TÁC
+                            </Badge>
+                          )}
+                          {sl.verified && (
+                            <Badge variant="premium" className="text-[10px]">
+                              HAIRAPY KIỂM ĐỊNH
+                            </Badge>
+                          )}
+                          {sl.distanceKm != null && (
+                            <span className="text-[11px] font-semibold text-muted bg-canvas px-2 py-0.5 rounded-full border border-line">
+                              ~{sl.distanceKm} km
+                            </span>
+                          )}
                         </div>
-                        <p className="text-sm text-mauve">{sl.address}</p>
-                        <div className="mt-auto flex items-center justify-between pt-2">
+
+                        <div className="flex items-center justify-between">
+                          <Link to={`/salons/${sl.id}`} className="hover:text-primary transition-colors">
+                            <h3 className="text-lg font-bold text-ink">{sl.name}</h3>
+                          </Link>
+                          {sl.rating > 0 && (
+                            <span className="flex items-center gap-1 text-sm font-bold text-ink">
+                              <Star className="w-4 h-4 text-lime fill-lime" /> {sl.rating}
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="text-xs text-mauve flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5 shrink-0 text-muted" /> {sl.address}
+                        </p>
+
+                        {sl.description && (
+                          <p className="text-xs text-muted line-clamp-2 mt-0.5">{sl.description}</p>
+                        )}
+
+                        <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-divider/10">
                           <div>
-                            <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Giá từ</p>
-                            <p className="font-bold text-magenta">{formatPrice(sl.priceFrom)}</p>
+                            {sl.stylePrice != null ? (
+                              <>
+                                <p className="text-[10px] font-bold uppercase tracking-wide text-pink">
+                                  Giá kiểu đã chọn
+                                </p>
+                                <p className="font-bold text-magenta text-base">{formatPrice(sl.stylePrice)}</p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-[10px] font-bold uppercase tracking-wide text-muted">Giá từ</p>
+                                <p className="font-bold text-magenta">{formatPrice(sl.priceFrom)}</p>
+                              </>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <Link
+                              to={`/salons/${sl.id}`}
+                              className="px-3 py-1.5 rounded-xl border border-line bg-canvas text-xs font-semibold text-ink hover:border-pink transition-colors"
+                            >
+                              Chi tiết
+                            </Link>
+
+                            {sl.partner ? (
+                              <button
+                                type="button"
+                                onClick={(e) => handleOpenBooking(sl, e)}
+                                className="px-4 py-1.5 rounded-xl bg-pink hover:bg-pink-hover text-white text-xs font-bold transition-colors shadow-sm flex items-center gap-1 cursor-pointer"
+                              >
+                                <Calendar className="w-3.5 h-3.5" />
+                                <span>Đặt lịch</span>
+                              </button>
+                            ) : (
+                              sl.phone && (
+                                <a
+                                  href={`tel:${sl.phone}`}
+                                  className="px-3.5 py-1.5 rounded-xl bg-canvas border border-line hover:border-primary text-xs font-semibold text-ink flex items-center gap-1 transition-colors"
+                                >
+                                  <Phone className="w-3 h-3" /> Gọi điện
+                                </a>
+                              )
+                            )}
                           </div>
                         </div>
                       </div>
@@ -232,12 +420,12 @@ export default function SalonsPage() {
                   </SpotlightCard>
                 </AnimatedContent>
               ))}
-              {list.length === 0 && <p className="py-10 text-center text-mauve">Không tìm thấy salon.</p>}
+              {list.length === 0 && <p className="py-10 text-center text-mauve">Không tìm thấy salon phù hợp với bộ lọc.</p>}
             </div>
           )}
         </div>
 
-        {/* Bản đồ Leaflet thật */}
+        {/* Bản đồ Leaflet */}
         <div ref={mapWrapperRef} className="sticky top-24 hidden h-[600px] w-full overflow-hidden rounded-3xl border border-line shadow-lg lg:block">
           <MapContainer
             ref={mapRef}
@@ -259,10 +447,18 @@ export default function SalonsPage() {
                   eventHandlers={{ click: () => trackEvent("view_salon", { salon_id: sl.id, salon_name: sl.name }) }}
                 >
                   <Popup>
-                    <div className="p-1">
+                    <div className="p-1 space-y-1">
                       <p className="text-sm font-bold text-ink">{sl.name}</p>
-                      <p className="mt-1 text-xs text-mauve">{sl.address}</p>
-                      <p className="mt-1 text-xs font-semibold text-primary">{formatPrice(sl.priceFrom)}</p>
+                      {sl.partner && (
+                        <span className="text-[10px] font-bold text-pink bg-pink/10 px-1.5 py-0.5 rounded">
+                          Đối tác Hairapy
+                        </span>
+                      )}
+                      <p className="text-xs text-mauve">{sl.address}</p>
+                      <p className="text-xs font-semibold text-primary">{formatPrice(sl.stylePrice || sl.priceFrom)}</p>
+                      <Link to={`/salons/${sl.id}`} className="text-[11px] font-bold text-pink hover:underline block pt-1">
+                        Xem chi tiết salon →
+                      </Link>
                     </div>
                   </Popup>
                 </Marker>
@@ -270,6 +466,17 @@ export default function SalonsPage() {
           </MapContainer>
         </div>
       </div>
+
+      {/* Booking Form Modal */}
+      {isBookingOpen && (
+        <BookingForm
+          isOpen={isBookingOpen}
+          onClose={() => setIsBookingOpen(false)}
+          salon={bookingSalon}
+          hairstyle={selectedHairstyleObj}
+          tryOnImageUrl={null}
+        />
+      )}
 
       <Footer />
     </div>

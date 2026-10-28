@@ -82,11 +82,13 @@ public class BookingController {
             ));
         }
 
-        // 3. Kiểm tra preferredTime [now + 1h, now + 30d]
+        // 3. Kiểm tra preferredTime [now + 1h, now + 30d] — preferredTime là giờ VN (từ input datetime-local),
+        // nên so với giờ VN; "now" (giờ server) chỉ dùng cho createdAt/updatedAt như các bảng khác.
         LocalDateTime now = LocalDateTime.now();
+        LocalDateTime nowVn = VnTime.nowVn();
         if (request.preferredTime() == null
-                || request.preferredTime().isBefore(now.plusHours(1))
-                || request.preferredTime().isAfter(now.plusDays(30))) {
+                || request.preferredTime().isBefore(nowVn.plusHours(1))
+                || request.preferredTime().isAfter(nowVn.plusDays(30))) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
                     "error", "Thời gian hẹn phải từ 1 giờ đến tối đa 30 ngày kể từ hiện tại."
             ));
@@ -165,10 +167,10 @@ public class BookingController {
             String portalLink = frontendUrl + "/salon-portal/bookings";
             String html = "<div style=\"font-family:sans-serif;max-width:560px;margin:0 auto\">"
                     + "<h2>Yêu cầu đặt lịch mới từ Hairapy</h2>"
-                    + "<p>Khách hàng: <strong>" + booking.getCustomerName() + "</strong></p>"
-                    + (hairstyleName != null ? "<p>Kiểu tóc mong muốn: <strong>" + hairstyleName + "</strong></p>" : "")
-                    + "<p>Thời gian mong muốn: <strong>" + booking.getPreferredTime() + "</strong></p>"
-                    + (booking.getNote() != null && !booking.getNote().isBlank() ? "<p>Ghi chú của khách: " + booking.getNote() + "</p>" : "")
+                    + "<p>Khách hàng: <strong>" + esc(booking.getCustomerName()) + "</strong></p>"
+                    + (hairstyleName != null ? "<p>Kiểu tóc mong muốn: <strong>" + esc(hairstyleName) + "</strong></p>" : "")
+                    + "<p>Thời gian mong muốn: <strong>" + fmtTime(booking.getPreferredTime()) + "</strong></p>"
+                    + (booking.getNote() != null && !booking.getNote().isBlank() ? "<p>Ghi chú của khách: " + esc(booking.getNote()) + "</p>" : "")
                     + "<p><a href=\"" + portalLink + "\" style=\"display:inline-block;padding:10px 20px;background:#ff4d94;color:#fff;border-radius:20px;text-decoration:none;font-weight:bold\">"
                     + "Xem và xác nhận trong Salon Portal</a></p>"
                     + "<p style=\"color:#666;font-size:13px\">Để bảo vệ quyền riêng tư, số điện thoại khách hàng chỉ hiển thị trong cổng Salon Portal.</p>"
@@ -219,7 +221,7 @@ public class BookingController {
         }
 
         boolean canCancel = (booking.getStatus() == BookingStatus.PENDING || booking.getStatus() == BookingStatus.CONFIRMED)
-                && booking.getPreferredTime().isAfter(LocalDateTime.now());
+                && booking.getPreferredTime().isAfter(VnTime.nowVn());
 
         if (!canCancel) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
@@ -254,5 +256,15 @@ public class BookingController {
                 b.getSalonNote(),
                 b.getCreatedAt()
         );
+    }
+
+    /** Escape HTML cho dữ liệu người dùng nhập trước khi chèn vào email (chống chèn link/HTML giả mạo). */
+    private static String esc(Object value) {
+        return value == null ? "" : org.springframework.web.util.HtmlUtils.htmlEscape(String.valueOf(value));
+    }
+
+    /** Hiển thị giờ hẹn dạng "15:00 ngày 29/10/2026" thay vì "2026-10-29T15:00". */
+    private static String fmtTime(java.time.LocalDateTime t) {
+        return t == null ? "" : t.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm 'ngày' dd/MM/yyyy"));
     }
 }

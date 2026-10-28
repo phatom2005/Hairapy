@@ -27,7 +27,9 @@ public class BookingExpiryScheduler {
     @Transactional
     public void expirePendingBookings() {
         LocalDateTime now = LocalDateTime.now();
-        List<BookingRequest> expired = bookingRequestRepository.findByStatusAndPreferredTimeBefore(BookingStatus.PENDING, now);
+        // preferredTime lưu theo giờ VN (người dùng chọn trên trình duyệt) → so với giờ VN, không phải giờ server
+        List<BookingRequest> expired = bookingRequestRepository.findByStatusAndPreferredTimeBefore(
+                BookingStatus.PENDING, com.hairapy.utils.VnTime.nowVn());
         if (expired.isEmpty()) {
             return;
         }

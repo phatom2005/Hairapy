@@ -23,6 +23,14 @@ public final class VnTime {
         return vnDate.atStartOfDay(VN).withZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
     }
 
+    /**
+     * Giờ hiện tại theo đồng hồ VN. Dùng để so với giờ người dùng nhập từ trình duyệt (input datetime-local
+     * gửi lên "giờ VN" không kèm múi giờ, vd giờ hẹn salon) — KHÔNG dùng LocalDateTime.now() (giờ server, Railway = UTC).
+     */
+    public static LocalDateTime nowVn() {
+        return LocalDateTime.now(VN);
+    }
+
     /** Ngày hôm nay theo lịch VN. */
     public static LocalDate todayVn() {
         return LocalDate.now(VN);

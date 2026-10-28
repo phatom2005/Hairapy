@@ -230,11 +230,11 @@ public class SalonOwnerController {
                 String subject = "Hairapy - Lịch hẹn tại " + s.getName() + " " + statusText;
                 String html = "<div style=\"font-family:sans-serif;max-width:560px;margin:0 auto\">"
                         + "<h2>Cập nhật lịch hẹn Hairapy</h2>"
-                        + "<p>Salon <strong>" + s.getName() + "</strong> đã <strong>" + statusText.toLowerCase() + "</strong> yêu cầu đặt lịch của bạn.</p>"
-                        + "<p>Thời gian hẹn: <strong>" + booking.getPreferredTime() + "</strong></p>"
-                        + (request.salonNote() != null && !request.salonNote().isBlank() ? "<p>Lời nhắn từ salon: " + request.salonNote() + "</p>" : "")
-                        + "<p>Địa chỉ salon: " + s.getAddress() + "</p>"
-                        + "<p>Số điện thoại salon: " + s.getPhone() + "</p>"
+                        + "<p>Salon <strong>" + esc(s.getName()) + "</strong> đã <strong>" + statusText.toLowerCase() + "</strong> yêu cầu đặt lịch của bạn.</p>"
+                        + "<p>Thời gian hẹn: <strong>" + fmtTime(booking.getPreferredTime()) + "</strong></p>"
+                        + (request.salonNote() != null && !request.salonNote().isBlank() ? "<p>Lời nhắn từ salon: " + esc(request.salonNote()) + "</p>" : "")
+                        + "<p>Địa chỉ salon: " + esc(s.getAddress()) + "</p>"
+                        + "<p>Số điện thoại salon: " + esc(s.getPhone()) + "</p>"
                         + "</div>";
                 try {
                     emailService.sendBookingStatusNotification(toEmail, subject, html);
@@ -333,5 +333,15 @@ public class SalonOwnerController {
                 b.getCreatedAt(),
                 b.getUpdatedAt()
         );
+    }
+
+    /** Escape HTML cho dữ liệu người dùng nhập trước khi chèn vào email (chống chèn link/HTML giả mạo). */
+    private static String esc(Object value) {
+        return value == null ? "" : org.springframework.web.util.HtmlUtils.htmlEscape(String.valueOf(value));
+    }
+
+    /** Hiển thị giờ hẹn dạng "15:00 ngày 29/10/2026" thay vì "2026-10-29T15:00". */
+    private static String fmtTime(java.time.LocalDateTime t) {
+        return t == null ? "" : t.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm 'ngày' dd/MM/yyyy"));
     }
 }

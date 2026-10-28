@@ -80,6 +80,11 @@ public class AdminSalonApplicationController {
         }
 
         User applicant = app.getUser();
+        // Không hạ quyền tài khoản quản trị/tester thành SALON_OWNER (mất quyền admin)
+        if (applicant.getRole() == Role.ADMIN || applicant.getRole() == Role.TESTER) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "error", "Tài khoản Admin/Tester không thể làm chủ salon. Hãy dùng một tài khoản người dùng thường."));
+        }
         // Ràng buộc 1 user - 1 salon: check ở service/controller
         if (salonRepository.existsByOwnerId(applicant.getId())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Người dùng này đã là chủ của một salon khác."));
@@ -129,7 +134,7 @@ public class AdminSalonApplicationController {
         String portalLink = frontendUrl + "/salon-portal";
         String html = "<div style=\"font-family:sans-serif;max-width:560px;margin:0 auto\">"
                 + "<h2>Chúc mừng bạn đã trở thành Salon đối tác của Hairapy!</h2>"
-                + "<p>Đơn đăng ký cho salon <strong>" + salon.getName() + "</strong> đã được duyệt.</p>"
+                + "<p>Đơn đăng ký cho salon <strong>" + esc(salon.getName()) + "</strong> đã được duyệt.</p>"
                 + "<p>Bạn được tặng <strong>30 ngày dùng thử Gói Đối tác</strong> miễn phí để nhận yêu cầu đặt lịch từ khách hàng.</p>"
                 + "<p><a href=\"" + portalLink + "\" style=\"display:inline-block;padding:12px 24px;background:#ff4d94;color:#fff;border-radius:24px;text-decoration:none;font-weight:bold\">"
                 + "Truy cập Cổng Quản lý Salon</a></p>"
@@ -172,8 +177,8 @@ public class AdminSalonApplicationController {
         String subject = "Hairapy - Cập nhật trạng thái đơn đăng ký salon đối tác";
         String html = "<div style=\"font-family:sans-serif;max-width:560px;margin:0 auto\">"
                 + "<h2>Thông báo từ Hairapy</h2>"
-                + "<p>Rất tiếc, đơn đăng ký làm salon đối tác cho <strong>" + app.getSalonName() + "</strong> chưa được phê duyệt vào thời điểm này.</p>"
-                + "<p>Lý do từ ban quản trị: " + app.getAdminNote() + "</p>"
+                + "<p>Rất tiếc, đơn đăng ký làm salon đối tác cho <strong>" + esc(app.getSalonName()) + "</strong> chưa được phê duyệt vào thời điểm này.</p>"
+                + "<p>Lý do từ ban quản trị: " + esc(app.getAdminNote()) + "</p>"
                 + "<p>Bạn có thể liên hệ bộ phận hỗ trợ hoặc chỉnh sửa thông tin để nộp lại sau.</p>"
                 + "</div>";
         try {
@@ -199,5 +204,15 @@ public class AdminSalonApplicationController {
                 a.getAdminNote(),
                 a.getCreatedAt()
         );
+    }
+
+    /** Escape HTML cho dữ liệu người dùng nhập trước khi chèn vào email (chống chèn link/HTML giả mạo). */
+    private static String esc(Object value) {
+        return value == null ? "" : org.springframework.web.util.HtmlUtils.htmlEscape(String.valueOf(value));
+    }
+
+    /** Hiển thị giờ hẹn dạng "15:00 ngày 29/10/2026" thay vì "2026-10-29T15:00". */
+    private static String fmtTime(java.time.LocalDateTime t) {
+        return t == null ? "" : t.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm 'ngày' dd/MM/yyyy"));
     }
 }

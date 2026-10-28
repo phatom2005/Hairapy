@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Calendar, MapPin, Phone, Clock } from "lucide-react";
 import { AnimatedContent, SpotlightCard } from "../components/animated";
 import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/Navbar";
@@ -27,6 +28,7 @@ const TABS = [
   { key: "history", label: "Lịch sử quét" },
   { key: "swaps", label: "Ảnh đã thử tóc" },
   { key: "saved", label: "Yêu thích" },
+  { key: "bookings", label: "Lịch hẹn Salon" },
 ];
 
 export default function ProfilePage() {
@@ -37,7 +39,7 @@ export default function ProfilePage() {
   const { setSelectedHairstyle, hydrateFromHistory } = useScanStore();
 
   const tabParam = searchParams.get("tab");
-  const activeTab = ["overview", "history", "swaps", "saved"].includes(tabParam)
+  const activeTab = ["overview", "history", "swaps", "saved", "bookings"].includes(tabParam)
     ? tabParam
     : "overview";
 
@@ -90,6 +92,27 @@ export default function ProfilePage() {
       window.alert("Không xoá được ảnh. Vui lòng thử lại.");
     }
   };
+
+  // Lịch sử yêu cầu đặt lịch salon
+  const { data: bookings = [], isLoading: bookingsLoading } = useQuery({
+    queryKey: ["profile-bookings"],
+    queryFn: async () => {
+      const res = await api.get("/bookings/my");
+      return res.data || [];
+    },
+    enabled: !!user,
+  });
+
+  const handleCancelBooking = async (bId) => {
+    if (!window.confirm("Bạn có chắc chắn muốn huỷ yêu cầu đặt lịch này không?")) return;
+    try {
+      await api.put(`/bookings/${bId}/cancel`);
+      queryClient.invalidateQueries({ queryKey: ["profile-bookings"] });
+    } catch (err) {
+      window.alert(err.response?.data?.error || "Không thể huỷ lịch hẹn. Vui lòng thử lại.");
+    }
+  };
+
   // Cloudinary: chèn fl_attachment để trình duyệt tải xuống thay vì mở tab mới
   const downloadUrl = (url) => (url || "").replace("/upload/", "/upload/fl_attachment/");
   const latestScan = scans[0];
@@ -143,6 +166,25 @@ export default function ProfilePage() {
     } catch {
       return "";
     }
+  };
+
+  const formatDateTime = (isoString) => {
+    if (!isoString) return "";
+    try {
+      const d = new Date(isoString);
+      return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")} - ${d.toLocaleDateString("vi-VN")}`;
+    } catch {
+      return "";
+    }
+  };
+
+  const BOOKING_STATUS_CONFIG = {
+    PENDING: { label: "Chờ salon xác nhận", badge: "bg-amber-500/15 text-amber-500 border-amber-500/30" },
+    CONFIRMED: { label: "Đã xác nhận", badge: "bg-emerald-500/15 text-emerald-500 border-emerald-500/30" },
+    REJECTED: { label: "Salon từ chối", badge: "bg-rose-500/15 text-rose-500 border-rose-500/30" },
+    COMPLETED: { label: "Đã hoàn thành", badge: "bg-purple-500/15 text-purple-500 border-purple-500/30" },
+    NO_SHOW: { label: "Vắng mặt", badge: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30" },
+    CANCELLED: { label: "Đã huỷ", badge: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30" },
   };
 
   return (
@@ -469,6 +511,121 @@ export default function ProfilePage() {
                   <p className="text-sm text-mauve">Khám phá thêm nhiều kiểu tóc từ bộ sưu tập của chúng tôi</p>
                   <Button to="/catalog" variant="outline" size="sm">Khám phá Catalog</Button>
                 </Card>
+              </div>
+            )}
+          </Section>
+        </AnimatedContent>
+      )}
+
+      {/* Tab: Lịch hẹn salon */}
+      {activeTab === "bookings" && (
+        <AnimatedContent key="bookings">
+          <Section className="bg-transparent">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <SectionHeading center={false} title="Lịch hẹn tại Salon" />
+                <p className="text-xs text-mauve mt-1">Theo dõi các yêu cầu đặt lịch làm tóc của bạn tại salon đối tác.</p>
+              </div>
+              <Button to="/salons" variant="pink" size="sm" className="text-xs shrink-0">
+                Tìm salon đặt lịch mới →
+              </Button>
+            </div>
+
+            {bookingsLoading ? (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {[1, 2].map((n) => (
+                  <Card key={n} padded={false} className="animate-pulse h-48 bg-line/10" />
+                ))}
+              </div>
+            ) : bookings.length === 0 ? (
+              <Card className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-divider bg-transparent text-center p-12">
+                <Calendar className="w-10 h-10 text-muted" />
+                <p className="font-bold text-ink">Chưa có lịch hẹn nào</p>
+                <p className="text-sm text-mauve max-w-sm">
+                  Thử các kiểu tóc mới trên Hairapy và đặt lịch với các salon đối tác uy tín gần bạn.
+                </p>
+                <Button to="/salons" variant="outline" size="sm" className="mt-2">
+                  Khám phá danh sách Salon
+                </Button>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {bookings.map((b) => {
+                  const cfg = BOOKING_STATUS_CONFIG[b.status] || {
+                    label: b.status,
+                    badge: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30",
+                  };
+                  const canCancel = (b.status === "PENDING" || b.status === "CONFIRMED") && new Date(b.preferredTime) > new Date();
+
+                  return (
+                    <Card key={b.id} padded={false} className="p-5 border border-line bg-white shadow-xs rounded-2xl flex flex-col justify-between gap-4">
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <Link to={`/salons/${b.salonId}`} className="font-bold text-base text-ink hover:text-pink transition-colors">
+                              {b.salonName}
+                            </Link>
+                            <p className="text-xs text-mauve flex items-center gap-1 mt-0.5">
+                              <MapPin className="w-3.5 h-3.5 shrink-0 text-muted" /> {b.salonAddress}
+                            </p>
+                          </div>
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${cfg.badge}`}>
+                            {cfg.label}
+                          </span>
+                        </div>
+
+                        {/* Kiểu tóc & ảnh */}
+                        {(b.hairstyleName || b.tryOnImageUrl) && (
+                          <div className="p-2.5 rounded-xl bg-canvas flex items-center gap-3 border border-line/60">
+                            {b.tryOnImageUrl ? (
+                              <img src={b.tryOnImageUrl} alt="Ảnh thử" className="w-12 h-12 rounded-lg object-cover shrink-0 border border-line" />
+                            ) : null}
+                            <div className="min-w-0">
+                              <p className="text-[11px] font-semibold text-muted">Kiểu tóc mong muốn</p>
+                              <p className="text-sm font-bold text-ink truncate">{b.hairstyleName || "Theo ảnh thử tóc"}</p>
+                              {b.faceShape && <p className="text-[10px] text-mauve">Dáng mặt: {b.faceShape}</p>}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="space-y-1 text-xs text-mauve">
+                          <p className="flex items-center gap-1.5 font-semibold text-ink">
+                            <Clock className="w-3.5 h-3.5 text-pink" />
+                            <span>Thời gian hẹn: {formatDateTime(b.preferredTime)}</span>
+                          </p>
+                          {b.salonPhone && (
+                            <p className="flex items-center gap-1.5">
+                              <Phone className="w-3.5 h-3.5 text-muted" />
+                              <span>SĐT salon: <a href={`tel:${b.salonPhone}`} className="text-ink font-semibold hover:underline">{b.salonPhone}</a></span>
+                            </p>
+                          )}
+                          {b.note && (
+                            <p className="text-muted text-[11px] italic bg-canvas/60 p-2 rounded-lg">
+                              Ghi chú của bạn: &quot;{b.note}&quot;
+                            </p>
+                          )}
+                          {b.salonNote && (
+                            <p className="text-pink text-[11px] bg-pink/10 p-2 rounded-lg border border-pink/20">
+                              Phản hồi từ salon: &quot;{b.salonNote}&quot;
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {canCancel && (
+                        <div className="pt-2 border-t border-divider/10 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => handleCancelBooking(b.id)}
+                            className="text-xs text-rose-500 hover:text-rose-600 font-semibold px-3 py-1.5 rounded-lg border border-rose-500/20 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                          >
+                            Huỷ yêu cầu
+                          </button>
+                        </div>
+                      )}
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </Section>

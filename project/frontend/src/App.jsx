@@ -19,6 +19,8 @@ import PricingPage from "./pages/PricingPage";
 import SettingsPage from "./pages/SettingsPage";
 import ProfilePage from "./pages/ProfilePage";
 import SalonsPage from "./pages/SalonsPage";
+import SalonDetailPage from "./pages/SalonDetailPage";
+import ForSalonsPage from "./pages/ForSalonsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import TermsPage from "./pages/TermsPage";
 import DeleteAccountPage from "./pages/DeleteAccountPage";
@@ -27,11 +29,19 @@ import PaymentSuccessPage from "./pages/PaymentSuccessPage";
 import PaymentCancelPage from "./pages/PaymentCancelPage";
 import AdminRoute from "./components/auth/AdminRoute";
 import AdminLayout from "./components/admin/AdminLayout";
+import SalonOwnerRoute from "./components/auth/SalonOwnerRoute";
+import SalonPortalLayout from "./components/salon/SalonPortalLayout";
+import SalonOverviewPage from "./pages/salon/SalonOverviewPage";
+import SalonBookingsPage from "./pages/salon/SalonBookingsPage";
+import SalonHairstylesPage from "./pages/salon/SalonHairstylesPage";
+import SalonProfilePage from "./pages/salon/SalonProfilePage";
 // Lazy-load dashboard để tách bundle recharts khỏi trang chính
 const AdminDashboardPage = lazy(() => import("./pages/admin/AdminDashboardPage"));
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminCatalogPage from "./pages/admin/AdminCatalogPage";
 import AdminSalonsPage from "./pages/admin/AdminSalonsPage";
+import AdminSalonApplicationsPage from "./pages/admin/AdminSalonApplicationsPage";
+import AdminBookingsPage from "./pages/admin/AdminBookingsPage";
 import AdminSubscriptionsPage from "./pages/admin/AdminSubscriptionsPage";
 import AdminPaymentsPage from "./pages/admin/AdminPaymentsPage";
 import AdminFeedbackPage from "./pages/admin/AdminFeedbackPage";
@@ -132,6 +142,8 @@ export default function App() {
         <Route path="/catalog" element={<CatalogPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/salons" element={<SalonsPage />} />
+        <Route path="/salons/:id" element={<SalonDetailPage />} />
+        <Route path="/for-salons" element={<ForSalonsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/delete-account" element={<DeleteAccountPage />} />
@@ -147,6 +159,16 @@ export default function App() {
           <Route path="/payment/cancel" element={<PaymentCancelPage />} />
         </Route>
 
+        {/* Salon Owner Portal Routes (yêu cầu đăng nhập + role SALON_OWNER) */}
+        <Route element={<SalonOwnerRoute />}>
+          <Route element={<SalonPortalLayout />}>
+            <Route path="/salon-portal" element={<SalonOverviewPage />} />
+            <Route path="/salon-portal/bookings" element={<SalonBookingsPage />} />
+            <Route path="/salon-portal/hairstyles" element={<SalonHairstylesPage />} />
+            <Route path="/salon-portal/profile" element={<SalonProfilePage />} />
+          </Route>
+        </Route>
+
         {/* Admin Routes (yêu cầu đăng nhập + role ADMIN) */}
         <Route element={<AdminRoute />}>
           <Route element={<AdminLayout />}>
@@ -158,6 +180,8 @@ export default function App() {
             <Route path="/admin/feedback" element={<AdminFeedbackPage />} />
             <Route path="/admin/ai-reports" element={<AdminAiReportsPage />} />
             <Route path="/admin/salons" element={<AdminSalonsPage />} />
+            <Route path="/admin/salon-applications" element={<AdminSalonApplicationsPage />} />
+            <Route path="/admin/bookings" element={<AdminBookingsPage />} />
             <Route path="/admin/usage" element={<AdminUsagePage />} />
             <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
             <Route path="/admin/ga" element={<AdminGaPage />} />

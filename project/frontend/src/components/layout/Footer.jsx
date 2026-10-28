@@ -37,6 +37,7 @@ export default function Footer() {
               { label: "Catalog", to: "/catalog" },
               { label: "Bảng giá", to: "/pricing" },
               { label: "Salon", to: "/salons" },
+              { label: "Dành cho Salon đối tác", to: "/for-salons" },
             ]}
           />
           <FooterCol title="Liên Hệ" links={[{ label: "Hỗ trợ", href: "mailto:hairapy.exe@gmail.com" }]} />

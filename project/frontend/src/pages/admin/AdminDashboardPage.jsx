@@ -25,6 +25,7 @@ import {
   Star1,
   TrendUp,
   ReceiptText,
+  Shop,
 } from "iconsax-reactjs";
 import api from "../../lib/api";
 import QuotaPanel from "../../components/admin/QuotaPanel";
@@ -263,6 +264,62 @@ export default function AdminDashboardPage() {
           Icon={Scan}
           tone={C.primary}
         />
+      </div>
+
+      {/* KPI Salon Đối tác (Phase 4) */}
+      <div className="rounded-3xl border border-line bg-gradient-to-r from-canvas to-card/60 p-4 shadow-sm">
+        <div className="flex items-center justify-between mb-3 px-1">
+          <div className="flex items-center gap-2">
+            <Shop size={18} variant="Bold" className="text-primary" />
+            <h2 className="text-xs font-bold uppercase tracking-wider text-ink">
+              Mảng kinh doanh Salon Đối tác (B2B)
+            </h2>
+          </div>
+          <span className="text-[11px] font-medium text-muted bg-surface px-2.5 py-0.5 rounded-full border border-line">
+            Gói dịch vụ 500.000₫ / tháng
+          </span>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="p-3.5 bg-white rounded-2xl border border-line/60">
+            <p className="text-xs text-muted">Salon đối tác Active</p>
+            <p className="text-xl font-bold text-ink mt-1">
+              {nf.format(stats.activePartnerSalons ?? 0)}{" "}
+              <span className="text-xs font-normal text-muted">tiệm</span>
+            </p>
+            <p className="text-[10px] text-muted mt-0.5">Đang có gói còn hạn</p>
+          </div>
+
+          <div className="p-3.5 bg-white rounded-2xl border border-line/60">
+            <p className="text-xs text-muted">Doanh thu Salon (Mô phỏng)</p>
+            <p className="text-xl font-bold text-emerald-600 mt-1">
+              {formatVND(stats.salonRevenue ?? 0)}
+            </p>
+            <p className="text-[10px] text-muted mt-0.5">
+              Từ phí duy trì gói đối tác
+            </p>
+          </div>
+
+          <div className="p-3.5 bg-white rounded-2xl border border-line/60">
+            <p className="text-xs text-muted">Yêu cầu đặt lịch (Kỳ này)</p>
+            <p className="text-xl font-bold text-ink mt-1">
+              {nf.format(stats.bookingsInPeriod ?? 0)}{" "}
+              <span className="text-xs font-normal text-muted">booking</span>
+            </p>
+            <p className="text-[10px] text-muted mt-0.5">
+              Đã xong: {stats.completedBookingsInPeriod ?? 0} lịch hẹn
+            </p>
+          </div>
+
+          <div className="p-3.5 bg-white rounded-2xl border border-line/60">
+            <p className="text-xs text-muted">Tỉ lệ Thử tóc → Đặt lịch</p>
+            <p className="text-xl font-bold text-primary mt-1">
+              {(stats.tryOnToBookingRate ?? 0).toFixed(1)}%
+            </p>
+            <p className="text-[10px] text-muted mt-0.5">
+              Hiệu suất chuyển đổi phễu
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Hạn mức dịch vụ (AILabTools, Cloudinary) */}

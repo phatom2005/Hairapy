@@ -51,6 +51,7 @@ export default function PrivacyPage() {
                 <li><strong className="text-ink">Hình ảnh khuôn mặt & Trắc học:</strong> Ảnh chân dung selfie do bạn trực tiếp chụp hoặc tải lên từ thư viện thiết bị, tọa độ các điểm mốc khuôn mặt (face mesh landmarks) được trích xuất trên thiết bị.</li>
                 <li><strong className="text-ink">Dữ liệu sử dụng tính năng:</strong> Kết quả xác định dáng khuôn mặt (Oval, Tròn, Vuông...), danh sách lịch sử các lần quét mặt, kiểu tóc yêu thích đã lưu và số lượt dùng quota hàng ngày.</li>
                 <li><strong className="text-ink">Đánh giá & Nhận xét:</strong> Số sao đánh giá và ý kiến nhận xét bạn chủ động gửi trong ứng dụng để góp ý nâng cao chất lượng dịch vụ. Khi xoá tài khoản, nội dung nhận xét sẽ bị xoá và số sao được giữ lại ở dạng ẩn danh.</li>
+                <li><strong className="text-ink">Thông tin đặt lịch salon:</strong> Khi bạn chủ động gửi yêu cầu đặt lịch hẹn, chúng tôi ghi nhận họ tên, số điện thoại, thời gian hẹn mong muốn, kiểu tóc đã chọn và ảnh thử tóc đính kèm để chuyển tiếp tới salon bạn đã chọn.</li>
                 <li><strong className="text-ink">Dữ liệu giao dịch:</strong> Mã đơn hàng, số tiền, ngày giờ giao dịch và trạng thái thanh toán từ PayOS. <span className="text-ink font-semibold">Hairapy tuyệt đối KHÔNG lưu trữ số thẻ ngân hàng, số CVV hay mật khẩu tài khoản ngân hàng của bạn.</span></li>
               </ul>
             </section>
@@ -63,6 +64,7 @@ export default function PrivacyPage() {
                 <li>Xử lý ghép kiểu tóc AI (Hair Swap) tạo hình ảnh trực quan trước khi ra tiệm salon.</li>
                 <li>Quản lý hạn mức sử dụng (quota) tương ứng với từng gói dịch vụ (Free / Premium).</li>
                 <li>Xử lý và kích hoạt trạng thái nâng cấp tài khoản khi có giao dịch thanh toán hợp lệ.</li>
+                <li>Kết nối và chuyển tiếp thông tin đặt lịch hẹn tới Salon đối tác bạn đã chọn để tiệm chủ động liên hệ và phục vụ.</li>
                 <li>Phục vụ công tác hỗ trợ khách hàng, giải quyết khiếu nại và ngăn ngừa gian lận.</li>
               </ul>
             </section>
@@ -72,6 +74,7 @@ export default function PrivacyPage() {
               <h2 className="text-lg font-bold text-ink mb-3">3. Các bên thứ ba tiếp nhận và xử lý dữ liệu</h2>
               <p className="mb-2">Chúng tôi chỉ hợp tác với các nhà cung cấp dịch vụ hạ tầng và công nghệ uy tín:</p>
               <ul className="list-disc list-inside space-y-1.5 pl-2">
+                <li><strong className="text-ink">Salon đối tác Hairapy:</strong> Khi bạn gửi yêu cầu đặt lịch, salon đối tác được chọn sẽ nhận được họ tên, số điện thoại, thời gian hẹn, kiểu tóc mong muốn và ảnh thử tóc để liên hệ xác nhận lịch hẹn.</li>
                 <li><strong className="text-ink">AILabTools:</strong> Cung cấp dịch vụ trí tuệ nhân tạo ghép kiểu tóc. Ảnh bạn tải lên để thử kiểu tóc sẽ được gửi sang AILabTools để xử lý.</li>
                 <li><strong className="text-ink">Cloudinary:</strong> Nền tảng lưu trữ hình ảnh đám mây bảo mật cao cho ảnh quét khuôn mặt và catalog.</li>
                 <li><strong className="text-ink">Google Analytics:</strong> Dịch vụ thống kê truy cập ẩn danh (trang đã xem, thao tác quét/thử tóc/thanh toán). Chúng tôi không gửi email, tên hay ảnh của bạn sang Google Analytics.</li>

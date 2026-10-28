@@ -56,7 +56,19 @@ export default function TermsPage() {
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-ink mb-2">5. Hành vi bị nghiêm cấm</h2>
+              <h2 className="text-lg font-bold text-ink mb-2">5. Dịch vụ Đặt lịch hẹn & Salon đối tác</h2>
+              <p className="mb-2">
+                Hairapy cung cấp tính năng kết nối người dùng với các salon đối tác nhằm hỗ trợ người dùng tìm kiếm địa chỉ làm tóc phù hợp với kết quả thử tóc AI:
+              </p>
+              <ul className="list-disc list-inside space-y-1 pl-2">
+                <li><strong className="text-ink">Vai trò trung gian:</strong> Hairapy đóng vai trò nền tảng công nghệ kết nối thông tin đặt hẹn. Các dịch vụ cắt, nhuộm, uốn, chất lượng hoá chất và thái độ phục vụ tại salon do chính cơ sở salon đối tác chịu trách nhiệm độc lập.</li>
+                <li><strong className="text-ink">Giá dịch vụ:</strong> Mức giá hiển thị trên ứng dụng là mức giá tham khảo do salon cung cấp hoặc giá niêm yết tối thiểu. Chi phí thực tế có thể thay đổi tùy thuộc vào tình trạng tóc thực tế của quý khách tại thời điểm thực hiện dịch vụ.</li>
+                <li><strong className="text-ink">Cam kết đến hẹn:</strong> Khi đặt lịch, quý khách vui lòng đến đúng giờ hoặc chủ động liên hệ hủy lịch hẹn sớm nếu có việc bận để tạo thuận lợi cho các khách hàng khác và thợ tóc.</li>
+              </ul>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-bold text-ink mb-2">6. Hành vi bị nghiêm cấm</h2>
               <ul className="list-disc list-inside space-y-1 pl-2">
                 <li>Tải lên hình ảnh khiêu dâm, bạo lực, vi phạm pháp luật hoặc xâm phạm quyền hình ảnh của người khác khi chưa được phép.</li>
                 <li>Sử dụng các công cụ tự động (bot, crawler, script) để khai thác trái phép hệ thống của Hairapy.</li>
@@ -65,21 +77,21 @@ export default function TermsPage() {
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-ink mb-2">6. Giới hạn trách nhiệm</h2>
+              <h2 className="text-lg font-bold text-ink mb-2">7. Giới hạn trách nhiệm</h2>
               <p>
                 Hairapy được cung cấp trên cơ sở &quot;nguyên trạng&quot; (as is). Chúng tôi nỗ lực tối đa để đảm bảo dịch vụ vận hành ổn định nhưng không chịu trách nhiệm đối với các gián đoạn dịch vụ do sự cố mạng, bảo trì định kỳ của nhà cung cấp hạ tầng đám mây hoặc các trường hợp bất khả kháng.
               </p>
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-ink mb-2">7. Điều chỉnh điều khoản</h2>
+              <h2 className="text-lg font-bold text-ink mb-2">8. Điều chỉnh điều khoản</h2>
               <p>
                 Chúng tôi có quyền cập nhật các điều khoản này theo thời gian để phản ánh các thay đổi trong dịch vụ hoặc yêu cầu pháp luật. Phiên bản cập nhật sẽ được công bố trên website kèm ngày hiệu lực mới.
               </p>
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-ink mb-2">8. Liên hệ</h2>
+              <h2 className="text-lg font-bold text-ink mb-2">9. Liên hệ</h2>
               <p>
                 Mọi thắc mắc liên quan đến Điều khoản dịch vụ, vui lòng gửi email tới: <a href={`mailto:${SUPPORT_EMAIL}`} className="text-primary font-bold hover:underline">{SUPPORT_EMAIL}</a>.
               </p>

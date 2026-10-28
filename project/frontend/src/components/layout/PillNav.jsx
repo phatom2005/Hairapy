@@ -17,13 +17,14 @@ import "../animated/border-glow.css";
 const DEFAULT_ITEMS = [
   { label: "Tính năng", to: "/#features" },
   { label: "Bộ sưu tập", to: "/catalog" },
+  { label: "Salon", to: "/salons" },
   { label: "Premium", to: "/pricing" },
 ];
 
 export default function PillNav({ items = DEFAULT_ITEMS }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
-  const { token, logout } = useAuthStore();
+  const { token, user, logout } = useAuthStore();
 
   // Resolve active item theo URL (so sánh path bỏ hash)
   const activeLabel = items.find((it) => {
@@ -103,6 +104,14 @@ export default function PillNav({ items = DEFAULT_ITEMS }) {
                   </>
                 ) : (
                   <div className="flex items-center gap-3">
+                    {user?.role === "SALON_OWNER" && (
+                      <Link
+                        to="/salon-portal"
+                        className="rounded-full px-3 py-1.5 text-xs font-bold bg-pink/15 text-pink border border-pink/30 hover:bg-pink hover:text-white transition-colors"
+                      >
+                        Cổng Salon
+                      </Link>
+                    )}
                     <Link
                       to="/profile"
                       aria-label="Tài khoản"

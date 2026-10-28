@@ -47,6 +47,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers("/api/payments/webhook").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/salon-owner/**").hasRole("SALON_OWNER")
                         .requestMatchers("/api/hairstyles/**").permitAll()
                         .requestMatchers("/api/salons/**").permitAll()
                         .anyRequest().authenticated()

@@ -3,5 +3,6 @@ package com.hairapy.models;
 public enum Role {
     USER,
     TESTER,
-    ADMIN
+    ADMIN,
+    SALON_OWNER
 }

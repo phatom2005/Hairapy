@@ -18,6 +18,8 @@ import PremiumGateModal from "../components/PremiumGateModal";
 import AiStylistPanel from "../components/AiStylistPanel";
 import HairColorStudio from "../components/HairColorStudio";
 import ShareModal from "../components/ShareModal";
+import SalonMatchSheet from "../components/SalonMatchSheet";
+import { Sparkles } from "lucide-react";
 
 import { COLOR_BY_VALUE } from "../lib/hairColors";
 
@@ -71,6 +73,9 @@ export default function SwapPage() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [shareData, setShareData] = useState(null);
+
+  // Modal gợi ý salon đối tác
+  const [showSalonMatch, setShowSalonMatch] = useState(false);
 
   const pollTimeoutRef = useRef(null);
 
@@ -823,6 +828,31 @@ export default function SwapPage() {
                   </div>
                 )}
               </div>
+
+              {/* Gợi ý salon đối tác khi đã có kết quả thử tóc */}
+              {activeResultImage && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-pink/10 via-primary/10 to-pink/5 border border-pink/20">
+                  <div className="flex items-center gap-3">
+                    <div className="size-10 rounded-xl bg-pink text-white flex items-center justify-center shrink-0 shadow-sm">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-ink">Thích kiểu tóc này?</p>
+                      <p className="text-xs text-mauve">Tìm salon đối tác nhận cắt kiểu {activeStyle?.name || "này"} gần bạn và đặt lịch trước.</p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      trackEvent("salon_match_open", { hairstyle_id: activeStyle?.id, source: "swap_page" });
+                      setShowSalonMatch(true);
+                    }}
+                    className="w-full sm:w-auto shrink-0 bg-primary hover:bg-primary-hover text-white font-bold text-xs px-4 py-2.5 shadow-sm"
+                  >
+                    Cắt kiểu này ở đâu? — Tìm Salon đối tác →
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
@@ -878,6 +908,13 @@ export default function SwapPage() {
         onClose={() => setShowPremiumGate(false)}
         style={premiumGateStyle}
         reason="style"
+      />
+
+      <SalonMatchSheet
+        isOpen={showSalonMatch}
+        onClose={() => setShowSalonMatch(false)}
+        hairstyle={activeStyle}
+        tryOnImageUrl={activeResultImage}
       />
 
       <Footer />

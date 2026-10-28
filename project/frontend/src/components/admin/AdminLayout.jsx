@@ -14,6 +14,8 @@ import {
   Global,
   Home2,
   Logout,
+  DocumentText,
+  Calendar,
 } from "iconsax-reactjs";
 import useAuthStore from "../../store/useAuthStore";
 import logoStack from "../../assets/logo/logo-stack.png";
@@ -26,6 +28,8 @@ const navItems = [
   { to: "/admin/users", label: "Người dùng", Icon: People },
   { to: "/admin/catalog", label: "Kho kiểu tóc", Icon: Scissor },
   { to: "/admin/salons", label: "Salon đối tác", Icon: Shop },
+  { to: "/admin/salon-applications", label: "Đơn đối tác", Icon: DocumentText },
+  { to: "/admin/bookings", label: "Lịch hẹn salon", Icon: Calendar },
   { to: "/admin/subscriptions", label: "Gói đăng ký", Icon: Crown1 },
   { to: "/admin/payments", label: "Lịch sử thanh toán", Icon: ReceiptText },
   { to: "/admin/feedback", label: "Đánh giá", Icon: Star1 },

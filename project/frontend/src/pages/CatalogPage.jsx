@@ -13,6 +13,7 @@ import useAuthStore from "../store/useAuthStore";
 import { HAIR_COLORS, COLOR_BY_VALUE, swatchBg } from "../lib/hairColors";
 import HairstyleDetailModal from "../components/HairstyleDetailModal";
 import PremiumGateModal from "../components/PremiumGateModal";
+import SalonMatchSheet from "../components/SalonMatchSheet";
 
 const GENDER_OPTS = ["Nam", "Nữ", "Unisex"];
 const FACE_OPTS = ["Tròn", "Vuông", "Trái xoan", "Dài", "Trái tim", "Kim cương"];
@@ -346,6 +347,8 @@ export default function CatalogPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [detailModalData, setDetailModalData] = useState(null);
   const [gateStyle, setGateStyle] = useState(null);
+  const [matchingStyle, setMatchingStyle] = useState(null);
+  const [showMatchSheet, setShowMatchSheet] = useState(false);
 
   const hasFilters = !!(q || genderFilter || face || lengthFilter || tagFilter || colorFilter);
 
@@ -740,6 +743,12 @@ export default function CatalogPage() {
           setDetailModalData(null);
           executeTryStyle(h);
         }}
+        onFindSalon={(h) => {
+          setDetailModalData(null);
+          trackEvent("salon_match_open", { hairstyle_id: h?.id, source: "catalog_modal" });
+          setMatchingStyle(h);
+          setShowMatchSheet(true);
+        }}
       />
 
       {/* Paywall Gate */}
@@ -747,6 +756,17 @@ export default function CatalogPage() {
         isOpen={!!gateStyle}
         onClose={() => setGateStyle(null)}
         style={gateStyle}
+      />
+
+      {/* Gợi ý salon đối tác */}
+      <SalonMatchSheet
+        isOpen={showMatchSheet}
+        onClose={() => {
+          setShowMatchSheet(false);
+          setMatchingStyle(null);
+        }}
+        hairstyle={matchingStyle}
+        tryOnImageUrl={null}
       />
     </div>
   );

@@ -65,7 +65,30 @@ public class Salon {
     @Column(name = "longitude")
     private Double longitude;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_user_id")
+    private User owner;
+
+    @Column(name = "partner_until")
+    private LocalDateTime partnerUntil;
+
+    @Column(length = 1000)
+    private String description;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean active = true;
+
+    @Column(name = "view_count", nullable = false)
+    @Builder.Default
+    private long viewCount = 0;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @Transient
+    public boolean isPartnerActive() {
+        return active && partnerUntil != null && partnerUntil.isAfter(LocalDateTime.now());
+    }
 }

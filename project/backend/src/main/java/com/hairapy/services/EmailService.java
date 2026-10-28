@@ -60,6 +60,27 @@ public class EmailService {
         send(toEmail, subject, html, "cảnh báo hệ thống");
     }
 
+    /**
+     * Gửi email thông báo đặt lịch mới cho chủ salon.
+     */
+    public void sendBookingNotification(String toEmail, String subject, String html) {
+        send(toEmail, subject, html, "thông báo đặt lịch mới");
+    }
+
+    /**
+     * Gửi email thông báo trạng thái đặt lịch cho khách hàng.
+     */
+    public void sendBookingStatusNotification(String toEmail, String subject, String html) {
+        send(toEmail, subject, html, "cập nhật trạng thái đặt lịch");
+    }
+
+    /**
+     * Gửi email kết quả duyệt đơn đăng ký salon đối tác.
+     */
+    public void sendApplicationNotification(String toEmail, String subject, String html) {
+        send(toEmail, subject, html, "kết quả đơn đối tác");
+    }
+
     private void send(String toEmail, String subject, String html, String label) {
         if (resendApiKey == null || resendApiKey.isBlank()) {
             log.warn("RESEND_API_KEY chưa được cấu hình. Bỏ qua gửi email {} tới {}", label, toEmail);

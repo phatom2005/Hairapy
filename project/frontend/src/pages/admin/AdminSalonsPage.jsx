@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
+import { SALON_PARTNER } from "../../lib/plans";
 import api from "../../lib/api";
 import { Card, Badge, Button, Input } from "../../components/ui";
 import ConfirmDialog from "../../components/admin/ConfirmDialog";
@@ -60,7 +61,7 @@ export default function AdminSalonsPage() {
     open: false,
     salon: null,
     months: 1,
-    amount: 500000,
+    amount: SALON_PARTNER.price,
     note: "Gia hạn gói đối tác qua Chuyển khoản (Mô phỏng)",
     saving: false,
     error: "",
@@ -331,7 +332,7 @@ export default function AdminSalonsPage() {
       open: true,
       salon,
       months: 1,
-      amount: 500000,
+      amount: SALON_PARTNER.price,
       note: "Gia hạn gói đối tác qua Chuyển khoản (Mô phỏng)",
       saving: false,
       error: "",
@@ -357,7 +358,7 @@ export default function AdminSalonsPage() {
     setPaymentModal((prev) => ({
       ...prev,
       months,
-      amount: months * 500000,
+      amount: months * SALON_PARTNER.price,
     }));
   };
 
@@ -768,7 +769,7 @@ export default function AdminSalonsPage() {
                   >
                     {[1, 2, 3, 6, 12].map((m) => (
                       <option key={m} value={m}>
-                        {m} tháng ({formatVnd(m * 500000)})
+                        {m} tháng ({formatVnd(m * SALON_PARTNER.price)})
                       </option>
                     ))}
                   </select>

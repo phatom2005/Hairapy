@@ -28,6 +28,14 @@ function formatPrice(v) {
   return `${Number(v).toLocaleString("vi-VN")}đ`;
 }
 
+// Backend trả serviceTypes là chuỗi "Cắt tóc,Uốn,Nhuộm" (không phải mảng) -> tách thành tag.
+// Vẫn nhận mảng phòng khi API đổi sau này.
+function toServiceTags(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value !== "string") return [];
+  return value.split(",").map((t) => t.trim()).filter(Boolean);
+}
+
 export default function SalonDetailPage() {
   const { id } = useParams();
   const [selectedHairstyle, setSelectedHairstyle] = useState(null);
@@ -83,6 +91,7 @@ export default function SalonDetailPage() {
     );
   }
 
+  const serviceTags = toServiceTags(salon.serviceTypes);
   const mapCenter = [salon.latitude || 10.7769, salon.longitude || 106.7009];
   const gmapsUrl = salon.latitude && salon.longitude
     ? `https://www.google.com/maps?q=${salon.latitude},${salon.longitude}`
@@ -161,9 +170,9 @@ export default function SalonDetailPage() {
                   </p>
                 )}
 
-                {salon.serviceTypes && salon.serviceTypes.length > 0 && (
+                {serviceTags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 pt-2">
-                    {salon.serviceTypes.map((st, i) => (
+                    {serviceTags.map((st, i) => (
                       <span key={i} className="text-xs px-2.5 py-1 rounded-lg bg-canvas text-mauve border border-line">
                         {st}
                       </span>

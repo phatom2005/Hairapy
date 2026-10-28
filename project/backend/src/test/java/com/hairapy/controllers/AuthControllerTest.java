@@ -244,7 +244,9 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.role").value("PREMIUM"))
                 .andExpect(jsonPath("$.plan").value("PREMIUM"))
-                .andExpect(jsonPath("$.planEndDate").value(end.toString()));
+                // Jackson luôn ghi đủ giây (13:40:00), còn LocalDateTime.toString() bỏ ":00" khi giây = 0
+                // -> format giống Jackson để test không fail ngẫu nhiên (1/60 khả năng)
+                .andExpect(jsonPath("$.planEndDate").value(end.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME)));
     }
 
     @Test

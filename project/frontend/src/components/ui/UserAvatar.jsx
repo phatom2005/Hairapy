@@ -116,8 +116,20 @@ export default function UserAvatar({
         className={`relative inline-flex shrink-0 items-center justify-center rounded-full select-none ${sizeClass} ${safeClassName}`}
       >
         {/* Khung viền vector SVG (vương miện, cánh, vòng hào quang xoay sáng) */}
-        {isPro && <AvatarFramePro animated={animated} showLabel={false} />}
-        {isPremium && <AvatarFramePremium animated={animated} showLabel={false} />}
+        {isPro && (
+          <AvatarFramePro
+            animated={animated}
+            showLabel={false}
+            showBottomStar={!showLabel}
+          />
+        )}
+        {isPremium && (
+          <AvatarFramePremium
+            animated={animated}
+            showLabel={false}
+            showBottomGem={!showLabel}
+          />
+        )}
 
         {/* Lõi Avatar tròn bên trong */}
         <div className="flex size-full items-center justify-center rounded-full font-display font-bold text-white shadow-sm overflow-hidden">
@@ -140,7 +152,7 @@ export default function UserAvatar({
             className={`absolute left-1/2 z-20 whitespace-nowrap rounded-full border shadow-sm font-display uppercase leading-none px-2.5 py-0.5 text-[10px] font-bold tracking-wider ${BADGE_OFFSETS[size] || "-bottom-1.5"} ${
               isPro
                 ? "bg-gradient-to-r from-[#1039da] to-[#ff57cf] text-white border-[#ffd775]/70"
-                : "bg-gradient-to-r from-[#17061d] via-[#850069] to-[#17061d] text-[#ffe699] border border-[#ffd775]/80"
+                : "bg-gradient-to-r from-[#17061d] via-[#850069] to-[#17061d] text-[#ffe699] border-[#ffd775]/80"
             }`}
           >
             {isPro ? "PRO" : "PREMIUM"}

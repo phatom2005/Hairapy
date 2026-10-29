@@ -6,15 +6,20 @@ import "./avatar-frames.css";
  * Khung viền PRO (Gói Tuần - 7 ngày)
  * Thiết kế: 4 ngôi sao kim cương 4 hướng (12h, 3h, 6h, 9h) viền vàng Champagne, dải ribbon công nghệ xanh-hồng và huy hiệu chữ PRO tinh xảo phía dưới.
  */
-export function AvatarFramePro({ animated = true, showLabel = true, className = "" }) {
+export function AvatarFramePro({
+  animated = true,
+  showLabel = true,
+  showBottomStar = true,
+  className = "",
+}) {
   const rawId = useId();
   const id = rawId.replace(/[^a-zA-Z0-9_-]/g, "");
 
   return (
     <svg
-      viewBox="0 0 200 212"
+      viewBox="0 0 200 200"
       aria-hidden="true"
-      className={`pointer-events-none select-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[143%] h-[151%] z-10 ${className}`}
+      className={`pointer-events-none select-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[143%] h-[143%] z-10 ${className}`}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -92,8 +97,8 @@ export function AvatarFramePro({ animated = true, showLabel = true, className = 
         </g>
       ))}
 
-      {/* Ngôi sao đáy (chỉ hiện khi không có nhãn chữ) */}
-      {!showLabel && (
+      {/* Ngôi sao đáy (chỉ hiện khi không có nhãn chữ và cho phép hiện sao đáy) */}
+      {!showLabel && showBottomStar && (
         <g transform="translate(100, 177)" filter={`url(#proGlow-${id})`}>
           <path
             d="M0 -15 L4.5 -4.5 L15 0 L4.5 4.5 L0 15 L-4.5 4.5 L-15 0 L-4.5 -4.5 Z"
@@ -162,7 +167,12 @@ export function AvatarFramePro({ animated = true, showLabel = true, className = 
  * Khung viền PREMIUM (Gói Tháng - 30 ngày)
  * Thiết kế: Vương miện Haute Tiara uốn lượn thanh mảnh, ngọc Marquise Ruby, đôi cánh thiên thần và huy hiệu chữ PREMIUM mạ vàng sang trọng phía dưới.
  */
-export function AvatarFramePremium({ animated = true, showLabel = true, className = "" }) {
+export function AvatarFramePremium({
+  animated = true,
+  showLabel = true,
+  showBottomGem = true,
+  className = "",
+}) {
   const rawId = useId();
   const id = rawId.replace(/[^a-zA-Z0-9_-]/g, "");
 
@@ -331,7 +341,7 @@ export function AvatarFramePremium({ animated = true, showLabel = true, classNam
       </g>
 
       {/* Đáy (6h) - Nếu không bật nhãn chữ thì hiện viên ngọc giọt lệ */}
-      {!showLabel && (
+      {!showLabel && showBottomGem && (
         <g transform="translate(100, 192)" filter={`url(#premGlow-${id})`}>
           <path d="M0 -10 L4.5 0 L0 14 L-4.5 0 Z" fill={`url(#premGold-${id})`} />
           <path d="M0 -7 L3 0 L0 10 L-3 0 Z" fill={`url(#premGem-${id})`} />

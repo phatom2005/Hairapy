@@ -48,9 +48,9 @@ const SIZE_CLASSES = {
 };
 
 // Cỡ chữ và kích thước của huy hiệu Tier Badge đặt ở đáy avatar
-// Tỷ lệ nhỏ gọn, thanh thoát, tinh tế, vừa vặn tự nhiên với khung tròn
+// Tỷ lệ nhỏ gọn, thanh thoát: Size 'sm' cho Navbar được thu gọn tối đa để không bị dài hay cộm
 const BADGE_SIZE_CLASSES = {
-  sm: "-bottom-1 px-1.5 py-[1px] text-[7.5px] font-bold tracking-wide",
+  sm: "-bottom-0.5 px-1.5 py-[0.5px] text-[6.5px] font-bold tracking-tight",
   md: "-bottom-1 px-2 py-0.5 text-[8.5px] font-bold tracking-wide",
   lg: "-bottom-1.5 px-2.5 py-0.5 text-[10px] font-bold tracking-wider",
   xl: "-bottom-2 px-3.5 py-1 text-xs font-bold tracking-widest",

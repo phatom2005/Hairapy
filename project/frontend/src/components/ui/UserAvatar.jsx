@@ -47,13 +47,23 @@ const SIZE_CLASSES = {
   xl: "size-40 text-5xl",
 };
 
-// Cỡ chữ và kích thước của huy hiệu Tier Badge đặt ở đáy avatar
-// Tỷ lệ nhỏ gọn, thanh thoát: Size 'sm' cho Navbar được thu gọn tối đa để không bị dài hay cộm
-const BADGE_SIZE_CLASSES = {
-  sm: "-bottom-0.5 px-1.5 py-[0.5px] text-[6.5px] font-bold tracking-tight",
-  md: "-bottom-1 px-2 py-0.5 text-[8.5px] font-bold tracking-wide",
-  lg: "-bottom-1.5 px-2.5 py-0.5 text-[10px] font-bold tracking-wider",
-  xl: "-bottom-2 px-3.5 py-1 text-xs font-bold tracking-widest",
+// Tỷ lệ co giãn toán học chuẩn xác theo kích thước avatar (lấy chuẩn từ size 'lg' 96px trên Profile card)
+// sm: 36px / 96px = 0.375
+// md: 48px / 96px = 0.50
+// lg: 96px / 96px = 1.00
+// xl: 160px / 96px = 1.67
+const BADGE_SCALES = {
+  sm: 0.375,
+  md: 0.50,
+  lg: 1.0,
+  xl: 1.67,
+};
+
+const BADGE_OFFSETS = {
+  sm: "-bottom-[2.5px]",
+  md: "-bottom-[3px]",
+  lg: "-bottom-1.5",
+  xl: "-bottom-3",
 };
 
 export default function UserAvatar({
@@ -83,7 +93,6 @@ export default function UserAvatar({
   const gradient = getGradientByHash(email || name);
   const initial = getInitial(name, email);
   const sizeClass = SIZE_CLASSES[size] || size;
-  const badgeSizeClass = BADGE_SIZE_CLASSES[size] || BADGE_SIZE_CLASSES.md;
 
   if (hasFrame) {
     // Lọc bỏ class border hoặc ring bên ngoài truyền vào để không bao giờ tạo thành viền ô vuông quanh SVG frame
@@ -121,10 +130,14 @@ export default function UserAvatar({
           </div>
         </div>
 
-        {/* Huy hiệu chữ PRO / PREMIUM nhỏ gọn, tinh tế ở đáy Avatar */}
+        {/* Huy hiệu chữ PRO / PREMIUM đồng bộ tỷ lệ toán học 100% với avatar */}
         {showLabel && (
           <span
-            className={`absolute left-1/2 -translate-x-1/2 z-20 whitespace-nowrap rounded-full border shadow-sm font-display uppercase leading-none ${badgeSizeClass} ${
+            style={{
+              transform: `translateX(-50%) scale(${BADGE_SCALES[size] || 1})`,
+              transformOrigin: "center bottom",
+            }}
+            className={`absolute left-1/2 z-20 whitespace-nowrap rounded-full border shadow-sm font-display uppercase leading-none px-2.5 py-0.5 text-[10px] font-bold tracking-wider ${BADGE_OFFSETS[size] || "-bottom-1.5"} ${
               isPro
                 ? "bg-gradient-to-r from-[#1039da] to-[#ff57cf] text-white border-[#ffd775]/70"
                 : "bg-gradient-to-r from-[#17061d] via-[#850069] to-[#17061d] text-[#ffe699] border border-[#ffd775]/80"

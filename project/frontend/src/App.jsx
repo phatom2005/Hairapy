@@ -34,6 +34,7 @@ import SalonPortalLayout from "./components/salon/SalonPortalLayout";
 import SalonOverviewPage from "./pages/salon/SalonOverviewPage";
 import SalonBookingsPage from "./pages/salon/SalonBookingsPage";
 import SalonHairstylesPage from "./pages/salon/SalonHairstylesPage";
+import SalonInsightsPage from "./pages/salon/SalonInsightsPage";
 import SalonProfilePage from "./pages/salon/SalonProfilePage";
 // Lazy-load dashboard để tách bundle recharts khỏi trang chính
 const AdminDashboardPage = lazy(() => import("./pages/admin/AdminDashboardPage"));
@@ -165,6 +166,7 @@ export default function App() {
             <Route path="/salon-portal" element={<SalonOverviewPage />} />
             <Route path="/salon-portal/bookings" element={<SalonBookingsPage />} />
             <Route path="/salon-portal/hairstyles" element={<SalonHairstylesPage />} />
+            <Route path="/salon-portal/insights" element={<SalonInsightsPage />} />
             <Route path="/salon-portal/profile" element={<SalonProfilePage />} />
           </Route>
         </Route>

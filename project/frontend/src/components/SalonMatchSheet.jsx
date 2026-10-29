@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CloseCircle, Location, Star1, LocationDiscover, MagicStar, Call, Danger } from "iconsax-reactjs";
 import api from "../lib/api";
+import { trackEvent } from "../lib/analytics";
 import BookingForm from "./BookingForm";
 
 function SalonMatchModalContent({
@@ -51,6 +52,29 @@ function SalonMatchModalContent({
   const salons = queryData.salons;
   const hasExactMatch = queryData.hasExactMatch;
 
+  useEffect(() => {
+    if (!salons || salons.length === 0) return;
+    try {
+      const stored = sessionStorage.getItem("hairapy_impressed_salons");
+      const impressed = stored ? new Set(JSON.parse(stored)) : new Set();
+      let changed = false;
+
+      salons.forEach((s) => {
+        if (s?.id && !impressed.has(s.id)) {
+          impressed.add(s.id);
+          trackEvent("salon_impression", { salon_id: s.id });
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        sessionStorage.setItem("hairapy_impressed_salons", JSON.stringify(Array.from(impressed)));
+      }
+    } catch {
+      // Storage error fallback
+    }
+  }, [salons]);
+
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
       setLocError("Trình duyệt không hỗ trợ định vị vị trí.");
@@ -73,6 +97,7 @@ function SalonMatchModalContent({
   };
 
   const handleOpenBooking = (salon) => {
+    trackEvent("salon_click", { salon_id: salon.id });
     setBookingSalon(salon);
     setIsBookingOpen(true);
   };

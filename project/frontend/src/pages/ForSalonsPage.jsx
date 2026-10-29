@@ -201,6 +201,9 @@ export default function ForSalonsPage() {
               <li className="flex items-center gap-2">
                 <TickCircle size={16} variant="Bold" className="text-pink shrink-0" /> Thống kê lượt xem, yêu cầu đặt lịch và kiểu tóc hot
               </li>
+              <li className="flex items-center gap-2">
+                <TickCircle size={16} variant="Bold" className="text-pink shrink-0" /> Báo cáo xu hướng kiểu tóc khu vực của bạn mỗi tuần
+              </li>
             </ul>
           </Card>
         </div>

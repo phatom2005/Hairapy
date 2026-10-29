@@ -43,6 +43,11 @@ public interface BookingRequestRepository extends JpaRepository<BookingRequest, 
     @Query("SELECT b.hairstyleName, COUNT(b) FROM BookingRequest b WHERE b.salon.id = :salonId AND b.hairstyleName IS NOT NULL GROUP BY b.hairstyleName ORDER BY COUNT(b) DESC")
     List<Object[]> findTopRequestedHairstylesBySalonId(@Param("salonId") Long salonId, Pageable pageable);
 
+    // Top kiểu tóc được yêu cầu đặt lịch tại các salon cùng quận trong 30 ngày qua: [hairstyleName, số lượt]
+    @Query("SELECT b.hairstyleName, COUNT(b) FROM BookingRequest b WHERE b.salon.district = :district "
+            + "AND b.hairstyleName IS NOT NULL AND b.createdAt >= :since GROUP BY b.hairstyleName ORDER BY COUNT(b) DESC")
+    List<Object[]> findTopRequestedInDistrict(@Param("district") String district, @Param("since") LocalDateTime since, Pageable pageable);
+
     @Modifying
     @Query("DELETE FROM BookingRequest b WHERE b.user.id = :userId")
     void deleteByUserId(@Param("userId") Long userId);

@@ -11,6 +11,7 @@ import {
   Menu,
   CloseCircle,
   MagicStar,
+  TrendUp,
 } from "iconsax-reactjs";
 import useAuthStore from "../../store/useAuthStore";
 import logoStack from "../../assets/logo/logo-stack.png";
@@ -19,6 +20,7 @@ const navItems = [
   { to: "/salon-portal", label: "Tổng quan", Icon: Element3, end: true },
   { to: "/salon-portal/bookings", label: "Yêu cầu đặt lịch", Icon: Calendar },
   { to: "/salon-portal/hairstyles", label: "Kiểu tóc nhận làm", Icon: Scissor },
+  { to: "/salon-portal/insights", label: "Xu hướng khu vực", Icon: TrendUp },
   { to: "/salon-portal/profile", label: "Hồ sơ salon", Icon: Shop },
 ];
 

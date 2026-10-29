@@ -59,6 +59,10 @@ public interface UsageHistoryRepository extends JpaRepository<UsageHistory, Long
             + "AND u.hairstyleId IS NOT NULL AND u.usedAt >= :since AND u.user.id IN :userIds GROUP BY u.hairstyleId ORDER BY COUNT(u) DESC")
     List<Object[]> countSwapsByUserIdsSince(@Param("userIds") List<Long> userIds, @Param("since") LocalDateTime since);
 
+    // Thời gian các lượt thử tóc từ mốc since (để tính phân bố theo giờ trong ngày)
+    @Query("SELECT u.usedAt FROM UsageHistory u WHERE u.feature = 'HAIR_SWAP' AND u.usedAt >= :since")
+    List<LocalDateTime> findSwapTimesSince(@Param("since") LocalDateTime since);
+
     // Thời điểm lượt thử có ghi kiểu tóc ĐẦU TIÊN (để trình bày "số liệu tính từ ngày...")
     @org.springframework.data.jpa.repository.Query("SELECT MIN(u.usedAt) FROM UsageHistory u WHERE u.hairstyleId IS NOT NULL")
     java.time.LocalDateTime firstTrackedAt();

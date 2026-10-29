@@ -9,6 +9,9 @@ const api = axios.create({
 // Các endpoint auth công khai: KHÔNG đính token cũ/hết hạn (tránh server từ chối request đăng nhập vì token rác)
 const PUBLIC_AUTH = /^\/auth\/(login|register|google|facebook|forgot-password|reset-password|verify-email|resend-verification)/;
 
+// Endpoint backend đọc header X-GA-Client-Id (PaymentController.create, BookingController.create)
+const GA_ID_ENDPOINTS = /^\/(payments\/create|bookings)\/?$/;
+
 // Tự đính JWT token + xử lý Content-Type cho FormData + đính kèm X-GA-Client-Id nếu có
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
@@ -16,8 +19,12 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
+  // Chỉ gắn X-GA-Client-Id cho 2 request backend thật sự dùng (tạo thanh toán, đặt lịch).
+  // Gắn cho MỌI request thì header lạ làm preflight CORS bị chặn nếu backend chưa cho phép -> hỏng cả đăng nhập.
   const gaClientId = getGaClientId();
-  if (gaClientId) {
+  const method = (config.method || "get").toLowerCase();
+  const needsGaId = method === "post" && GA_ID_ENDPOINTS.test(config.url || "");
+  if (gaClientId && needsGaId) {
     config.headers["X-GA-Client-Id"] = gaClientId;
   }
 

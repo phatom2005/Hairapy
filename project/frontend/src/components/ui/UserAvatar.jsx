@@ -48,12 +48,12 @@ const SIZE_CLASSES = {
 };
 
 // Cỡ chữ và kích thước của huy hiệu Tier Badge đặt ở đáy avatar
-// Dùng HTML/CSS để chữ to rõ, sắc nét, không bị teo nhỏ khi scale SVG trên mobile / navbar
+// Tỷ lệ nhỏ gọn, thanh thoát, tinh tế, vừa vặn tự nhiên với khung tròn
 const BADGE_SIZE_CLASSES = {
-  sm: "-bottom-1.5 px-2 py-0.5 text-[9.5px] font-black tracking-wider",
-  md: "-bottom-2 px-2.5 py-0.5 text-[11px] font-black tracking-wider",
-  lg: "-bottom-2.5 px-3.5 py-1 text-[13px] font-black tracking-widest",
-  xl: "-bottom-3.5 px-5 py-1.5 text-[15px] font-black tracking-widest",
+  sm: "-bottom-1 px-1.5 py-[1px] text-[7.5px] font-bold tracking-wide",
+  md: "-bottom-1 px-2 py-0.5 text-[8.5px] font-bold tracking-wide",
+  lg: "-bottom-1.5 px-2.5 py-0.5 text-[10px] font-bold tracking-wider",
+  xl: "-bottom-2 px-3.5 py-1 text-xs font-bold tracking-widest",
 };
 
 export default function UserAvatar({
@@ -121,13 +121,13 @@ export default function UserAvatar({
           </div>
         </div>
 
-        {/* Huy hiệu chữ PRO / PREMIUM to rõ, đậm nét ở đáy Avatar */}
+        {/* Huy hiệu chữ PRO / PREMIUM nhỏ gọn, tinh tế ở đáy Avatar */}
         {showLabel && (
           <span
-            className={`absolute left-1/2 -translate-x-1/2 z-20 whitespace-nowrap rounded-full border shadow-lg font-display uppercase leading-none ${badgeSizeClass} ${
+            className={`absolute left-1/2 -translate-x-1/2 z-20 whitespace-nowrap rounded-full border shadow-sm font-display uppercase leading-none ${badgeSizeClass} ${
               isPro
-                ? "bg-gradient-to-r from-[#1039da] via-[#2a4ae8] to-[#ff57cf] text-white border-[#ffd775] shadow-[#1039da]/40"
-                : "bg-gradient-to-r from-[#17061d] via-[#a80084] to-[#17061d] text-[#ffe699] border-2 border-[#ffd775] shadow-[#ff57cf]/50"
+                ? "bg-gradient-to-r from-[#1039da] to-[#ff57cf] text-white border-[#ffd775]/70"
+                : "bg-gradient-to-r from-[#17061d] via-[#850069] to-[#17061d] text-[#ffe699] border border-[#ffd775]/80"
             }`}
           >
             {isPro ? "PRO" : "PREMIUM"}

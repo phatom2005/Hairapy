@@ -27,7 +27,8 @@ public class CorsConfig implements WebMvcConfigurer {
         registry.addMapping("/api/**")
                 .allowedOriginPatterns(origins)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("Authorization", "Content-Type", "Accept")
+                // X-GA-Client-Id: FE gửi kèm khi tạo thanh toán / đặt lịch để gắn sự kiện GA phía server (Phase 5.1)
+                .allowedHeaders("Authorization", "Content-Type", "Accept", "X-GA-Client-Id")
                 .allowCredentials(true);
     }
 }

@@ -169,8 +169,8 @@ export default function ForSalonsPage() {
       {/* Bảng giá đối tác & Dùng thử */}
       <section className="px-6 py-16 sm:px-16">
         <div className="mx-auto max-w-xl text-center">
-          <Card className="p-8 sm:p-10 border-2 border-pink/40 bg-white shadow-xl rounded-3xl relative overflow-hidden">
-            <span className="absolute -top-3 right-6 px-3 py-1 bg-gradient-to-r from-pink to-brand text-white text-[10px] font-black uppercase tracking-wider rounded-full shadow">
+          <Card className="p-8 sm:p-10 border-2 border-pink/40 bg-white shadow-xl rounded-3xl relative overflow-visible">
+            <span className="absolute -top-3 right-6 z-10 px-3 py-1 bg-gradient-to-r from-pink to-brand text-white text-[10px] font-black uppercase tracking-wider rounded-full shadow">
               Ưu đãi ra mắt
             </span>
 

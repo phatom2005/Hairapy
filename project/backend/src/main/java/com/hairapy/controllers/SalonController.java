@@ -118,12 +118,12 @@ public class SalonController {
     @GetMapping("/{id}")
     @Transactional
     public ResponseEntity<?> getSalonDetail(@PathVariable Long id) {
-        salonRepository.incrementViewCount(id);
-
         Optional<Salon> salonOpt = salonRepository.findById(id);
         if (salonOpt.isEmpty() || !salonOpt.get().isActive()) {
             return ResponseEntity.notFound().build();
         }
+
+        salonRepository.incrementViewCount(id);
 
         Salon s = salonOpt.get();
         List<SalonHairstyle> salonHairstyles = salonHairstyleRepository.findBySalonId(id);

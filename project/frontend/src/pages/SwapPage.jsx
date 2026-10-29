@@ -474,7 +474,8 @@ export default function SwapPage() {
 
       trackEvent("hair_swap", {
         hairstyle_id: activeStyle.id,
-        hair_color: chosenColor || "default",
+        base_style_id: activeStyle.baseStyleId ?? activeStyle.id,
+        hair_color: chosenColor || activeStyle.ailabColor || "original",
       });
 
       pollTimeoutRef.current = setTimeout(

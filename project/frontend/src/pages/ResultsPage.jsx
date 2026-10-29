@@ -8,7 +8,7 @@ import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/Navbar";
 import { Badge, Button, Card, Section, SectionHeading } from "../components/ui";
 import api from "../lib/api";
-import { trackEvent } from "../lib/analytics";
+import { trackEvent, setUserProps } from "../lib/analytics";
 import { useScanStore, useHasHydrated } from "../store/useScanStore";
 import useAuthStore from "../store/useAuthStore";
 import FeedbackWidget from "../components/FeedbackWidget";
@@ -413,6 +413,7 @@ export default function ResultsPage() {
                         type="button"
                         onClick={() => {
                           overrideFaceShape(code);
+                          setUserProps({ face_shape: code });
                           trackEvent("face_shape_override", { from: faceShape, to: code });
                         }}
                         className={`rounded-full px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
@@ -523,7 +524,10 @@ export default function ResultsPage() {
                     <button
                       key={t.label}
                       type="button"
-                      onClick={() => setGender(t.value)}
+                      onClick={() => {
+                        setGender(t.value);
+                        setUserProps({ gender_pref: t.value || "Tất cả" });
+                      }}
                       className={`rounded-full px-4 py-1.5 text-xs font-bold transition cursor-pointer ${
                         isActive ? "bg-pink text-white shadow-sm" : "text-mauve hover:text-ink"
                       }`}

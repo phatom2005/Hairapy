@@ -1,6 +1,6 @@
 import QuotaBadge from "../components/QuotaBadge";
 import { Danger } from "iconsax-reactjs";
-import { trackEvent } from "../lib/analytics";
+import { trackEvent, setUserProps } from "../lib/analytics";
 import { useRef, useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import ScanGuideIllustration from "../components/ScanGuideIllustration";
@@ -89,6 +89,7 @@ export default function ScanPage() {
       try {
         const result = await analyzeFace(img);
         setResult(result);
+        setUserProps({ face_shape: result.faceShape });
 
         // Gửi kết quả phân tích dáng khuôn mặt lên backend để lưu lịch sử quét
         const token = localStorage.getItem("token");

@@ -485,7 +485,13 @@ export default function CatalogPage() {
         trackEvent("unsave_favorite", { hairstyle_id: hairstyleId, source: "catalog" });
       } else {
         await api.post("/profile/saved-styles", null, { params: { hairstyleId } });
-        trackEvent("save_favorite", { hairstyle_id: hairstyleId, source: "catalog" });
+        const styleObj = items.find((h) => h.id === hairstyleId);
+        trackEvent("save_favorite", {
+          hairstyle_id: hairstyleId,
+          base_style_id: styleObj?.baseStyleId ?? hairstyleId,
+          hair_color: styleObj?.ailabColor || "original",
+          source: "catalog",
+        });
       }
       queryClient.invalidateQueries({ queryKey: ["profile-saved-styles"] });
     } catch (err) {
@@ -495,7 +501,12 @@ export default function CatalogPage() {
   };
 
   const handleOpenDetail = (base, variants, selected) => {
-    trackEvent("view_hairstyle", { hairstyle_id: selected.id, hairstyle_name: selected.name });
+    trackEvent("view_hairstyle", {
+      hairstyle_id: selected.id,
+      base_style_id: selected.baseStyleId ?? selected.id,
+      hair_color: selected.ailabColor || "original",
+      hairstyle_name: selected.name,
+    });
     setDetailModalData({ base, variants, selected });
   };
 

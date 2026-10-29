@@ -80,7 +80,12 @@ function BookingModalContent({
 
       await api.post("/bookings", payload);
       setSuccess(true);
-      trackEvent("booking_submit", { salon_id: salon.id, hairstyle_id: hairstyle?.id });
+      trackEvent("booking_submit", {
+        salon_id: salon.id,
+        hairstyle_id: hairstyle?.id,
+        base_style_id: hairstyle?.baseStyleId ?? hairstyle?.id,
+        hair_color: hairstyle?.ailabColor || "original",
+      });
       if (onSuccess) onSuccess();
     } catch (err) {
       const msg = err.response?.data?.error || "Không thể gửi yêu cầu đặt lịch. Vui lòng thử lại.";

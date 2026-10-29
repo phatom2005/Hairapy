@@ -23,6 +23,10 @@ public interface SavedHairstyleRepository extends JpaRepository<SavedHairstyle, 
 
     long countByHairstyleId(Long hairstyleId);
 
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(sh) FROM SavedHairstyle sh WHERE sh.createdAt >= :start AND sh.createdAt < :end")
+    long countBetween(@org.springframework.data.repository.query.Param("start") java.time.LocalDateTime start,
+                      @org.springframework.data.repository.query.Param("end") java.time.LocalDateTime end);
+
     void deleteByUserId(Long userId);
 
     // Top kiểu tóc được lưu yêu thích: [hairstyleId, số lượt lưu]

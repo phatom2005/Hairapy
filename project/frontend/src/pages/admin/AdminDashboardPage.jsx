@@ -30,6 +30,7 @@ import {
 import api from "../../lib/api";
 import QuotaPanel from "../../components/admin/QuotaPanel";
 import GaPanel from "../../components/admin/GaPanel";
+import WeeklyInsightPanel from "../../components/admin/WeeklyInsightPanel";
 
 // Màu dùng cho chart — hardcode hex vì Tailwind 4 có thể bỏ CSS var không dùng
 const C = {
@@ -227,6 +228,9 @@ export default function AdminDashboardPage() {
           ))}
         </div>
       </div>
+
+      {/* Thẻ Insight tuần này */}
+      <WeeklyInsightPanel />
 
       {/* KPI */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">

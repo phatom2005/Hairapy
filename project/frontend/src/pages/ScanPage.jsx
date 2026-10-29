@@ -3,7 +3,7 @@ import { Danger } from "iconsax-reactjs";
 import { trackEvent } from "../lib/analytics";
 import { useRef, useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { SCAN_PORTRAIT } from "../lib/figmaAssets";
+import ScanGuideIllustration from "../components/ScanGuideIllustration";
 import { Button, Badge, DisclosureModal } from "../components/ui";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
@@ -246,12 +246,15 @@ export default function ScanPage() {
             <div className="pointer-events-none absolute -bottom-20 -left-20 size-80 rounded-full bg-primary/5 blur-[32px]" />
 
             <div className="relative overflow-hidden rounded-[32px] border-4 border-white bg-line shadow-2xl">
-              <img
-                src={previewUrl || SCAN_PORTRAIT}
-                alt="Đang quét AI"
-                // Ảnh người dùng: hiện trọn khung hình (không cắt mất tóc/cằm) — chỉ ảnh minh hoạ mặc định mới cover
-                className={`aspect-[3/4] w-full transition-all duration-300 ${previewUrl ? "object-contain bg-ink/5" : "object-cover"}`}
-              />
+              {previewUrl ? (
+                <img
+                  src={previewUrl}
+                  alt="Ảnh chân dung đã chọn"
+                  className="aspect-[3/4] w-full object-contain bg-ink/5 transition-all duration-300"
+                />
+              ) : (
+                <ScanGuideIllustration className="aspect-[3/4] w-full" />
+              )}
 
               {analyzing && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink/60 backdrop-blur-sm transition-opacity duration-300">

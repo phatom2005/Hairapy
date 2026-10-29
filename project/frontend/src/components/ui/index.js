@@ -5,3 +5,4 @@ export { default as Input } from "./Input";
 export { Section, SectionHeading } from "./Section";
 export { default as DragScroll } from "./DragScroll";
 export { default as DisclosureModal } from "./DisclosureModal";
+export { default as UserAvatar } from "./UserAvatar";

@@ -7,7 +7,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { PROFILE_IMG } from "../../lib/figmaAssets";
+import UserAvatar from "../ui/UserAvatar";
 import useAuthStore from "../../store/useAuthStore";
 import Button from "../ui/Button";
 import Logo from "./Logo";
@@ -117,10 +117,11 @@ export default function PillNav({ items = DEFAULT_ITEMS }) {
                       aria-label="Tài khoản"
                       className="group flex items-center gap-2"
                     >
-                      <img
-                        src={PROFILE_IMG}
-                        alt=""
-                        className="size-9 rounded-full border-2 border-white object-cover shadow-sm group-hover:ring-2 group-hover:ring-primary/40 transition-all"
+                      <UserAvatar
+                        name={user?.fullName}
+                        email={user?.email}
+                        size="sm"
+                        className="border-2 border-white group-hover:ring-2 group-hover:ring-primary/40 transition-all"
                       />
                     </Link>
                     <button

@@ -40,6 +40,10 @@ public interface PaymentRepository extends JpaRepository<Payment, Long>, JpaSpec
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.status = com.hairapy.models.PaymentStatus.PAID AND p.paidAt >= :since")
     long sumPaidAmountSince(@Param("since") LocalDateTime since);
 
+    // Doanh thu trong khoảng thời gian [start, end)
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.status = com.hairapy.models.PaymentStatus.PAID AND p.paidAt >= :start AND p.paidAt < :end")
+    long sumPaidAmountBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
     // 3. Số giao dịch PAID trong kỳ period
     @Query("SELECT COUNT(p) FROM Payment p WHERE p.status = com.hairapy.models.PaymentStatus.PAID AND p.paidAt >= :since")
     long countPaidSince(@Param("since") LocalDateTime since);

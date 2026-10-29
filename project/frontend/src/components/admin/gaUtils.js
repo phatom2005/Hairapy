@@ -36,10 +36,23 @@ export const EVENT_LABEL = {
   view_salon: "Xem salon trên bản đồ",
   exception: "Lỗi giao diện",
   page_timing: "Đo thời gian tải trang",
+  salon_match_open: "Xem salon phù hợp",
+  booking_submit: "Gửi yêu cầu đặt lịch",
+  booking_confirmed: "Salon xác nhận lịch",
+  booking_completed: "Hoàn thành cắt tóc",
 };
 
 // Phễu sử dụng chính, theo thứ tự
 export const FUNNEL = ["sign_up", "face_scan", "hair_swap", "begin_checkout", "purchase"];
+
+// Phễu kinh doanh mới (North Star: Thử tóc AI -> Cắt tóc hoàn thành tại salon)
+export const BUSINESS_FUNNEL = [
+  "hair_swap",
+  "salon_match_open",
+  "booking_submit",
+  "booking_confirmed",
+  "booking_completed",
+];
 
 export const CHANNEL_LABEL = {
   "Organic Social": "MXH (tự nhiên)",
@@ -98,19 +111,19 @@ export function useGaRealtime() {
 }
 
 /** Tải số liệu GA4 từ backend (cache 10 phút) kèm nút làm mới. */
-export function useGaData(days) {
+export function useGaData(days, onlyVietnam = false) {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const query = useQuery({
-    queryKey: ["admin-ga", days],
-    queryFn: async () => (await api.get("/admin/ga", { params: { days } })).data,
+    queryKey: ["admin-ga", days, onlyVietnam],
+    queryFn: async () => (await api.get("/admin/ga", { params: { days, onlyVietnam } })).data,
     staleTime: 5 * 60_000,
   });
   const refresh = async () => {
     setRefreshing(true);
     try {
-      const res = await api.get("/admin/ga", { params: { days, refresh: true } });
-      queryClient.setQueryData(["admin-ga", days], res.data);
+      const res = await api.get("/admin/ga", { params: { days, onlyVietnam, refresh: true } });
+      queryClient.setQueryData(["admin-ga", days, onlyVietnam], res.data);
     } catch (err) {
       console.error("Không làm mới được GA4:", err);
     } finally {

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { X, Calendar, Clock, MapPin, Phone, CheckCircle, AlertCircle, Sparkles } from "lucide-react";
+import { CloseCircle, Calendar, Clock, Location, Call, TickCircle, Danger, MagicStar } from "iconsax-reactjs";
 import api from "../lib/api";
 import useAuthStore from "../store/useAuthStore";
 import { useScanStore } from "../store/useScanStore";
@@ -80,7 +80,12 @@ function BookingModalContent({
 
       await api.post("/bookings", payload);
       setSuccess(true);
-      trackEvent("booking_submit", { salon_id: salon.id, hairstyle_id: hairstyle?.id });
+      trackEvent("booking_submit", {
+        salon_id: salon.id,
+        hairstyle_id: hairstyle?.id,
+        base_style_id: hairstyle?.baseStyleId ?? hairstyle?.id,
+        hair_color: hairstyle?.ailabColor || "original",
+      });
       if (onSuccess) onSuccess();
     } catch (err) {
       const msg = err.response?.data?.error || "Không thể gửi yêu cầu đặt lịch. Vui lòng thử lại.";
@@ -96,7 +101,7 @@ function BookingModalContent({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-zinc-800 bg-zinc-900/80">
           <div className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-pink-500" />
+            <Calendar size={20} className="text-pink-500" />
             <h3 className="text-lg font-semibold text-white">
               {success ? "Gửi yêu cầu thành công" : "Đặt lịch tại Salon"}
             </h3>
@@ -105,7 +110,7 @@ function BookingModalContent({
             onClick={onClose}
             className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <CloseCircle size={20} />
           </button>
         </div>
 
@@ -114,7 +119,7 @@ function BookingModalContent({
           {success ? (
             <div className="text-center py-6 space-y-4">
               <div className="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30">
-                <CheckCircle className="w-8 h-8" />
+                <TickCircle size={32} variant="Bold" />
               </div>
               <div className="space-y-1">
                 <h4 className="text-xl font-bold text-white">Đã gửi yêu cầu đặt lịch!</h4>
@@ -163,10 +168,10 @@ function BookingModalContent({
                     )}
                   </div>
                   <p className="text-xs text-zinc-400 truncate flex items-center gap-1 mt-0.5">
-                    <MapPin className="w-3 h-3 shrink-0" /> {salon.address}
+                    <Location size={12} className="shrink-0" /> {salon.address}
                   </p>
                   <p className="text-xs text-zinc-400 truncate flex items-center gap-1 mt-0.5">
-                    <Phone className="w-3 h-3 shrink-0" /> {salon.phone}
+                    <Call size={12} className="shrink-0" /> {salon.phone}
                   </p>
                 </div>
               </div>
@@ -192,7 +197,7 @@ function BookingModalContent({
                     )}
                     <div className="min-w-0">
                       <p className="text-xs text-pink-400 font-medium flex items-center gap-1">
-                        <Sparkles className="w-3 h-3" /> Kiểu tóc mong muốn
+                        <MagicStar size={12} variant="Bold" /> Kiểu tóc mong muốn
                       </p>
                       <p className="text-sm font-semibold text-white truncate">
                         {hairstyle ? hairstyle.name : "Kiểu tóc từ ảnh thử"}
@@ -266,7 +271,7 @@ function BookingModalContent({
                   />
                 </div>
                 <p className="text-[11px] text-zinc-400 mt-1 flex items-center gap-1">
-                  <Clock className="w-3 h-3" /> Tối thiểu trước 1 giờ, tối đa 30 ngày tới.
+                  <Clock size={12} /> Tối thiểu trước 1 giờ, tối đa 30 ngày tới.
                 </p>
               </div>
 
@@ -300,7 +305,7 @@ function BookingModalContent({
 
               {error && (
                 <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-400 flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <Danger size={16} className="shrink-0 mt-0.5" />
                   <span>{error}</span>
                 </div>
               )}

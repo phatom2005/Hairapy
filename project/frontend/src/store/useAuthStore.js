@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { trackEvent } from "../lib/analytics";
+import { trackEvent, setGaUserId, setUserProps } from "../lib/analytics";
 import api from "../lib/api";
 import { useScanStore } from "./useScanStore";
 
@@ -29,6 +29,11 @@ const useAuthStore = create((set, get) => ({
       try {
         const meRes = await api.get("/auth/me");
         set({ user: meRes.data });
+        if (meRes.data?.id) setGaUserId(meRes.data.id);
+        setUserProps({
+          plan: meRes.data?.plan || "FREE",
+          is_salon_owner: (meRes.data?.role === "SALON_OWNER" || meRes.data?.salonId) ? "1" : "",
+        });
       } catch {
         // Giữ thông tin user cơ bản nếu endpoint me gặp lỗi tạm thời
       }
@@ -89,6 +94,11 @@ const useAuthStore = create((set, get) => ({
       try {
         const meRes = await api.get("/auth/me");
         set({ user: meRes.data });
+        if (meRes.data?.id) setGaUserId(meRes.data.id);
+        setUserProps({
+          plan: meRes.data?.plan || "FREE",
+          is_salon_owner: (meRes.data?.role === "SALON_OWNER" || meRes.data?.salonId) ? "1" : "",
+        });
       } catch {
         // Giữ thông tin user cơ bản nếu endpoint me gặp lỗi tạm thời
       }
@@ -119,6 +129,11 @@ const useAuthStore = create((set, get) => ({
       try {
         const meRes = await api.get("/auth/me");
         set({ user: meRes.data });
+        if (meRes.data?.id) setGaUserId(meRes.data.id);
+        setUserProps({
+          plan: meRes.data?.plan || "FREE",
+          is_salon_owner: (meRes.data?.role === "SALON_OWNER" || meRes.data?.salonId) ? "1" : "",
+        });
       } catch {
         // Giữ thông tin user cơ bản nếu endpoint me gặp lỗi tạm thời
       }
@@ -147,6 +162,7 @@ const useAuthStore = create((set, get) => ({
       console.warn("Lỗi xoá session scan khi logout:", e);
     }
     set({ token: null, user: null, error: null });
+    setGaUserId(null);
     // Chuyển hướng về trang chủ và tải lại trang để xóa sạch cache/state cũ
     window.location.href = "/";
   },
@@ -164,6 +180,11 @@ const useAuthStore = create((set, get) => ({
     try {
       const res = await api.get("/auth/me");
       set({ user: res.data, hydrated: true });
+      if (res.data?.id) setGaUserId(res.data.id);
+      setUserProps({
+        plan: res.data?.plan || "FREE",
+        is_salon_owner: (res.data?.role === "SALON_OWNER" || res.data?.salonId) ? "1" : "",
+      });
     } catch {
       // Nếu token hết hạn hoặc không hợp lệ, đăng xuất người dùng
       localStorage.removeItem("token");

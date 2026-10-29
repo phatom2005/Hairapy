@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { MagicStar } from "iconsax-reactjs";
+import { MagicStar, Profile2User } from "iconsax-reactjs";
 import { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { AnimatedContent, BorderGlow, GlareHover, SpotlightCard } from "../components/animated";
@@ -8,7 +8,7 @@ import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/Navbar";
 import { Badge, Button, Card, Section, SectionHeading } from "../components/ui";
 import api from "../lib/api";
-import { trackEvent } from "../lib/analytics";
+import { trackEvent, setUserProps } from "../lib/analytics";
 import { useScanStore, useHasHydrated } from "../store/useScanStore";
 import useAuthStore from "../store/useAuthStore";
 import FeedbackWidget from "../components/FeedbackWidget";
@@ -246,6 +246,21 @@ export default function ResultsPage() {
     enabled: !!faceShape,
   });
 
+  // Lấy top kiểu tóc người có cùng dáng mặt hay thử nhất (30 ngày)
+  const { data: faceShapeTrending = [] } = useQuery({
+    queryKey: ["insights-face-shape", faceShape],
+    queryFn: async () => {
+      if (!faceShape) return [];
+      try {
+        const { data } = await api.get(`/insights/face-shape/${encodeURIComponent(faceShape)}`);
+        return data;
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!faceShape,
+  });
+
   const groupedRecommendations = useMemo(() => {
     const groups = new Map();
     for (const item of recommendations) {
@@ -413,6 +428,7 @@ export default function ResultsPage() {
                         type="button"
                         onClick={() => {
                           overrideFaceShape(code);
+                          setUserProps({ face_shape: code });
                           trackEvent("face_shape_override", { from: faceShape, to: code });
                         }}
                         className={`rounded-full px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
@@ -523,7 +539,10 @@ export default function ResultsPage() {
                     <button
                       key={t.label}
                       type="button"
-                      onClick={() => setGender(t.value)}
+                      onClick={() => {
+                        setGender(t.value);
+                        setUserProps({ gender_pref: t.value || "Tất cả" });
+                      }}
                       className={`rounded-full px-4 py-1.5 text-xs font-bold transition cursor-pointer ${
                         isActive ? "bg-pink text-white shadow-sm" : "text-mauve hover:text-ink"
                       }`}
@@ -587,6 +606,45 @@ export default function ResultsPage() {
                     Xem toàn bộ kho kiểu tóc
                   </Button>
                 </Card>
+              </div>
+            )}
+
+            {/* Khối "Người có dáng mặt {X} hay thử nhất" */}
+            {faceShapeTrending.length > 0 && (
+              <div className="mt-8 rounded-3xl border border-line bg-card p-6 shadow-sm">
+                <div className="mb-4">
+                  <h3 className="flex items-center gap-2 font-display text-lg font-bold text-ink sm:text-xl">
+                    <Profile2User size="22" className="text-primary" variant="Bold" />
+                    Người có dáng mặt {faceShapeVi} hay thử nhất
+                  </h3>
+                  <p className="text-xs text-mauve">Dựa trên số lượt thử tóc thực tế của người dùng cùng dáng mặt 30 ngày qua.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+                  {faceShapeTrending.map((st) => (
+                    <div
+                      key={st.hairstyleId}
+                      onClick={() => handleTryStyle(st)}
+                      className="group cursor-pointer flex flex-col"
+                    >
+                      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl border border-line bg-canvas">
+                        <img
+                          src={st.imageUrl}
+                          alt={st.name}
+                          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                          onError={(e) => {
+                            e.target.src = `https://placehold.co/180x240?text=${encodeURIComponent(st.name)}`;
+                          }}
+                        />
+                        <span className="absolute bottom-2 left-2 rounded-lg bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+                          {st.tries} lượt thử
+                        </span>
+                      </div>
+                      <h4 className="mt-2 text-xs font-bold text-ink line-clamp-1 group-hover:text-primary transition">
+                        {st.name}
+                      </h4>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

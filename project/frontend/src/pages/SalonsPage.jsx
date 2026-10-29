@@ -7,7 +7,7 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
-import { MapPin, Navigation, Sparkles, Phone, Calendar, Star } from "lucide-react";
+import { Location, LocationDiscover, MagicStar, Call, Calendar, Star1 } from "iconsax-reactjs";
 
 // Khắc phục lỗi bundler Vite không tải được default marker icons của Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -253,7 +253,7 @@ export default function SalonsPage() {
                   className="rounded border-line text-pink focus:ring-pink"
                 />
                 <span className="flex items-center gap-1 text-pink">
-                  <Sparkles className="w-3.5 h-3.5" /> Chỉ salon nhận đặt lịch online (Đối tác)
+                  <MagicStar size={14} variant="Bold" /> Chỉ salon nhận đặt lịch online (Đối tác)
                 </span>
               </label>
             </div>
@@ -269,7 +269,7 @@ export default function SalonsPage() {
                     : "bg-white border-line text-mauve hover:text-ink"
                 }`}
               >
-                <Navigation className={`w-3.5 h-3.5 text-pink ${locating ? "animate-spin" : ""}`} />
+                <LocationDiscover size={14} className={`text-pink ${locating ? "animate-spin" : ""}`} />
                 <span>{coords ? "Đã định vị gần bạn" : "Gần tôi nhất"}</span>
               </button>
               {coords && (
@@ -356,13 +356,13 @@ export default function SalonsPage() {
                           </Link>
                           {sl.rating > 0 && (
                             <span className="flex items-center gap-1 text-sm font-bold text-ink">
-                              <Star className="w-4 h-4 text-lime fill-lime" /> {sl.rating}
+                              <Star1 size={16} variant="Bold" className="text-lime" /> {sl.rating}
                             </span>
                           )}
                         </div>
 
                         <p className="text-xs text-mauve flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 shrink-0 text-muted" /> {sl.address}
+                          <Location size={14} className="shrink-0 text-muted" /> {sl.address}
                         </p>
 
                         {sl.description && (
@@ -400,7 +400,7 @@ export default function SalonsPage() {
                                 onClick={(e) => handleOpenBooking(sl, e)}
                                 className="px-4 py-1.5 rounded-xl bg-pink hover:bg-pink-hover text-white text-xs font-bold transition-colors shadow-sm flex items-center gap-1 cursor-pointer"
                               >
-                                <Calendar className="w-3.5 h-3.5" />
+                                <Calendar size={14} />
                                 <span>Đặt lịch</span>
                               </button>
                             ) : (
@@ -409,7 +409,7 @@ export default function SalonsPage() {
                                   href={`tel:${sl.phone}`}
                                   className="px-3.5 py-1.5 rounded-xl bg-canvas border border-line hover:border-primary text-xs font-semibold text-ink flex items-center gap-1 transition-colors"
                                 >
-                                  <Phone className="w-3 h-3" /> Gọi điện
+                                  <Call size={12} /> Gọi điện
                                 </a>
                               )
                             )}

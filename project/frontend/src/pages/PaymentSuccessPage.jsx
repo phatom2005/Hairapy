@@ -26,15 +26,14 @@ export default function PaymentSuccessPage() {
     const checkStatus = async () => {
       try {
         const response = await api.get(`/payments/status/${orderCode}`);
-        const { status: paymentStatus, plan, amount } = response.data;
+        const { status: paymentStatus, plan } = response.data;
 
         if (paymentStatus === "PAID") {
-          // value + currency để GA4 tính doanh thu theo nguồn truy cập
-          trackEvent("purchase", {
+          // Sự kiện purchase đã được gửi an toàn từ server qua GA4 Measurement Protocol.
+          // Frontend chỉ bắn event payment_success_view không kèm value để đo lượt xem trang.
+          trackEvent("payment_success_view", {
             transaction_id: String(orderCode),
-            value: Number(amount) || 0,
-            currency: "VND",
-            items: [{ item_id: String(plan), item_name: String(plan) }],
+            plan: String(plan),
           });
           setStatus("paid");
           // Đồng bộ lại thông tin gói tài khoản mới của user trong auth store

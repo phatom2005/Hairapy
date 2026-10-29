@@ -53,4 +53,7 @@ public class Payment {
     @Column(name = "subscription_granted", nullable = false)
     @Builder.Default
     private boolean subscriptionGranted = false;
+
+    @Column(name = "ga_client_id", length = 100)
+    private String gaClientId;
 }

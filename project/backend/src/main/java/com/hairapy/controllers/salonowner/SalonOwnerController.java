@@ -45,6 +45,12 @@ public class SalonOwnerController {
     private final UsageService usageService;
     private final CloudinaryService cloudinaryService;
     private final EmailService emailService;
+    private final com.hairapy.services.GaMeasurementService gaMeasurementService;
+    private final com.hairapy.services.TrendService trendService;
+    private final com.hairapy.services.GaReportService gaReportService;
+    private final com.hairapy.repositories.UsageHistoryRepository usageHistoryRepository;
+
+    private static final String DEFAULT_CITY = "Ho Chi Minh City";
 
     private Salon getOwnedSalon() {
         User currentUser = usageService.getCurrentUser();
@@ -222,6 +228,34 @@ public class SalonOwnerController {
         booking.setUpdatedAt(LocalDateTime.now());
         bookingRequestRepository.save(booking);
 
+        // Bắn sự kiện cập nhật trạng thái đặt lịch lên GA4 Measurement Protocol
+        if (gaMeasurementService != null) {
+            long leadTimeHours = 0;
+            if (booking.getPreferredTime() != null && booking.getCreatedAt() != null) {
+                leadTimeHours = java.time.Duration.between(booking.getCreatedAt(), booking.getPreferredTime()).toHours();
+            }
+
+            String eventName = switch (target) {
+                case CONFIRMED -> "booking_confirmed";
+                case COMPLETED -> "booking_completed";
+                case REJECTED -> "booking_rejected";
+                case NO_SHOW -> "booking_no_show";
+                default -> null;
+            };
+
+            if (eventName != null) {
+                Map<String, Object> gaParams = new HashMap<>();
+                gaParams.put("salon_id", s.getId());
+                if (booking.getHairstyleId() != null) {
+                    gaParams.put("hairstyle_id", booking.getHairstyleId());
+                }
+                gaParams.put("lead_time_hours", leadTimeHours);
+                gaMeasurementService.send(booking.getGaClientId(),
+                        booking.getUser() != null ? booking.getUser().getId() : null,
+                        eventName, gaParams);
+            }
+        }
+
         // Gửi email cho khách khi CONFIRMED hoặc REJECTED (best-effort)
         if (target == BookingStatus.CONFIRMED || target == BookingStatus.REJECTED) {
             if (booking.getUser() != null && booking.getUser().getEmail() != null) {
@@ -333,6 +367,155 @@ public class SalonOwnerController {
                 b.getCreatedAt(),
                 b.getUpdatedAt()
         );
+    }
+
+    /**
+     * Báo cáo xu hướng khu vực cho Salon đối tác (yêu cầu gói đối tác còn hiệu lực).
+     */
+    @GetMapping("/insights")
+    public ResponseEntity<?> getSalonInsights() {
+        Salon s = getOwnedSalon();
+        if (!s.isPartnerActive()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(
+                            "error", "Gói đối tác đã hết hạn hoặc chưa kích hoạt.",
+                            "partnerExpired", true
+                    ));
+        }
+
+        // 1. Top 10 kiểu được thử ở thành phố (kèm growthPct)
+        List<com.hairapy.dto.insight.TrendingStyleResponse> topTriedInCity = trendService.getTopStylesByCity(DEFAULT_CITY, 10);
+
+        // 2. Top kiểu khách gửi yêu cầu đặt lịch cùng quận trong 30 ngày qua
+        LocalDateTime since30d = LocalDateTime.now().minusDays(30);
+        List<SalonOwnerInsightsResponse.DistrictRequestedHairstyle> topRequestedInDistrict = new ArrayList<>();
+        if (s.getDistrict() != null && !s.getDistrict().isBlank()) {
+            List<Object[]> districtRows = bookingRequestRepository.findTopRequestedInDistrict(
+                    s.getDistrict().trim(), since30d, PageRequest.of(0, 10));
+            for (Object[] r : districtRows) {
+                String name = (String) r[0];
+                long count = ((Number) r[1]).longValue();
+                topRequestedInDistrict.add(new SalonOwnerInsightsResponse.DistrictRequestedHairstyle(name, count));
+            }
+        }
+
+        // 3. Kiểu nằm trong topTriedInCity mà salon chưa nhận làm
+        Set<Long> salonHairstyleIds = new HashSet<>();
+        for (SalonHairstyle sh : salonHairstyleRepository.findBySalonId(s.getId())) {
+            if (sh.getHairstyle() != null && sh.getHairstyle().getId() != null) {
+                salonHairstyleIds.add(sh.getHairstyle().getId());
+                if (sh.getHairstyle().getBaseStyleId() != null) {
+                    salonHairstyleIds.add(sh.getHairstyle().getBaseStyleId());
+                }
+            }
+        }
+        List<com.hairapy.dto.insight.TrendingStyleResponse> missingHotStyles = topTriedInCity.stream()
+                .filter(t -> !salonHairstyleIds.contains(t.hairstyleId()))
+                .toList();
+
+        // 4. Phân bố lượt thử tóc theo giờ trong ngày (30 ngày)
+        List<SalonOwnerInsightsResponse.HourCount> peakHours = computePeakHours(since30d);
+
+        // 5. Phễu 5 bước của riêng salon
+        SalonOwnerInsightsResponse.SalonFunnel funnel = computeSalonFunnel(s);
+
+        return ResponseEntity.ok(new SalonOwnerInsightsResponse(
+                DEFAULT_CITY,
+                s.getDistrict(),
+                topTriedInCity,
+                topRequestedInDistrict,
+                missingHotStyles,
+                peakHours,
+                funnel
+        ));
+    }
+
+    private List<SalonOwnerInsightsResponse.HourCount> computePeakHours(LocalDateTime since30d) {
+        long[] hourCounts = new long[24];
+        if (gaReportService.isConfigured()) {
+            try {
+                Map<String, Object> filter = Map.of(
+                        "filter", Map.of("fieldName", "eventName", "stringFilter", Map.of("value", "hair_swap", "matchType", "EXACT"))
+                );
+                List<com.hairapy.services.GaReportService.Row> rows = gaReportService.runReport(
+                        "30daysAgo", "today",
+                        List.of("hour"),
+                        List.of("eventCount"),
+                        24, null, filter);
+                for (com.hairapy.services.GaReportService.Row r : rows) {
+                    try {
+                        int h = Integer.parseInt(r.dims().get(0));
+                        if (h >= 0 && h < 24) {
+                            hourCounts[h] = Math.round(r.metrics().get(0));
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+                List<SalonOwnerInsightsResponse.HourCount> list = new ArrayList<>();
+                for (int h = 0; h < 24; h++) {
+                    list.add(new SalonOwnerInsightsResponse.HourCount(h, hourCounts[h]));
+                }
+                return list;
+            } catch (Exception e) {
+                log.warn("Lỗi khi lấy peakHours từ GA4: {}", e.getMessage());
+            }
+        }
+
+        // Fallback DB
+        List<LocalDateTime> times = usageHistoryRepository.findSwapTimesSince(since30d);
+        java.time.ZoneId serverZone = java.time.ZoneId.systemDefault();
+        java.time.ZoneId vnZone = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
+        for (LocalDateTime t : times) {
+            // usedAt lưu theo giờ server (UTC trên Railway) -> quy về giờ VN, nếu không biểu đồ lệch 7 tiếng
+            int h = t.atZone(serverZone).withZoneSameInstant(vnZone).getHour();
+            hourCounts[h]++;
+        }
+        List<SalonOwnerInsightsResponse.HourCount> list = new ArrayList<>();
+        for (int h = 0; h < 24; h++) {
+            list.add(new SalonOwnerInsightsResponse.HourCount(h, hourCounts[h]));
+        }
+        return list;
+    }
+
+    private SalonOwnerInsightsResponse.SalonFunnel computeSalonFunnel(Salon s) {
+        if (gaReportService.isConfigured()) {
+            try {
+                Map<String, Object> filter = Map.of(
+                        "andGroup", Map.of("expressions", List.of(
+                                Map.of("filter", Map.of("fieldName", "customEvent:salon_id", "stringFilter", Map.of("value", String.valueOf(s.getId()), "matchType", "EXACT"))),
+                                Map.of("filter", Map.of("fieldName", "eventName", "inListFilter", Map.of("values", List.of(
+                                        "salon_impression", "salon_click", "booking_submit", "booking_confirmed", "booking_completed"
+                                ))))
+                        ))
+                );
+                List<com.hairapy.services.GaReportService.Row> rows = gaReportService.runReport(
+                        "30daysAgo", "today",
+                        List.of("eventName"),
+                        List.of("eventCount"),
+                        10, null, filter);
+                Map<String, Long> counts = new HashMap<>();
+                for (com.hairapy.services.GaReportService.Row r : rows) {
+                    counts.put(r.dims().get(0), Math.round(r.metrics().get(0)));
+                }
+                return new SalonOwnerInsightsResponse.SalonFunnel(
+                        counts.getOrDefault("salon_impression", 0L),
+                        counts.getOrDefault("salon_click", 0L),
+                        counts.getOrDefault("booking_submit", 0L),
+                        counts.getOrDefault("booking_confirmed", 0L),
+                        counts.getOrDefault("booking_completed", 0L)
+                );
+            } catch (Exception e) {
+                log.warn("Lỗi khi lấy funnel từ GA4: {}", e.getMessage());
+            }
+        }
+
+        // Fallback DB
+        long bookingSubmit = bookingRequestRepository.countBySalonId(s.getId());
+        long confirmed = bookingRequestRepository.countBySalonIdAndStatus(s.getId(), BookingStatus.CONFIRMED)
+                + bookingRequestRepository.countBySalonIdAndStatus(s.getId(), BookingStatus.COMPLETED);
+        long completed = bookingRequestRepository.countBySalonIdAndStatus(s.getId(), BookingStatus.COMPLETED);
+        long click = s.getViewCount();
+        // Không có GA thì không biết lượt hiển thị thật -> trả null (FE hiện "—"), KHÔNG ước lượng/bịa số
+        return new SalonOwnerInsightsResponse.SalonFunnel(null, click, bookingSubmit, confirmed, completed);
     }
 
     /** Escape HTML cho dữ liệu người dùng nhập trước khi chèn vào email (chống chèn link/HTML giả mạo). */

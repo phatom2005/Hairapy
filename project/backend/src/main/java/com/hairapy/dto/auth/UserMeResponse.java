@@ -17,5 +17,6 @@ public record UserMeResponse(
     LocalDateTime planEndDate, // null nếu FREE (hoặc Admin/Tester)
     String provider,           // LOCAL | GOOGLE | FACEBOOK
     boolean hasPassword,       // passwordHash != null
-    Long salonId               // null nếu không phải chủ salon
+    Long salonId,              // null nếu không phải chủ salon
+    Long id                    // id số nội bộ của user (dùng cho GA user_id, v.v.)
 ) {}

@@ -49,6 +49,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/salon-owner/**").hasRole("SALON_OWNER")
                         .requestMatchers("/api/hairstyles/**").permitAll()
+                        .requestMatchers("/api/insights/**").permitAll()
                         .requestMatchers("/api/salons/**").permitAll()
                         .anyRequest().authenticated()
                 )

@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Danger, TickCircle } from "iconsax-reactjs";
+import { Danger, TickCircle, MagicStar } from "iconsax-reactjs";
 import { trackEvent } from "../lib/analytics";
+import { peekVariant, trackExposure } from "../lib/experiments";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { normalizeImage } from "../utils/imageUtils";
 import { Link, useSearchParams } from "react-router-dom";
@@ -19,7 +20,7 @@ import AiStylistPanel from "../components/AiStylistPanel";
 import HairColorStudio from "../components/HairColorStudio";
 import ShareModal from "../components/ShareModal";
 import SalonMatchSheet from "../components/SalonMatchSheet";
-import { Sparkles } from "lucide-react";
+
 
 import { COLOR_BY_VALUE } from "../lib/hairColors";
 
@@ -76,6 +77,8 @@ export default function SwapPage() {
 
   // Modal gợi ý salon đối tác
   const [showSalonMatch, setShowSalonMatch] = useState(false);
+  // Thử nghiệm A/B "salon_cta" (5.5): A = nút viền "Cắt kiểu này ở đâu?", B = nút đậm "Đặt lịch cắt kiểu này gần bạn"
+  const [salonCtaVariant] = useState(() => peekVariant("salon_cta"));
 
   const pollTimeoutRef = useRef(null);
 
@@ -170,6 +173,12 @@ export default function SwapPage() {
     : null;
 
   const activeResultImage = resultImage || existingSessionResult?.imageUrl || null;
+
+  // Ghi nhận exposure của thử nghiệm salon_cta khi nút thực sự hiện ra (có ảnh kết quả), 1 lần/phiên
+  const hasSalonCta = Boolean(activeResultImage);
+  useEffect(() => {
+    if (hasSalonCta) trackExposure("salon_cta", salonCtaVariant);
+  }, [hasSalonCta, salonCtaVariant]);
 
   const POLL_INTERVAL_MS = 3000;
   const MAX_POLL_ATTEMPTS = 30;
@@ -474,7 +483,8 @@ export default function SwapPage() {
 
       trackEvent("hair_swap", {
         hairstyle_id: activeStyle.id,
-        hair_color: chosenColor || "default",
+        base_style_id: activeStyle.baseStyleId ?? activeStyle.id,
+        hair_color: chosenColor || activeStyle.ailabColor || "original",
       });
 
       pollTimeoutRef.current = setTimeout(
@@ -834,7 +844,7 @@ export default function SwapPage() {
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-pink/10 via-primary/10 to-pink/5 border border-pink/20">
                   <div className="flex items-center gap-3">
                     <div className="size-10 rounded-xl bg-pink text-white flex items-center justify-center shrink-0 shadow-sm">
-                      <Sparkles className="w-5 h-5" />
+                      <MagicStar size={20} variant="Bold" />
                     </div>
                     <div>
                       <p className="text-sm font-bold text-ink">Thích kiểu tóc này?</p>
@@ -844,12 +854,21 @@ export default function SwapPage() {
                   <Button
                     type="button"
                     onClick={() => {
-                      trackEvent("salon_match_open", { hairstyle_id: activeStyle?.id, source: "swap_page" });
+                      trackEvent("salon_match_open", {
+                        hairstyle_id: activeStyle?.id,
+                        source: "swap_page",
+                        experiment: "salon_cta",
+                        variant: salonCtaVariant,
+                      });
                       setShowSalonMatch(true);
                     }}
-                    className="w-full sm:w-auto shrink-0 bg-primary hover:bg-primary-hover text-white font-bold text-xs px-4 py-2.5 shadow-sm"
+                    className={
+                      salonCtaVariant === "B"
+                        ? "w-full sm:w-auto shrink-0 bg-primary hover:bg-primary-hover text-white font-bold text-sm px-5 py-3 shadow-md"
+                        : "w-full sm:w-auto shrink-0 bg-white hover:bg-primary/5 border-2 border-primary text-primary font-bold text-xs px-4 py-2.5"
+                    }
                   >
-                    Cắt kiểu này ở đâu? — Tìm Salon đối tác →
+                    {salonCtaVariant === "B" ? "Đặt lịch cắt kiểu này gần bạn" : "Cắt kiểu này ở đâu?"}
                   </Button>
                 </div>
               )}

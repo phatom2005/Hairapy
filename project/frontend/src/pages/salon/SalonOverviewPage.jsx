@@ -3,14 +3,14 @@ import { Link } from "react-router-dom";
 import {
   Calendar,
   Eye,
-  CheckCircle,
+  TickCircle,
   Clock,
-  TrendingUp,
-  Sparkles,
-  AlertTriangle,
+  TrendUp,
+  MagicStar,
+  Danger,
   ArrowRight,
-  Scissors,
-} from "lucide-react";
+  Scissor,
+} from "iconsax-reactjs";
 import { Card, Button } from "../../components/ui";
 import api from "../../lib/api";
 
@@ -81,14 +81,14 @@ export default function SalonOverviewPage() {
     {
       label: "Đã hoàn thành",
       value: stats.completedBookings || 0,
-      icon: CheckCircle,
+      icon: TickCircle,
       color: "text-emerald-500",
       bg: "bg-emerald-500/10 border-emerald-500/20",
     },
     {
       label: "Tỉ lệ đặt / xem",
       value: `${stats.conversionRate != null ? stats.conversionRate : 0}%`,
-      icon: TrendingUp,
+      icon: TrendUp,
       color: "text-pink",
       bg: "bg-pink/10 border-pink/20",
     },
@@ -128,9 +128,9 @@ export default function SalonOverviewPage() {
               }`}
             >
               {isExpired || isExpiringSoon ? (
-                <AlertTriangle className="size-5" />
+                <Danger size={20} />
               ) : (
-                <Sparkles className="size-5" />
+                <MagicStar size={20} variant="Bold" />
               )}
             </div>
             <div>
@@ -163,7 +163,7 @@ export default function SalonOverviewPage() {
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-mauve">{kpi.label}</span>
               <div className={`size-8 rounded-lg flex items-center justify-center border ${kpi.bg} ${kpi.color}`}>
-                <kpi.icon className="size-4" />
+                <kpi.icon size={16} />
               </div>
             </div>
             <p className="text-2xl sm:text-3xl font-black text-ink">{kpi.value}</p>
@@ -177,7 +177,7 @@ export default function SalonOverviewPage() {
         <Card className="p-6 border border-line bg-white rounded-2xl shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold text-ink text-base flex items-center gap-2">
-              <Scissors className="size-4 text-pink" />
+              <Scissor size={16} className="text-pink" />
               <span>Kiểu tóc được yêu cầu nhiều nhất</span>
             </h2>
             <Link
@@ -212,7 +212,7 @@ export default function SalonOverviewPage() {
                       />
                     ) : (
                       <div className="size-10 rounded-lg bg-pink/10 text-pink flex items-center justify-center shrink-0">
-                        <Scissors className="size-5" />
+                        <Scissor size={20} />
                       </div>
                     )}
                     <p className="font-bold text-sm text-ink truncate">{item.hairstyleName}</p>
@@ -241,7 +241,7 @@ export default function SalonOverviewPage() {
                 className="w-full justify-between py-3 text-xs font-bold shadow-sm"
               >
                 <span>Xử lý yêu cầu đặt lịch ngay</span>
-                <ArrowRight className="size-4" />
+                <ArrowRight size={16} />
               </Button>
 
               <Button
@@ -250,7 +250,7 @@ export default function SalonOverviewPage() {
                 className="w-full justify-between py-3 text-xs font-semibold"
               >
                 <span>Cập nhật bảng giá dịch vụ</span>
-                <Scissors className="size-4" />
+                <Scissor size={16} />
               </Button>
 
               <Button
@@ -259,7 +259,7 @@ export default function SalonOverviewPage() {
                 className="w-full justify-between py-3 text-xs font-semibold"
               >
                 <span>Chỉnh sửa thông tin tiệm</span>
-                <Calendar className="size-4" />
+                <Calendar size={16} />
               </Button>
             </div>
           </div>

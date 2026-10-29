@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { MapPin, Phone, Calendar, Star, Sparkles, ArrowLeft, ExternalLink, Scissors, CheckCircle } from "lucide-react";
+import { Location, Call, Calendar, Star1, MagicStar, ArrowLeft, Export, Scissor, TickCircle } from "iconsax-reactjs";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
@@ -83,7 +83,7 @@ export default function SalonDetailPage() {
           <h2 className="text-xl font-bold text-ink">Không tìm thấy thông tin salon</h2>
           <p className="text-sm text-mauve mt-2">Salon này có thể đã ngừng hoạt động hoặc đường dẫn không đúng.</p>
           <Link to="/salons" className="mt-6 inline-flex items-center gap-1.5 text-sm font-bold text-pink hover:underline">
-            <ArrowLeft className="w-4 h-4" /> Quay lại danh sách salon
+            <ArrowLeft size={16} /> Quay lại danh sách salon
           </Link>
         </div>
         <Footer />
@@ -108,7 +108,7 @@ export default function SalonDetailPage() {
             to="/salons"
             className="inline-flex items-center gap-2 text-xs font-semibold text-mauve hover:text-ink transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" /> Danh sách salon
+            <ArrowLeft size={16} /> Danh sách salon
           </Link>
         </div>
 
@@ -125,12 +125,12 @@ export default function SalonDetailPage() {
               <div className="absolute top-4 left-4 flex flex-col gap-1.5 z-10">
                 {salon.partner && (
                   <Badge variant="new" className="bg-pink text-white border-pink text-xs font-bold shadow-md">
-                    <Sparkles className="w-3.5 h-3.5 mr-1" /> SALON ĐỐI TÁC
+                    <MagicStar size={14} variant="Bold" className="mr-1" /> SALON ĐỐI TÁC
                   </Badge>
                 )}
                 {salon.verified && (
                   <Badge variant="premium" className="text-xs shadow-md">
-                    <CheckCircle className="w-3.5 h-3.5 mr-1" /> HAIRAPY KIỂM ĐỊNH
+                    <TickCircle size={14} variant="Bold" className="mr-1" /> HAIRAPY KIỂM ĐỊNH
                   </Badge>
                 )}
               </div>
@@ -145,19 +145,19 @@ export default function SalonDetailPage() {
                   </h1>
                   {salon.rating > 0 && (
                     <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-lime/10 border border-lime/30 text-ink text-sm font-bold">
-                      <Star className="w-4 h-4 text-lime fill-lime" /> {salon.rating}
+                      <Star1 size={16} variant="Bold" className="text-lime" /> {salon.rating}
                     </span>
                   )}
                 </div>
 
                 <p className="text-sm text-mauve flex items-start gap-2">
-                  <MapPin className="w-4 h-4 shrink-0 text-pink mt-0.5" />
+                  <Location size={16} className="shrink-0 text-pink mt-0.5" />
                   <span>{salon.address}</span>
                 </p>
 
                 {salon.phone && (
                   <p className="text-sm text-mauve flex items-center gap-2">
-                    <Phone className="w-4 h-4 shrink-0 text-pink" />
+                    <Call size={16} className="shrink-0 text-pink" />
                     <a href={`tel:${salon.phone}`} className="hover:text-ink font-semibold">
                       {salon.phone}
                     </a>
@@ -195,7 +195,7 @@ export default function SalonDetailPage() {
                     rel="noreferrer"
                     className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-line bg-white hover:border-primary text-xs font-semibold text-ink transition-colors"
                   >
-                    <ExternalLink className="w-4 h-4" /> Mở Google Maps
+                    <Export size={16} /> Mở Google Maps
                   </a>
 
                   {salon.partner ? (
@@ -204,7 +204,7 @@ export default function SalonDetailPage() {
                       variant="pink"
                       className="px-6 py-2.5 text-sm font-bold shadow-md flex items-center gap-2"
                     >
-                      <Calendar className="w-4 h-4" /> Đặt lịch hẹn
+                      <Calendar size={16} /> Đặt lịch hẹn
                     </Button>
                   ) : (
                     salon.phone && (
@@ -212,7 +212,7 @@ export default function SalonDetailPage() {
                         href={`tel:${salon.phone}`}
                         className="px-6 py-2.5 rounded-xl bg-ink text-white hover:bg-ink/90 text-sm font-bold transition-colors inline-flex items-center gap-2"
                       >
-                        <Phone className="w-4 h-4" /> Gọi đặt chỗ
+                        <Call size={16} /> Gọi đặt chỗ
                       </a>
                     )
                   )}
@@ -228,7 +228,7 @@ export default function SalonDetailPage() {
           <div>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-display text-xl font-bold text-ink flex items-center gap-2">
-                <Scissors className="w-5 h-5 text-pink" /> Kiểu tóc nhận làm tại salon
+                <Scissor size={20} className="text-pink" /> Kiểu tóc nhận làm tại salon
               </h2>
               <span className="text-xs text-muted">
                 {salon.hairstyles?.length || 0} kiểu tóc đã đăng ký
@@ -289,7 +289,7 @@ export default function SalonDetailPage() {
           {/* Bản đồ vị trí */}
           <div>
             <h2 className="font-display text-xl font-bold text-ink mb-4 flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-pink" /> Vị trí trên bản đồ
+              <Location size={20} className="text-pink" /> Vị trí trên bản đồ
             </h2>
             <div className="h-[360px] w-full rounded-3xl overflow-hidden border border-line shadow-sm">
               <MapContainer

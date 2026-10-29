@@ -2,6 +2,7 @@
 const GA_ID = import.meta.env.VITE_GA_ID;
 
 let ready = false;
+let cachedClientId = null;
 
 const FT_KEY = "hairapy_first_touch";
 // Chỉ giữ lại các tham số chiến dịch khi gửi page_location (KHÔNG gửi token reset mật khẩu, v.v.)
@@ -83,6 +84,7 @@ export function initAnalytics() {
   // Thuộc tính người dùng: nguồn đầu tiên + app MXH đang dùng để mở link
   setUserProps({ ...firstTouch(), social_app: detectSocialApp() });
   ready = true;
+  getGaClientId();
   trackRuntimeErrors();
   trackPageTiming();
 }
@@ -146,4 +148,39 @@ export function setUserProps(props) {
 export function markInternalTraffic(isInternal) {
   if (typeof window === "undefined" || !window.gtag) return;
   window.gtag("set", { traffic_type: isInternal ? "internal" : undefined });
+}
+
+/**
+ * Lấy client_id của GA4 từ trình duyệt, cache lại để đính kèm vào header X-GA-Client-Id.
+ * Trả về null nếu GA4 bị tắt hoặc chưa khởi tạo.
+ */
+export function getGaClientId() {
+  if (cachedClientId) return cachedClientId;
+  if (!GA_ID || typeof window === "undefined" || !window.gtag) return null;
+
+  try {
+    window.gtag("get", GA_ID, "client_id", (clientId) => {
+      if (clientId) {
+        cachedClientId = String(clientId);
+      }
+    });
+  } catch {
+    /* GA có thể bị chặn bởi adblocker */
+  }
+
+  return cachedClientId;
+}
+
+/**
+ * Đặt hoặc xóa GA user_id khi người dùng đăng nhập / đăng xuất.
+ */
+export function setGaUserId(userId) {
+  if (typeof window === "undefined" || !window.gtag) return;
+  if (userId) {
+    if (GA_ID) {
+      window.gtag("config", GA_ID, { user_id: String(userId) });
+    }
+  } else {
+    window.gtag("set", { user_id: null });
+  }
 }

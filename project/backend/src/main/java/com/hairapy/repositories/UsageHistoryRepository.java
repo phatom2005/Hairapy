@@ -29,6 +29,14 @@ public interface UsageHistoryRepository extends JpaRepository<UsageHistory, Long
     @Query("SELECT COUNT(u) FROM UsageHistory u WHERE u.feature = :feature AND u.usedAt >= :since")
     long countByFeatureSince(@Param("feature") String feature, @Param("since") LocalDateTime since);
 
+    // Đếm lượt dùng theo feature trong khoảng thời gian [start, end)
+    @Query("SELECT COUNT(u) FROM UsageHistory u WHERE u.feature = :feature AND u.usedAt >= :start AND u.usedAt < :end")
+    long countByFeatureBetween(@Param("feature") String feature, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    // Đếm số người dùng duy nhất hoạt động trong khoảng thời gian [start, end)
+    @Query("SELECT COUNT(DISTINCT u.user.id) FROM UsageHistory u WHERE u.usedAt >= :start AND u.usedAt < :end")
+    long countActiveUsersBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
     // Đếm lượt dùng của một user cụ thể từ thời điểm cụ thể (hôm nay)
     @Query("SELECT COUNT(u) FROM UsageHistory u WHERE u.user.id = :userId AND u.feature = :feature AND u.usedAt >= :since")
     long countTodayUsage(@Param("userId") Long userId, @Param("feature") String feature, @Param("since") LocalDateTime since);
@@ -48,6 +56,20 @@ public interface UsageHistoryRepository extends JpaRepository<UsageHistory, Long
             + "AND u.hairstyleId IS NOT NULL AND u.usedAt >= :since GROUP BY u.hairstyleId ORDER BY COUNT(u) DESC")
     java.util.List<Object[]> topTriedSince(@org.springframework.data.repository.query.Param("since") java.time.LocalDateTime since,
                                            org.springframework.data.domain.Pageable pageable);
+
+    // Đếm lượt thử tóc theo hairstyleId giữa 2 mốc thời gian: [hairstyleId, số lượt]
+    @Query("SELECT u.hairstyleId, COUNT(u) FROM UsageHistory u WHERE u.feature = 'HAIR_SWAP' "
+            + "AND u.hairstyleId IS NOT NULL AND u.usedAt >= :since AND u.usedAt < :until GROUP BY u.hairstyleId")
+    List<Object[]> countSwapsBetween(@Param("since") LocalDateTime since, @Param("until") LocalDateTime until);
+
+    // Đếm lượt thử tóc theo hairstyleId cho danh sách user từ mốc since: [hairstyleId, số lượt]
+    @Query("SELECT u.hairstyleId, COUNT(u) FROM UsageHistory u WHERE u.feature = 'HAIR_SWAP' "
+            + "AND u.hairstyleId IS NOT NULL AND u.usedAt >= :since AND u.user.id IN :userIds GROUP BY u.hairstyleId ORDER BY COUNT(u) DESC")
+    List<Object[]> countSwapsByUserIdsSince(@Param("userIds") List<Long> userIds, @Param("since") LocalDateTime since);
+
+    // Thời gian các lượt thử tóc từ mốc since (để tính phân bố theo giờ trong ngày)
+    @Query("SELECT u.usedAt FROM UsageHistory u WHERE u.feature = 'HAIR_SWAP' AND u.usedAt >= :since")
+    List<LocalDateTime> findSwapTimesSince(@Param("since") LocalDateTime since);
 
     // Thời điểm lượt thử có ghi kiểu tóc ĐẦU TIÊN (để trình bày "số liệu tính từ ngày...")
     @org.springframework.data.jpa.repository.Query("SELECT MIN(u.usedAt) FROM UsageHistory u WHERE u.hairstyleId IS NOT NULL")

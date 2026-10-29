@@ -31,7 +31,9 @@ public class PaymentController {
      * Endpoint: POST /api/payments/create
      */
     @PostMapping("/create")
-    public ResponseEntity<?> createPayment(@RequestBody Map<String, String> request) {
+    public ResponseEntity<?> createPayment(
+            @RequestBody Map<String, String> request,
+            @RequestHeader(value = "X-GA-Client-Id", required = false) String gaClientIdHeader) {
         User currentUser = usageService.getCurrentUser();
         if (currentUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
@@ -47,7 +49,8 @@ public class PaymentController {
         }
 
         try {
-            String checkoutUrl = paymentService.createPaymentLink(currentUser, plan);
+            String sanitizedGaClientId = sanitizeGaClientId(gaClientIdHeader);
+            String checkoutUrl = paymentService.createPaymentLink(currentUser, plan, sanitizedGaClientId);
             return ResponseEntity.ok(Map.of("checkoutUrl", checkoutUrl));
         } catch (IllegalArgumentException e) {
             // Lỗi nghiệp vụ (vd đang Gói Tháng mà mua Gói Tuần) → 400 kèm lý do cho FE
@@ -147,5 +150,15 @@ public class PaymentController {
                     "error", "Không thể kiểm tra trạng thái thanh toán. Vui lòng thử lại sau."
             ));
         }
+    }
+
+    /**
+     * Chuẩn hóa Client ID của GA4: cắt tối đa 100 ký tự, chỉ nhận ký tự số và dấu chấm [0-9.].
+     */
+    public static String sanitizeGaClientId(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String clean = raw.replaceAll("[^0-9.]", "");
+        if (clean.isBlank()) return null;
+        return clean.length() > 100 ? clean.substring(0, 100) : clean;
     }
 }

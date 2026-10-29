@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { AI_STYLIST_ENABLED } from "../lib/features";
 import { useNavigate } from "react-router-dom";
-import { PROFILE_IMG } from "../lib/figmaAssets";
+import UserAvatar from "../components/ui/UserAvatar";
 import { Button, Card, Input, Badge } from "../components/ui";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
@@ -237,7 +237,7 @@ export default function SettingsPage() {
               <div className="flex flex-col gap-4">
                 <div className="relative w-40">
                   <div className="overflow-hidden rounded-full border-4 border-[#f3f3f3] shadow">
-                    <img src={PROFILE_IMG} alt="Avatar" className="size-40 object-cover" />
+                    <UserAvatar name={fullName || user?.fullName} email={user?.email} size="xl" className="size-40" />
                   </div>
                 </div>
                 <div>

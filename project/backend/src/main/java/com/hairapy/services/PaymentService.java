@@ -49,6 +49,27 @@ public class PaymentService {
 
     private final SubscriptionService subscriptionService;
     private final AlertService alertService;
+    private final GaMeasurementService gaMeasurementService;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public PaymentService(PaymentRepository paymentRepository,
+                          SubscriptionRepository subscriptionRepository,
+                          SubscriptionService subscriptionService,
+                          AlertService alertService,
+                          ObjectMapper objectMapper,
+                          org.springframework.boot.web.client.RestTemplateBuilder restTemplateBuilder,
+                          GaMeasurementService gaMeasurementService) {
+        this.paymentRepository = paymentRepository;
+        this.subscriptionRepository = subscriptionRepository;
+        this.subscriptionService = subscriptionService;
+        this.alertService = alertService;
+        this.objectMapper = objectMapper;
+        this.gaMeasurementService = gaMeasurementService;
+        this.restTemplate = restTemplateBuilder
+                .connectTimeout(java.time.Duration.ofSeconds(10))
+                .readTimeout(java.time.Duration.ofSeconds(10))
+                .build();
+    }
 
     public PaymentService(PaymentRepository paymentRepository,
                           SubscriptionRepository subscriptionRepository,
@@ -56,15 +77,7 @@ public class PaymentService {
                           AlertService alertService,
                           ObjectMapper objectMapper,
                           org.springframework.boot.web.client.RestTemplateBuilder restTemplateBuilder) {
-        this.paymentRepository = paymentRepository;
-        this.subscriptionRepository = subscriptionRepository;
-        this.subscriptionService = subscriptionService;
-        this.alertService = alertService;
-        this.objectMapper = objectMapper;
-        this.restTemplate = restTemplateBuilder
-                .connectTimeout(java.time.Duration.ofSeconds(10))
-                .readTimeout(java.time.Duration.ofSeconds(10))
-                .build();
+        this(paymentRepository, subscriptionRepository, subscriptionService, alertService, objectMapper, restTemplateBuilder, null);
     }
 
     /**
@@ -72,6 +85,11 @@ public class PaymentService {
      */
     @Transactional
     public String createPaymentLink(User user, String planCode) throws Exception {
+        return createPaymentLink(user, planCode, null);
+    }
+
+    @Transactional
+    public String createPaymentLink(User user, String planCode, String gaClientId) throws Exception {
         SubscriptionPlan plan = SubscriptionPlan.valueOf(planCode.toUpperCase());
         int amount;
 
@@ -100,6 +118,7 @@ public class PaymentService {
                 .plan(plan)
                 .amount(amount)
                 .status(PaymentStatus.PENDING)
+                .gaClientId(gaClientId)
                 .build();
         paymentRepository.save(payment);
 
@@ -277,7 +296,7 @@ public class PaymentService {
                 current.setStatus(PaymentStatus.PAID);
                 current.setPaidAt(LocalDateTime.now());
                 paymentRepository.save(current);
-                grantSubscriptionIfNeeded(current);
+                grantSubscriptionIfNeeded(current, "poll");
             }
         } else if ("CANCELLED".equals(payosStatus) && current.getStatus() == PaymentStatus.PENDING) {
             current.setStatus(PaymentStatus.CANCELLED);
@@ -300,6 +319,11 @@ public class PaymentService {
      */
     @Transactional
     public void grantSubscriptionIfNeeded(Payment payment) {
+        grantSubscriptionIfNeeded(payment, "webhook");
+    }
+
+    @Transactional
+    public void grantSubscriptionIfNeeded(Payment payment, String source) {
         // Payment truyền vào có thể đã bị "detach" khỏi session cũ (vd: được lấy ở
         // PaymentController.getPaymentStatus() - method đó không có @Transactional nên
         // session đóng lại ngay sau khi query xong). Nếu dùng thẳng payment/proxy user
@@ -352,6 +376,25 @@ public class PaymentService {
 
         log.info("Nâng cấp gói thành công: user={}, plan={}, hết hạn={}",
                 user.getEmail(), paymentToGrant.getPlan(), endDate);
+
+        // Gửi sự kiện purchase lên GA4 Measurement Protocol
+        if (gaMeasurementService != null) {
+            String planName = (paymentToGrant.getPlan() == SubscriptionPlan.PRO) ? "Gói Tuần" : "Gói Tháng";
+            Map<String, Object> item = Map.of(
+                    "item_id", paymentToGrant.getPlan().name(),
+                    "item_name", planName,
+                    "price", paymentToGrant.getAmount(),
+                    "quantity", 1
+            );
+            Map<String, Object> params = new HashMap<>();
+            params.put("transaction_id", String.valueOf(paymentToGrant.getOrderCode()));
+            params.put("value", paymentToGrant.getAmount());
+            params.put("currency", "VND");
+            params.put("items", List.of(item));
+            params.put("source", source != null ? source : "webhook");
+
+            gaMeasurementService.send(paymentToGrant.getGaClientId(), user.getId(), "purchase", params);
+        }
     }
 
     /**

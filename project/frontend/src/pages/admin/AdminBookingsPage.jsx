@@ -4,17 +4,16 @@ import {
   Calendar,
   Clock,
   Filter,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  Building2,
-  Scissors,
+  TickCircle,
+  CloseCircle,
+  Danger,
+  Buildings,
+  Scissor,
   User,
-  Phone,
+  Call,
   Image,
-  X,
-  Sparkles,
-} from "lucide-react";
+  MagicStar,
+} from "iconsax-reactjs";
 import api from "../../lib/api";
 import { Card, Button, Input } from "../../components/ui";
 
@@ -60,42 +59,42 @@ export default function AdminBookingsPage() {
       case "PENDING":
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-950/60 border border-amber-800 text-amber-300 font-medium text-[11px]">
-            <Clock className="w-3 h-3" />
+            <Clock size={12} />
             Chờ xác nhận
           </span>
         );
       case "CONFIRMED":
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-950/60 border border-blue-800 text-blue-300 font-semibold text-[11px]">
-            <CheckCircle2 className="w-3 h-3" />
+            <TickCircle size={12} variant="Bold" />
             Đã xác nhận
           </span>
         );
       case "COMPLETED":
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800 text-emerald-300 font-semibold text-[11px]">
-            <CheckCircle2 className="w-3 h-3" />
+            <TickCircle size={12} variant="Bold" />
             Hoàn thành
           </span>
         );
       case "REJECTED":
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-red-950/60 border border-red-800 text-red-300 font-medium text-[11px]">
-            <XCircle className="w-3 h-3" />
+            <CloseCircle size={12} variant="Bold" />
             Salon từ chối
           </span>
         );
       case "CANCELLED":
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-card border border-line text-muted font-medium text-[11px]">
-            <XCircle className="w-3 h-3" />
+            <CloseCircle size={12} variant="Bold" />
             Khách hủy
           </span>
         );
       case "NO_SHOW":
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-zinc-900 border border-zinc-700 text-zinc-400 font-medium text-[11px]">
-            <AlertCircle className="w-3 h-3" />
+            <Danger size={12} variant="Bold" />
             Không đến
           </span>
         );
@@ -122,7 +121,7 @@ export default function AdminBookingsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="font-display text-3xl font-bold text-ink flex items-center gap-2">
-            <Calendar className="w-7 h-7 text-primary" />
+            <Calendar size={28} className="text-primary" />
             Lịch hẹn toàn hệ thống
           </h2>
           <p className="text-sm text-mauve">
@@ -144,7 +143,7 @@ export default function AdminBookingsPage() {
 
       {/* Tabs lọc trạng thái */}
       <div className="flex flex-wrap items-center gap-1.5 bg-card border border-line rounded-xl p-1 text-xs">
-        <Filter className="w-4 h-4 text-muted ml-2 mr-1 shrink-0" />
+        <Filter size={16} className="text-muted ml-2 mr-1 shrink-0" />
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.key}
@@ -175,7 +174,7 @@ export default function AdminBookingsPage() {
           </div>
         ) : filteredBookings.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-muted space-y-2">
-            <Calendar className="w-8 h-8 opacity-30" />
+            <Calendar size={32} className="opacity-30" />
             <p>Không tìm thấy lịch hẹn nào.</p>
           </div>
         ) : (
@@ -207,7 +206,7 @@ export default function AdminBookingsPage() {
                           #{item.id}
                         </div>
                         <div className="text-[10px] text-muted flex items-center gap-1 mt-0.5">
-                          <Clock className="w-3 h-3" />
+                          <Clock size={12} />
                           {new Date(item.createdAt).toLocaleDateString("vi-VN")}
                         </div>
                       </td>
@@ -215,12 +214,12 @@ export default function AdminBookingsPage() {
                       {/* Khách hàng */}
                       <td className="px-5 py-3.5 text-xs">
                         <div className="font-semibold text-ink flex items-center gap-1">
-                          <User className="w-3.5 h-3.5 text-muted" />
+                          <User size={14} className="text-muted" />
                           {item.customerName || "Khách ẩn danh"}
                         </div>
                         {item.customerPhone && (
                           <div className="text-muted text-[11px] flex items-center gap-1 mt-0.5">
-                            <Phone className="w-3 h-3" />
+                            <Call size={12} />
                             {item.customerPhone}
                           </div>
                         )}
@@ -237,7 +236,7 @@ export default function AdminBookingsPage() {
                       {/* Salon */}
                       <td className="px-5 py-3.5 text-xs">
                         <div className="font-semibold text-ink flex items-center gap-1.5">
-                          <Building2 className="w-3.5 h-3.5 text-primary shrink-0" />
+                          <Buildings size={14} className="text-primary shrink-0" />
                           {item.salonName}
                         </div>
                         <div className="text-muted text-[11px] mt-0.5">
@@ -263,12 +262,12 @@ export default function AdminBookingsPage() {
                                 className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                               />
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                <Image className="w-3.5 h-3.5 text-white" />
+                                <Image size={14} className="text-white" />
                               </div>
                             </button>
                           ) : (
                             <div className="w-10 h-10 rounded-lg bg-card border border-line flex items-center justify-center text-muted shrink-0">
-                              <Scissors className="w-4 h-4 opacity-40" />
+                              <Scissor size={16} className="opacity-40" />
                             </div>
                           )}
 
@@ -276,8 +275,10 @@ export default function AdminBookingsPage() {
                             <div className="font-medium text-ink flex items-center gap-1">
                               {item.hairstyleName || "Tư vấn tại tiệm"}
                               {item.tryOnImageUrl && (
-                                <Sparkles
-                                  className="w-3 h-3 text-primary"
+                                <MagicStar
+                                  size={12}
+                                  variant="Bold"
+                                  className="text-primary"
                                   title="Đã thử tóc AI"
                                 />
                               )}
@@ -363,7 +364,7 @@ export default function AdminBookingsPage() {
           >
             <div className="p-3 border-b border-line flex items-center justify-between">
               <span className="text-xs font-semibold text-ink flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-primary" />
+                <MagicStar size={14} variant="Bold" className="text-primary" />
                 Ảnh kết quả thử tóc của khách hàng
               </span>
               <button
@@ -371,7 +372,7 @@ export default function AdminBookingsPage() {
                 onClick={() => setLightboxImage(null)}
                 className="p-1 rounded-lg text-muted hover:text-ink hover:bg-surface transition-colors"
               >
-                <X className="w-4 h-4" />
+                <CloseCircle size={16} />
               </button>
             </div>
             <div className="p-2 flex items-center justify-center bg-black/50">

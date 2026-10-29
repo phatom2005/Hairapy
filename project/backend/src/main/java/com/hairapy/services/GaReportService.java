@@ -50,7 +50,8 @@ public class GaReportService {
             "page_view", "sign_up", "login", "face_scan", "view_hairstyle", "select_hair_color", "hair_swap",
             "download_result", "save_favorite", "view_plans", "begin_checkout", "purchase",
             "paywall_view", "quota_exceeded", "scan_error", "swap_error", "ai_report_submit", "feedback_submit",
-            "search", "filter_catalog", "filter_salons", "view_salon", "exception", "page_timing");
+            "search", "filter_catalog", "filter_salons", "view_salon", "exception", "page_timing",
+            "salon_match_open", "booking_submit", "booking_confirmed", "booking_completed");
 
     /** Từ khoá nhận diện nền tảng MXH trong "nguồn / phương tiện" của GA4. */
     private static final Map<String, String> SOCIAL_KEYWORDS = new LinkedHashMap<>();
@@ -87,7 +88,7 @@ public class GaReportService {
     private final String propertyId;
     private final String serviceAccountJson;
 
-    private final Map<Integer, GaSnapshot> cache = new ConcurrentHashMap<>();
+    private final Map<String, GaSnapshot> cache = new ConcurrentHashMap<>();
     private String accessToken;
     private Instant tokenExpiry = Instant.EPOCH;
 
@@ -99,19 +100,78 @@ public class GaReportService {
         this.serviceAccountJson = serviceAccountJson == null ? "" : serviceAccountJson.trim();
     }
 
-    public synchronized GaSnapshot getSnapshot(int days, boolean forceRefresh) {
+    public boolean isConfigured() {
+        return !propertyId.isEmpty() && !serviceAccountJson.isEmpty();
+    }
+
+    /**
+     * Chạy báo cáo GA4 tùy biến với date range, dimensions, metrics và dimensionFilter.
+     */
+    public List<Row> runReport(String start, String end, List<String> dims, List<String> metrics, int limit,
+                               String orderMetric, Map<String, Object> dimensionFilter) {
+        if (!isConfigured()) {
+            return List.of();
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("dateRanges", List.of(Map.of("startDate", start, "endDate", end)));
+        body.put("dimensions", dims.stream().map(n -> Map.of("name", n)).toList());
+        body.put("metrics", metrics.stream().map(n -> Map.of("name", n)).toList());
+        body.put("limit", String.valueOf(limit));
+        if (orderMetric != null) {
+            body.put("orderBys", List.of(Map.of("metric", Map.of("metricName", orderMetric), "desc", true)));
+        }
+        if (dimensionFilter != null && !dimensionFilter.isEmpty()) {
+            body.put("dimensionFilter", dimensionFilter);
+        }
+        try {
+            JsonNode resp = post("https://analyticsdata.googleapis.com/v1beta/properties/" + propertyId + ":runReport", body);
+            return parse(resp);
+        } catch (Exception e) {
+            log.warn("Lỗi khi chạy runReport GA4 ({}): {}", dims, shorten(e.getMessage()));
+            return List.of();
+        }
+    }
+
+    public List<Row> runReport(String start, List<String> dims, List<String> metrics, int limit,
+                               String orderMetric, Map<String, Object> dimensionFilter) {
+        return runReport(start, "today", dims, metrics, limit, orderMetric, dimensionFilter);
+    }
+
+    private Map<String, Object> combineWithVnFilter(Map<String, Object> originalFilter, boolean onlyVietnam) {
+        if (!onlyVietnam) return originalFilter;
+        Map<String, Object> vnFilter = Map.of("filter", Map.of("fieldName", "country",
+                "stringFilter", Map.of("value", "Vietnam", "matchType", "EXACT")));
+        if (originalFilter == null || originalFilter.isEmpty()) {
+            return vnFilter;
+        }
+        List<Map<String, Object>> expressions = new ArrayList<>();
+        if (originalFilter.containsKey("andGroup")) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> andGroup = (Map<String, Object>) originalFilter.get("andGroup");
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> existing = (List<Map<String, Object>>) andGroup.get("expressions");
+            if (existing != null) expressions.addAll(existing);
+        } else {
+            expressions.add(originalFilter);
+        }
+        expressions.add(vnFilter);
+        return Map.of("andGroup", Map.of("expressions", expressions));
+    }
+
+    public synchronized GaSnapshot getSnapshot(int days, boolean forceRefresh, boolean onlyVietnam) {
         int d = Math.min(Math.max(days, 1), 365);
+        String cacheKey = d + (onlyVietnam ? ":vn" : "");
         if (propertyId.isEmpty() || serviceAccountJson.isEmpty()) {
             return empty(d, false, "Chưa cấu hình GA_PROPERTY_ID / GA_SERVICE_ACCOUNT_JSON trên server.");
         }
-        GaSnapshot current = cache.get(d);
+        GaSnapshot current = cache.get(cacheKey);
         if (current != null && current.error() == null) {
             long age = Duration.between(current.fetchedAt(), LocalDateTime.now()).getSeconds();
             if (age < (forceRefresh ? 60 : CACHE_TTL.getSeconds())) return current;
         }
         try {
-            GaSnapshot fresh = fetch(d);
-            cache.put(d, fresh);
+            GaSnapshot fresh = fetch(d, onlyVietnam);
+            cache.put(cacheKey, fresh);
             return fresh;
         } catch (Exception e) {
             log.warn("Không lấy được dữ liệu GA4: {}", e.getMessage());
@@ -119,23 +179,30 @@ public class GaReportService {
         }
     }
 
-    private GaSnapshot fetch(int days) throws Exception {
+    public GaSnapshot getSnapshot(int days, boolean forceRefresh) {
+        return getSnapshot(days, forceRefresh, false);
+    }
+
+    private GaSnapshot fetch(int days, boolean onlyVietnam) throws Exception {
         String start = days + "daysAgo";
         List<Map<String, Object>> requests = new ArrayList<>();
         // 0: tổng quan
-        requests.add(report(start, List.of(), List.of("activeUsers", "newUsers", "sessions", "screenPageViews",
-                "engagementRate", "averageSessionDuration", "keyEvents"), 1, null, null));
+        requests.add(reportWithFilter(start, "today", List.of(), List.of("activeUsers", "newUsers", "sessions", "screenPageViews",
+                "engagementRate", "averageSessionDuration", "keyEvents"), 1, null, combineWithVnFilter(null, onlyVietnam)));
         // 1: kênh mặc định (Organic Social, Direct, Referral...)
-        requests.add(report(start, List.of("sessionDefaultChannelGroup"), List.of("sessions", "activeUsers", "keyEvents"),
-                10, "sessions", null));
+        requests.add(reportWithFilter(start, "today", List.of("sessionDefaultChannelGroup"), List.of("sessions", "activeUsers", "keyEvents"),
+                10, "sessions", combineWithVnFilter(null, onlyVietnam)));
         // 2: nguồn / phương tiện (facebook / social, tiktok / social...)
-        requests.add(report(start, List.of("sessionSourceMedium"), List.of("sessions", "activeUsers", "keyEvents"),
-                50, "sessions", null));
+        requests.add(reportWithFilter(start, "today", List.of("sessionSourceMedium"), List.of("sessions", "activeUsers", "keyEvents"),
+                50, "sessions", combineWithVnFilter(null, onlyVietnam)));
         // 3: số lần mỗi sự kiện của Hairapy
-        requests.add(report(start, List.of("eventName"), List.of("eventCount", "totalUsers"),
-                50, "eventCount", TRACKED_EVENTS));
+        Map<String, Object> eventFilter = Map.of("filter", Map.of("fieldName", "eventName",
+                "inListFilter", Map.of("values", TRACKED_EVENTS)));
+        requests.add(reportWithFilter(start, "today", List.of("eventName"), List.of("eventCount", "totalUsers"),
+                50, "eventCount", combineWithVnFilter(eventFilter, onlyVietnam)));
         // 4: theo ngày
-        requests.add(report(start, List.of("date"), List.of("activeUsers", "sessions"), days + 1, null, null));
+        requests.add(reportWithFilter(start, "today", List.of("date"), List.of("activeUsers", "sessions"),
+                days + 1, null, combineWithVnFilter(null, onlyVietnam)));
 
         Map<String, Object> body = Map.of("requests", requests);
         JsonNode resp = post("https://analyticsdata.googleapis.com/v1beta/properties/" + propertyId + ":batchRunReports", body);
@@ -156,49 +223,54 @@ public class GaReportService {
         daily.sort((a, b) -> a.dims().get(0).compareTo(b.dims().get(0)));
 
         return new GaSnapshot(true, null, days, overview, parse(reports.get(1)), sources, socialFrom(sources),
-                parse(reports.get(3)), daily, fetchExtra(start, days), LocalDateTime.now());
+                parse(reports.get(3)), daily, fetchExtra(start, days, onlyVietnam), LocalDateTime.now());
     }
 
     /**
      * Các báo cáo chi tiết cho trang GA4 riêng. Mỗi nhóm gọi riêng và bọc try/catch:
      * một nhóm lỗi (vd custom dimension chưa đăng ký trong GA4) chỉ làm nhóm đó rỗng.
      */
-    private Map<String, List<Row>> fetchExtra(String start, int days) {
+    private Map<String, List<Row>> fetchExtra(String start, int days, boolean onlyVietnam) {
         Map<String, List<Row>> out = new LinkedHashMap<>();
         List<String> sessUsers = List.of("sessions", "activeUsers");
         // Nhóm 1: trang, quốc gia, thiết bị, trình duyệt
         runGroup(out, List.of("topPages", "landingPages", "countries", "devices", "browsers"), List.of(
-                report(start, List.of("pagePath"), List.of("screenPageViews", "activeUsers", "averageSessionDuration"), 15, "screenPageViews", null),
-                report(start, List.of("landingPage"), List.of("sessions", "activeUsers", "keyEvents"), 15, "sessions", null),
-                report(start, List.of("country"), sessUsers, 15, "sessions", null),
-                report(start, List.of("deviceCategory"), sessUsers, 10, "sessions", null),
-                report(start, List.of("browser"), sessUsers, 10, "sessions", null)));
+                reportWithFilter(start, "today", List.of("pagePath"), List.of("screenPageViews", "activeUsers", "averageSessionDuration"), 15, "screenPageViews", combineWithVnFilter(null, onlyVietnam)),
+                reportWithFilter(start, "today", List.of("landingPage"), List.of("sessions", "activeUsers", "keyEvents"), 15, "sessions", combineWithVnFilter(null, onlyVietnam)),
+                reportWithFilter(start, "today", List.of("country"), sessUsers, 15, "sessions", combineWithVnFilter(null, onlyVietnam)),
+                reportWithFilter(start, "today", List.of("deviceCategory"), sessUsers, 10, "sessions", combineWithVnFilter(null, onlyVietnam)),
+                reportWithFilter(start, "today", List.of("browser"), sessUsers, 10, "sessions", combineWithVnFilter(null, onlyVietnam))));
         // Nhóm 2: hệ điều hành, người dùng mới/cũ, giờ trong ngày, thành phố, nguồn đầu tiên của người dùng mới
         runGroup(out, List.of("os", "newVsReturning", "hours", "cities", "firstUserSources"), List.of(
-                report(start, List.of("operatingSystem"), sessUsers, 10, "sessions", null),
-                report(start, List.of("newVsReturning"), sessUsers, 5, "sessions", null),
-                report(start, List.of("hour"), List.of("sessions"), 24, null, null),
-                report(start, List.of("city"), sessUsers, 15, "sessions", null),
-                report(start, List.of("firstUserSourceMedium"), List.of("newUsers", "keyEvents"), 15, "newUsers", null)));
+                reportWithFilter(start, "today", List.of("operatingSystem"), sessUsers, 10, "sessions", combineWithVnFilter(null, onlyVietnam)),
+                reportWithFilter(start, "today", List.of("newVsReturning"), sessUsers, 5, "sessions", combineWithVnFilter(null, onlyVietnam)),
+                reportWithFilter(start, "today", List.of("hour"), List.of("sessions"), 24, null, combineWithVnFilter(null, onlyVietnam)),
+                reportWithFilter(start, "today", List.of("city"), sessUsers, 15, "sessions", combineWithVnFilter(null, onlyVietnam)),
+                reportWithFilter(start, "today", List.of("firstUserSourceMedium"), List.of("newUsers", "keyEvents"), 15, "newUsers", combineWithVnFilter(null, onlyVietnam))));
         // Nhóm 3: kỳ trước (để so sánh), ngôn ngữ, doanh thu theo nguồn, trang hay lỗi
         String prevStart = (days * 2) + "daysAgo";
         String prevEnd = (days + 1) + "daysAgo";
+        Map<String, Object> errFilter = Map.of("filter", Map.of("fieldName", "eventName", "inListFilter", Map.of("values", List.of("exception"))));
         runGroup(out, List.of("prevOverview", "languages", "revenueBySource", "errorPages"), List.of(
-                report(prevStart, prevEnd, List.of(), List.of("activeUsers", "newUsers", "sessions", "screenPageViews",
-                        "engagementRate", "averageSessionDuration", "keyEvents"), 1, null, null),
-                report(start, List.of("language"), sessUsers, 10, "sessions", null),
-                report(start, List.of("sessionSourceMedium"), List.of("purchaseRevenue", "ecommercePurchases"), 15, "purchaseRevenue", null),
-                report(start, List.of("pagePath"), List.of("eventCount"), 10, "eventCount", List.of("exception"))));
+                reportWithFilter(prevStart, prevEnd, List.of(), List.of("activeUsers", "newUsers", "sessions", "screenPageViews",
+                        "engagementRate", "averageSessionDuration", "keyEvents"), 1, null, combineWithVnFilter(null, onlyVietnam)),
+                reportWithFilter(start, "today", List.of("language"), sessUsers, 10, "sessions", combineWithVnFilter(null, onlyVietnam)),
+                reportWithFilter(start, "today", List.of("sessionSourceMedium"), List.of("purchaseRevenue", "ecommercePurchases"), 15, "purchaseRevenue", combineWithVnFilter(null, onlyVietnam)),
+                reportWithFilter(start, "today", List.of("pagePath"), List.of("eventCount"), 10, "eventCount", combineWithVnFilter(errFilter, onlyVietnam))));
         // Custom dimension (chỉ có số liệu sau khi đăng ký trong GA4: Quản trị → Định nghĩa tùy chỉnh)
+        Map<String, Object> swapFilter = Map.of("filter", Map.of("fieldName", "eventName", "inListFilter", Map.of("values", List.of("hair_swap"))));
         runGroup(out, List.of("hairColors"), List.of(
-                report(start, List.of("customEvent:hair_color"), List.of("eventCount"), 25, "eventCount", List.of("hair_swap"))));
+                reportWithFilter(start, "today", List.of("customEvent:hair_color"), List.of("eventCount"), 25, "eventCount", combineWithVnFilter(swapFilter, onlyVietnam))));
+        Map<String, Object> scanFilter = Map.of("filter", Map.of("fieldName", "eventName", "inListFilter", Map.of("values", List.of("face_scan"))));
         runGroup(out, List.of("faceShapes"), List.of(
-                report(start, List.of("customEvent:face_shape"), List.of("eventCount"), 10, "eventCount", List.of("face_scan"))));
+                reportWithFilter(start, "today", List.of("customEvent:face_shape"), List.of("eventCount"), 10, "eventCount", combineWithVnFilter(scanFilter, onlyVietnam))));
+        Map<String, Object> searchFilter = Map.of("filter", Map.of("fieldName", "eventName", "inListFilter", Map.of("values", List.of("search"))));
         runGroup(out, List.of("searchTerms"), List.of(
-                report(start, List.of("customEvent:search_term"), List.of("eventCount"), 20, "eventCount", List.of("search"))));
+                reportWithFilter(start, "today", List.of("customEvent:search_term"), List.of("eventCount"), 20, "eventCount", combineWithVnFilter(searchFilter, onlyVietnam))));
+        Map<String, Object> signupFilter = Map.of("filter", Map.of("fieldName", "eventName", "inListFilter", Map.of("values", List.of("sign_up", "face_scan", "hair_swap", "purchase"))));
         runGroup(out, List.of("signupSources"), List.of(
-                report(start, List.of("customEvent:ft_source", "eventName"), List.of("eventCount"), 50, "eventCount",
-                        List.of("sign_up", "face_scan", "hair_swap", "purchase"))));
+                reportWithFilter(start, "today", List.of("customEvent:ft_source", "eventName"), List.of("eventCount"), 50, "eventCount",
+                        combineWithVnFilter(signupFilter, onlyVietnam))));
         return out;
     }
 
@@ -272,13 +344,23 @@ public class GaReportService {
         return out;
     }
 
-    private Map<String, Object> report(String start, List<String> dims, List<String> metrics, int limit,
+    public Map<String, Object> report(String start, List<String> dims, List<String> metrics, int limit,
                                        String orderMetric, List<String> eventFilter) {
         return report(start, "today", dims, metrics, limit, orderMetric, eventFilter);
     }
 
-    private Map<String, Object> report(String start, String end, List<String> dims, List<String> metrics, int limit,
+    public Map<String, Object> report(String start, String end, List<String> dims, List<String> metrics, int limit,
                                        String orderMetric, List<String> eventFilter) {
+        Map<String, Object> df = null;
+        if (eventFilter != null) {
+            df = Map.of("filter", Map.of("fieldName", "eventName",
+                    "inListFilter", Map.of("values", eventFilter)));
+        }
+        return reportWithFilter(start, end, dims, metrics, limit, orderMetric, df);
+    }
+
+    public Map<String, Object> reportWithFilter(String start, String end, List<String> dims, List<String> metrics, int limit,
+                                                String orderMetric, Map<String, Object> dimensionFilter) {
         Map<String, Object> r = new LinkedHashMap<>();
         r.put("dateRanges", List.of(Map.of("startDate", start, "endDate", end)));
         r.put("dimensions", dims.stream().map(n -> Map.of("name", n)).toList());
@@ -287,11 +369,15 @@ public class GaReportService {
         if (orderMetric != null) {
             r.put("orderBys", List.of(Map.of("metric", Map.of("metricName", orderMetric), "desc", true)));
         }
-        if (eventFilter != null) {
-            r.put("dimensionFilter", Map.of("filter", Map.of("fieldName", "eventName",
-                    "inListFilter", Map.of("values", eventFilter))));
+        if (dimensionFilter != null && !dimensionFilter.isEmpty()) {
+            r.put("dimensionFilter", dimensionFilter);
         }
         return r;
+    }
+
+    public Map<String, Object> reportWithFilter(String start, List<String> dims, List<String> metrics, int limit,
+                                                String orderMetric, Map<String, Object> dimensionFilter) {
+        return reportWithFilter(start, "today", dims, metrics, limit, orderMetric, dimensionFilter);
     }
 
     private List<Row> parse(JsonNode report) {

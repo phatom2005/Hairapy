@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import api from "../../lib/api";
 import { Columns, List, Section, Stat } from "../../components/admin/GaWidgets";
 import {
-  CHANNEL_LABEL, DEVICE_LABEL, EVENT_LABEL, FACE_SHAPE_LABEL, FUNNEL, HAIR_COLOR_LABEL, PERIODS, VISITOR_LABEL,
+  BUSINESS_FUNNEL, CHANNEL_LABEL, DEVICE_LABEL, EVENT_LABEL, FACE_SHAPE_LABEL, FUNNEL, HAIR_COLOR_LABEL, PERIODS, VISITOR_LABEL,
   deltaText, fmtDuration, fmtGaDate, nf, toRows, useGaData, useGaRealtime,
 } from "../../components/admin/gaUtils";
 
@@ -35,11 +37,87 @@ function RealtimeCard() {
   );
 }
 
+/** Khối kết quả thử nghiệm A/B (Z-test). */
+function AbTestingSection({ days, onlyVietnam }) {
+  const { data: exp, isLoading } = useQuery({
+    queryKey: ["admin-experiment-salon-cta", days, onlyVietnam],
+    queryFn: async () => {
+      try {
+        const { data } = await api.get("/admin/experiments/salon_cta", { params: { days, onlyVietnam } });
+        return data;
+      } catch {
+        return null;
+      }
+    },
+  });
+
+  return (
+    <Section title="Thử nghiệm A/B" subtitle="Đánh giá hiệu quả các biến thể giao diện và nút bấm (Z-Test)">
+      {isLoading ? (
+        <div className="h-32 animate-pulse rounded-2xl bg-line" />
+      ) : !exp ? (
+        <p className="text-xs text-mauve">Chưa có dữ liệu thử nghiệm A/B.</p>
+      ) : (
+        <div className="rounded-2xl border border-line bg-white p-5 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-line/60">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-ink text-sm uppercase tracking-wide">
+                  Thử nghiệm: {exp.experimentName}
+                </span>
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                  exp.verdict === "B tốt hơn" ? "bg-emerald-500/15 text-emerald-700 border border-emerald-500/30" :
+                  exp.verdict === "A tốt hơn" ? "bg-rose-500/15 text-rose-700 border border-rose-500/30" :
+                  "bg-canvas text-mauve border border-line"
+                }`}>
+                  {exp.verdict}
+                </span>
+              </div>
+              <p className="text-xs text-mauve mt-1">
+                Bắt đầu từ: {exp.startDate} · Kỳ phân tích: {exp.days} ngày · p-value: {exp.pValue}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+            {/* Nhánh A */}
+            <div className="rounded-xl border border-line/80 bg-canvas/50 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-bold text-xs text-ink uppercase tracking-wider">Nhánh A (Gốc)</span>
+                <span className="text-xs font-black text-ink">{exp.variantA?.rate}%</span>
+              </div>
+              <p className="text-xs text-mauve mb-3">Nút viền: &quot;Cắt kiểu này ở đâu?&quot;</p>
+              <div className="flex items-baseline justify-between text-xs text-ink border-t border-line/40 pt-2">
+                <span className="text-mauve">Người dùng: <strong>{exp.variantA?.users?.toLocaleString("vi-VN")}</strong></span>
+                <span className="text-mauve">Chuyển đổi: <strong>{exp.variantA?.conversions?.toLocaleString("vi-VN")}</strong></span>
+              </div>
+            </div>
+
+            {/* Nhánh B */}
+            <div className="rounded-xl border border-pink/30 bg-pink/[0.02] p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-bold text-xs text-pink uppercase tracking-wider">Nhánh B (Thử nghiệm)</span>
+                <span className="text-xs font-black text-pink">{exp.variantB?.rate}%</span>
+              </div>
+              <p className="text-xs text-mauve mb-3">Nút đậm: &quot;Đặt lịch cắt kiểu này gần bạn (X salon)&quot;</p>
+              <div className="flex items-baseline justify-between text-xs text-ink border-t border-pink/20 pt-2">
+                <span className="text-mauve">Người dùng: <strong>{exp.variantB?.users?.toLocaleString("vi-VN")}</strong></span>
+                <span className="text-mauve">Chuyển đổi: <strong>{exp.variantB?.conversions?.toLocaleString("vi-VN")}</strong></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </Section>
+  );
+}
+
 const NEED_DIM = "Chưa có dữ liệu. Cần đăng ký custom dimension trong GA4 (Quản trị → Định nghĩa tùy chỉnh) và đợi khoảng 24 giờ.";
 
 export default function AdminGaPage() {
   const [days, setDays] = useState(30);
-  const { data, isLoading, error, refreshing, refresh } = useGaData(days);
+  const [onlyVietnam, setOnlyVietnam] = useState(false);
+  const { data, isLoading, error, refreshing, refresh } = useGaData(days, onlyVietnam);
 
   const o = data?.overview || {};
   const x = data?.extra || {};
@@ -68,6 +146,23 @@ export default function AdminGaPage() {
     .filter((r) => r.metrics[0] > 0)
     .map((r) => ({ label: r.dims[0], value: r.metrics[0], unit: " đ", note: `· ${nf.format(r.metrics[1])} giao dịch`, color: "#2f9e5e" }));
 
+  // Phễu kinh doanh (North Star: Thử tóc AI -> Hoàn thành cắt tóc tại salon)
+  const businessFunnel = BUSINESS_FUNNEL.map((name, i) => {
+    const value = eventCount(name);
+    const prev = i > 0 ? eventCount(BUSINESS_FUNNEL[i - 1]) : 0;
+    const startVal = eventCount(BUSINESS_FUNNEL[0]);
+    const stepPct = i > 0 && prev > 0 ? Math.round((value / prev) * 100) : 0;
+    const totalPct = i > 0 && startVal > 0 ? Math.round((value / startVal) * 100) : 0;
+    return {
+      label: EVENT_LABEL[name] || name,
+      value,
+      note: i > 0
+        ? `· ${stepPct}% so với bước trước (tổng ${totalPct}%)`
+        : "· Điểm bắt đầu phễu",
+      color: i === BUSINESS_FUNNEL.length - 1 ? "#1039da" : "#2f9e5e",
+    };
+  });
+
   const funnel = FUNNEL.map((name, i) => {
     const value = eventCount(name);
     const prev = i > 0 ? eventCount(FUNNEL[i - 1]) : 0;
@@ -78,8 +173,9 @@ export default function AdminGaPage() {
       color: "#2f9e5e",
     };
   });
+  const allFunnelEvents = [...FUNNEL, ...BUSINESS_FUNNEL];
   const otherEvents = (data?.events || [])
-    .filter((r) => !FUNNEL.includes(r.dims[0]) && r.dims[0] !== "page_timing" && r.dims[0] !== "page_view")
+    .filter((r) => !allFunnelEvents.includes(r.dims[0]) && r.dims[0] !== "page_timing" && r.dims[0] !== "page_view")
     .map((r) => ({ label: EVENT_LABEL[r.dims[0]] || r.dims[0], value: r.metrics[0], note: `· ${nf.format(r.metrics[1])} người`, color: "#8e949b" }));
   const social = (data?.social || []).map((r) => ({
     label: r.platform, value: r.sessions, note: `· ${nf.format(r.users)} người · ${nf.format(r.keyEvents)} sự kiện chính`, color: "#e0457b",
@@ -120,7 +216,18 @@ export default function AdminGaPage() {
               : ""}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setOnlyVietnam((v) => !v)}
+            className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
+              onlyVietnam
+                ? "border-primary bg-primary/10 text-primary font-bold shadow-xs"
+                : "border-line bg-white text-mauve hover:text-ink"
+            }`}
+          >
+            {onlyVietnam ? "Đang lọc: Chỉ Việt Nam" : "Chỉ Việt Nam"}
+          </button>
           <div className="flex rounded-xl border border-line bg-white p-0.5">
             {PERIODS.map((p) => (
               <button
@@ -196,6 +303,12 @@ export default function AdminGaPage() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
+            <Section
+              title="Phễu kinh doanh (North Star)"
+              subtitle="Hiệu quả chuyển đổi từ Thử tóc AI sang Hoàn thành cắt tóc tại salon đối tác"
+            >
+              <List rows={businessFunnel} empty="Chưa có dữ liệu phễu kinh doanh." />
+            </Section>
             <Section title="Phễu sử dụng" subtitle="Số lần mỗi bước và tỷ lệ chuyển đổi so với bước trước">
               <List rows={funnel} empty="Chưa có dữ liệu." />
             </Section>
@@ -242,6 +355,8 @@ export default function AdminGaPage() {
               <List title="Từ khoá tìm kiếm kiểu tóc" rows={toRows(x.searchTerms)} empty={NEED_DIM} />
             </div>
           </Section>
+
+          <AbTestingSection days={days} onlyVietnam={onlyVietnam} />
 
           <Section title="Sức khoẻ trang web" subtitle="Lỗi giao diện được ghi nhận (không có nghĩa là lỗi thật nếu ít)">
             <List title="Trang có lỗi" rows={toRows(x.errorPages, { limit: 10 })} empty="Không ghi nhận lỗi nào. Tốt." />

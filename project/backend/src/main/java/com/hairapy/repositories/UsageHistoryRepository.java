@@ -49,6 +49,16 @@ public interface UsageHistoryRepository extends JpaRepository<UsageHistory, Long
     java.util.List<Object[]> topTriedSince(@org.springframework.data.repository.query.Param("since") java.time.LocalDateTime since,
                                            org.springframework.data.domain.Pageable pageable);
 
+    // Đếm lượt thử tóc theo hairstyleId giữa 2 mốc thời gian: [hairstyleId, số lượt]
+    @Query("SELECT u.hairstyleId, COUNT(u) FROM UsageHistory u WHERE u.feature = 'HAIR_SWAP' "
+            + "AND u.hairstyleId IS NOT NULL AND u.usedAt >= :since AND u.usedAt < :until GROUP BY u.hairstyleId")
+    List<Object[]> countSwapsBetween(@Param("since") LocalDateTime since, @Param("until") LocalDateTime until);
+
+    // Đếm lượt thử tóc theo hairstyleId cho danh sách user từ mốc since: [hairstyleId, số lượt]
+    @Query("SELECT u.hairstyleId, COUNT(u) FROM UsageHistory u WHERE u.feature = 'HAIR_SWAP' "
+            + "AND u.hairstyleId IS NOT NULL AND u.usedAt >= :since AND u.user.id IN :userIds GROUP BY u.hairstyleId ORDER BY COUNT(u) DESC")
+    List<Object[]> countSwapsByUserIdsSince(@Param("userIds") List<Long> userIds, @Param("since") LocalDateTime since);
+
     // Thời điểm lượt thử có ghi kiểu tóc ĐẦU TIÊN (để trình bày "số liệu tính từ ngày...")
     @org.springframework.data.jpa.repository.Query("SELECT MIN(u.usedAt) FROM UsageHistory u WHERE u.hairstyleId IS NOT NULL")
     java.time.LocalDateTime firstTrackedAt();

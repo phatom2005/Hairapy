@@ -197,7 +197,8 @@ export default function ProfilePage() {
           <div className="mx-auto max-w-[1100px] rounded-3xl border border-line bg-canvas p-6 sm:p-8">
             <div className="flex flex-col items-center gap-6 sm:flex-row">
               <div className="relative shrink-0">
-                <UserAvatar name={userName} email={user?.email} size="lg" className="border-4 border-white shadow-lg" />
+                <UserAvatar name={userName} email={user?.email} size="lg"
+                  className="border-4 border-white shadow-lg" />
               </div>
               <div className="flex-1 text-center sm:text-left">
                 <div className="flex flex-col items-center gap-2 sm:flex-row">

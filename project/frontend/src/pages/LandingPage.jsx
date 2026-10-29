@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import useAuthStore from "../store/useAuthStore";
 import { trackEvent } from "../lib/analytics";
-import { Scan, MagicStar, CalendarTick, ArrowRight as IconsaxArrowRight } from "iconsax-reactjs";
+import { Scan, MagicStar, CalendarTick, ArrowRight as IconsaxArrowRight, Flash } from "iconsax-reactjs";
 import {
   AnimatedContent,
   BorderGlow,
@@ -371,18 +371,19 @@ function Trends() {
   const setSelectedHairstyle = useScanStore((state) => state.setSelectedHairstyle);
   const user = useAuthStore((state) => state.user);
 
-  // Lấy catalog kiểu tóc thật từ backend — thay cho mảng TRENDS hardcode cũ (7 ảnh Figma giả,
-  // không liên quan gì catalog thật). Chỉ lấy những kiểu admin đã gắn tag (Thịnh hành/Mới/Bán
-  // chạy...) — coi như "được chọn nổi bật", không cần thêm API/param riêng ở backend.
-  const { data: allHairstyles = [] } = useQuery({
-    queryKey: ["landing-trends"],
+  // Lấy danh sách kiểu tóc đang hot tuần này từ API insights (fallback về catalog nếu trống)
+  const { data: trendingStyles = [] } = useQuery({
+    queryKey: ["insights-trending"],
     queryFn: async () => {
-      const { data } = await api.get("/hairstyles");
-      return data;
+      try {
+        const { data } = await api.get("/insights/trending", { params: { limit: 8 } });
+        return data;
+      } catch {
+        return [];
+      }
     },
   });
 
-  const trendingStyles = allHairstyles.filter((h) => h.tag && h.tag.trim() !== "").slice(0, 8);
   const [gateStyle, setGateStyle] = useState(null);
 
   const handleTryStyle = (hairstyle) => {
@@ -396,18 +397,17 @@ function Trends() {
       setGateStyle(hairstyle);
       return;
     }
+    const targetId = hairstyle.hairstyleId || hairstyle.id;
     setSelectedHairstyle({
-      id: hairstyle.id,
+      id: targetId,
       name: hairstyle.name,
       imageUrl: hairstyle.imageUrl,
-      ailabHairType: hairstyle.ailabHairType,
-      ailabProStyle: hairstyle.ailabProStyle,
     });
-    navigate(`/scan?hairstyleId=${hairstyle.id}`);
+    navigate(`/scan?hairstyleId=${targetId}`);
   };
 
-  // Chưa có kiểu tóc nào được admin gắn tag nổi bật -> ẩn cả section thay vì hiện rỗng hoặc data giả
-  if (trendingStyles.length === 0) {
+  // Không có kiểu tóc nào đang hot -> ẩn cả section thay vì hiện rỗng
+  if (!trendingStyles || trendingStyles.length === 0) {
     return null;
   }
 
@@ -415,8 +415,13 @@ function Trends() {
     <Section id="trends" className="overflow-hidden bg-transparent">
       <AnimatedContent>
         <SectionHeading center={false}
-          title="Xu Hướng Tóc 2026"
-          subtitle="Những kiểu tóc nổi bật nhất trong kho catalog của Hairapy."
+          title={
+            <span className="inline-flex items-center gap-2">
+              <Flash size="26" className="text-amber-500" variant="Bold" />
+              Đang hot tuần này
+            </span>
+          }
+          subtitle="Dựa trên lượt xem, lưu và thử tóc trên Hairapy 7 ngày qua."
           action={
             <Link to="/catalog" className="flex shrink-0 items-center gap-2 font-bold text-primary">
               Xem tất cả <ArrowRight />
@@ -424,20 +429,23 @@ function Trends() {
           } />
       </AnimatedContent>
 
-      {/* 1 hàng ngang - kéo chuột / vuốt để xem thêm (không bọc AnimatedContent từng card để khỏi giật) */}
+      {/* 1 hàng ngang - kéo chuột / vuốt để xem thêm */}
       <DragScroll>
         {trendingStyles.map((t) => (
-          <Card key={t.id} padded={false} className="w-[280px] shrink-0 p-3 shadow-lg">
+          <Card key={t.hairstyleId || t.id} padded={false} className="w-[280px] shrink-0 p-3 shadow-lg">
             <div className="relative overflow-hidden rounded-[20px]">
               <img src={t.imageUrl} alt={t.name} draggable={false} className="pointer-events-none h-[320px] w-full object-cover"
                 onError={(e) => { e.target.src = `https://placehold.co/280x320?text=${encodeURIComponent(t.name)}`; }} />
-              <Badge variant="new" className="absolute left-4 top-4 shadow">{t.tag}</Badge>
+              {t.growthPct > 0 && (
+                <Badge variant="new" className="absolute left-4 top-4 shadow font-bold">
+                  ↑{t.growthPct}%
+                </Badge>
+              )}
               {t.premiumOnly && (
                 <Badge variant="premium" className="absolute right-4 top-4 shadow">Trả phí</Badge>
               )}
             </div>
             <h4 className="mt-4 px-2 text-lg font-bold text-ink">{t.name}</h4>
-            <p className="px-2 text-sm font-semibold text-mauve line-clamp-1">{t.description}</p>
             <div className="px-2 pb-2 pt-3">
               <Button onClick={() => handleTryStyle(t)} size="sm" className="w-full text-xs">Thử ngay</Button>
             </div>

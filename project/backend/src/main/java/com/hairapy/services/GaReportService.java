@@ -99,6 +99,43 @@ public class GaReportService {
         this.serviceAccountJson = serviceAccountJson == null ? "" : serviceAccountJson.trim();
     }
 
+    public boolean isConfigured() {
+        return !propertyId.isEmpty() && !serviceAccountJson.isEmpty();
+    }
+
+    /**
+     * Chạy báo cáo GA4 tùy biến với date range, dimensions, metrics và dimensionFilter.
+     */
+    public List<Row> runReport(String start, String end, List<String> dims, List<String> metrics, int limit,
+                               String orderMetric, Map<String, Object> dimensionFilter) {
+        if (!isConfigured()) {
+            return List.of();
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("dateRanges", List.of(Map.of("startDate", start, "endDate", end)));
+        body.put("dimensions", dims.stream().map(n -> Map.of("name", n)).toList());
+        body.put("metrics", metrics.stream().map(n -> Map.of("name", n)).toList());
+        body.put("limit", String.valueOf(limit));
+        if (orderMetric != null) {
+            body.put("orderBys", List.of(Map.of("metric", Map.of("metricName", orderMetric), "desc", true)));
+        }
+        if (dimensionFilter != null && !dimensionFilter.isEmpty()) {
+            body.put("dimensionFilter", dimensionFilter);
+        }
+        try {
+            JsonNode resp = post("https://analyticsdata.googleapis.com/v1beta/properties/" + propertyId + ":runReport", body);
+            return parse(resp);
+        } catch (Exception e) {
+            log.warn("Lỗi khi chạy runReport GA4 ({}): {}", dims, shorten(e.getMessage()));
+            return List.of();
+        }
+    }
+
+    public List<Row> runReport(String start, List<String> dims, List<String> metrics, int limit,
+                               String orderMetric, Map<String, Object> dimensionFilter) {
+        return runReport(start, "today", dims, metrics, limit, orderMetric, dimensionFilter);
+    }
+
     public synchronized GaSnapshot getSnapshot(int days, boolean forceRefresh) {
         int d = Math.min(Math.max(days, 1), 365);
         if (propertyId.isEmpty() || serviceAccountJson.isEmpty()) {
@@ -272,13 +309,23 @@ public class GaReportService {
         return out;
     }
 
-    private Map<String, Object> report(String start, List<String> dims, List<String> metrics, int limit,
+    public Map<String, Object> report(String start, List<String> dims, List<String> metrics, int limit,
                                        String orderMetric, List<String> eventFilter) {
         return report(start, "today", dims, metrics, limit, orderMetric, eventFilter);
     }
 
-    private Map<String, Object> report(String start, String end, List<String> dims, List<String> metrics, int limit,
+    public Map<String, Object> report(String start, String end, List<String> dims, List<String> metrics, int limit,
                                        String orderMetric, List<String> eventFilter) {
+        Map<String, Object> df = null;
+        if (eventFilter != null) {
+            df = Map.of("filter", Map.of("fieldName", "eventName",
+                    "inListFilter", Map.of("values", eventFilter)));
+        }
+        return reportWithFilter(start, end, dims, metrics, limit, orderMetric, df);
+    }
+
+    public Map<String, Object> reportWithFilter(String start, String end, List<String> dims, List<String> metrics, int limit,
+                                                String orderMetric, Map<String, Object> dimensionFilter) {
         Map<String, Object> r = new LinkedHashMap<>();
         r.put("dateRanges", List.of(Map.of("startDate", start, "endDate", end)));
         r.put("dimensions", dims.stream().map(n -> Map.of("name", n)).toList());
@@ -287,11 +334,15 @@ public class GaReportService {
         if (orderMetric != null) {
             r.put("orderBys", List.of(Map.of("metric", Map.of("metricName", orderMetric), "desc", true)));
         }
-        if (eventFilter != null) {
-            r.put("dimensionFilter", Map.of("filter", Map.of("fieldName", "eventName",
-                    "inListFilter", Map.of("values", eventFilter))));
+        if (dimensionFilter != null && !dimensionFilter.isEmpty()) {
+            r.put("dimensionFilter", dimensionFilter);
         }
         return r;
+    }
+
+    public Map<String, Object> reportWithFilter(String start, List<String> dims, List<String> metrics, int limit,
+                                                String orderMetric, Map<String, Object> dimensionFilter) {
+        return reportWithFilter(start, "today", dims, metrics, limit, orderMetric, dimensionFilter);
     }
 
     private List<Row> parse(JsonNode report) {

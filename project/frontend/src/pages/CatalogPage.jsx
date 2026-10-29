@@ -1,11 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Scissor, MagicStar } from "iconsax-reactjs";
+import { Scissor, MagicStar, Flash } from "iconsax-reactjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatedContent } from "../components/animated";
 import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/Navbar";
-import { Badge, Button, Card } from "../components/ui";
+import { Badge, Button, Card, DragScroll } from "../components/ui";
 import api from "../lib/api";
 import { trackEvent } from "../lib/analytics";
 import { useScanStore } from "../store/useScanStore";
@@ -19,6 +19,7 @@ const GENDER_OPTS = ["Nam", "Nữ", "Unisex"];
 const FACE_OPTS = ["Tròn", "Vuông", "Trái xoan", "Dài", "Trái tim", "Kim cương"];
 const LENGTH_OPTS = ["Ngắn", "Vừa", "Dài"];
 const SORT_OPTS = [
+  { value: "trending", label: "Đang hot" },
   { value: "popular", label: "Phổ biến" },
   { value: "newest", label: "Mới nhất" },
   { value: "a-z", label: "Tên A → Z" },
@@ -406,15 +407,35 @@ export default function CatalogPage() {
     sort: sortBy === "popular" ? "popular" : null,
   });
 
+  const { data: trendingStyles = [] } = useQuery({
+    queryKey: ["insights-trending"],
+    queryFn: async () => {
+      try {
+        const { data } = await api.get("/insights/trending", { params: { limit: 8 } });
+        return data;
+      } catch {
+        return [];
+      }
+    },
+  });
+
   const sorted = useMemo(() => {
     const copy = [...items];
     switch (sortBy) {
+      case "trending": {
+        const scoreMap = new Map(trendingStyles.map((t) => [t.hairstyleId, t.score]));
+        return copy.sort((a, b) => {
+          const scoreB = scoreMap.get(b.baseStyleId || b.id) || 0;
+          const scoreA = scoreMap.get(a.baseStyleId || a.id) || 0;
+          return scoreB - scoreA;
+        });
+      }
       case "newest": return copy.sort((a, b) => b.id - a.id);
       case "a-z":    return copy.sort((a, b) => a.name.localeCompare(b.name, "vi"));
       case "z-a":    return copy.sort((a, b) => b.name.localeCompare(a.name, "vi"));
       default:       return copy; // popular đã được BE sắp xếp đúng
     }
-  }, [items, sortBy]);
+  }, [items, sortBy, trendingStyles]);
 
   // Nhóm theo kiểu tóc gốc nếu không lọc theo màu
   const groupedItems = useMemo(() => {
@@ -551,6 +572,59 @@ export default function CatalogPage() {
           </p>
         </div>
       </section>
+
+      {/* Dải "Đang hot tuần này" */}
+      {trendingStyles.length > 0 && (
+        <section className="mx-auto max-w-[1200px] px-6 pb-4 sm:px-16">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink sm:text-xl">
+                <Flash size="22" className="text-amber-500" variant="Bold" />
+                Đang hot tuần này
+              </h2>
+              <p className="text-xs text-mauve">Dựa trên lượt xem, lưu và thử tóc trên Hairapy 7 ngày qua.</p>
+            </div>
+            {sortBy !== "trending" && (
+              <button
+                onClick={() => setParam("sort", "trending", false)}
+                className="text-xs font-semibold text-primary hover:underline"
+              >
+                Xem tất cả kiểu hot →
+              </button>
+            )}
+          </div>
+          <DragScroll>
+            {trendingStyles.map((t) => (
+              <div
+                key={t.hairstyleId || t.id}
+                onClick={() => {
+                  const style = items.find((h) => h.id === t.hairstyleId) || t;
+                  executeTryStyle(style);
+                }}
+                className="group relative w-[180px] shrink-0 cursor-pointer overflow-hidden rounded-2xl border border-line bg-card p-2.5 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+              >
+                <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl">
+                  <img
+                    src={t.imageUrl}
+                    alt={t.name}
+                    className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                    onError={(e) => {
+                      e.target.src = `https://placehold.co/180x240?text=${encodeURIComponent(t.name)}`;
+                    }}
+                  />
+                  {t.growthPct > 0 && (
+                    <Badge variant="new" className="absolute left-2 top-2 font-bold text-[10px] px-1.5 py-0.5">
+                      ↑{t.growthPct}%
+                    </Badge>
+                  )}
+                </div>
+                <h4 className="mt-2 text-xs font-bold text-ink line-clamp-1 group-hover:text-primary transition">{t.name}</h4>
+                <p className="text-[11px] font-semibold text-primary mt-1">Thử ngay →</p>
+              </div>
+            ))}
+          </DragScroll>
+        </section>
+      )}
 
       {/* Main Container: Sidebar + Results Grid */}
       <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-8 px-6 py-6 sm:px-16 lg:grid-cols-[260px_1fr]">

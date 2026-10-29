@@ -28,4 +28,10 @@ public interface SavedHairstyleRepository extends JpaRepository<SavedHairstyle, 
     // Top kiểu tóc được lưu yêu thích: [hairstyleId, số lượt lưu]
     @org.springframework.data.jpa.repository.Query("SELECT sh.hairstyle.id, COUNT(sh) FROM SavedHairstyle sh GROUP BY sh.hairstyle.id ORDER BY COUNT(sh) DESC")
     java.util.List<Object[]> topSaved(org.springframework.data.domain.Pageable pageable);
+
+    // Đếm lượt lưu theo hairstyleId giữa 2 mốc thời gian: [hairstyleId, số lượt]
+    @org.springframework.data.jpa.repository.Query("SELECT sh.hairstyle.id, COUNT(sh) FROM SavedHairstyle sh "
+            + "WHERE sh.createdAt >= :since AND sh.createdAt < :until GROUP BY sh.hairstyle.id")
+    java.util.List<Object[]> countSavesBetween(@org.springframework.data.repository.query.Param("since") java.time.LocalDateTime since,
+                                              @org.springframework.data.repository.query.Param("until") java.time.LocalDateTime until);
 }

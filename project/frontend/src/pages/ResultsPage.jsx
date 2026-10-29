@@ -151,7 +151,7 @@ function HairstyleRecCard({ group, idx, savedIds, handleToggleSave, handleTrySty
               <h4 className="font-bold text-ink truncate mr-2" title={r.name}>
                 {r.name}
               </h4>
-              <Button onClick={() => handleTryStyle(r)} size="sm" className="px-4 py-2 text-xs shrink-0">
+              <Button onClick={() => handleTryStyle(r)} size="xs" className="shrink-0">
                 Thử ngay
               </Button>
             </div>
@@ -506,7 +506,7 @@ export default function ResultsPage() {
                               </p>
                             </div>
                             <div className="mt-3 flex justify-end">
-                              <Button onClick={() => handleTryStyle(chosenHairstyle)} size="sm" className="px-4 py-2 text-xs">
+                              <Button onClick={() => handleTryStyle(chosenHairstyle)} size="xs">
                                 Thử kiểu này ngay
                               </Button>
                             </div>

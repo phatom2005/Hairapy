@@ -24,7 +24,7 @@ export default function Button({
   className = "", icon, ...props
 }) {
   const cls =
-    `inline-flex items-center justify-center gap-2 rounded-full font-bold cursor-pointer ` +
+    `inline-flex items-center justify-center gap-2 rounded-full font-bold cursor-pointer whitespace-nowrap ` +
     `transition active:scale-[0.99] ${VARIANTS[variant]} ${SIZES[size] || ""} ${className}`;
 
   if (to) return <Link to={to} className={cls} {...props}>{children}{icon}</Link>;

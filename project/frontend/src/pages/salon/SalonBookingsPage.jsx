@@ -4,15 +4,15 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Calendar,
   Clock,
-  Phone,
+  Call,
   User,
-  Sparkles,
-  Check,
-  X,
-  AlertCircle,
+  MagicStar,
+  TickCircle,
+  CloseCircle,
+  Danger,
   Eye,
-  Search,
-} from "lucide-react";
+  SearchNormal1,
+} from "iconsax-reactjs";
 import { Card, Button, Input } from "../../components/ui";
 import api from "../../lib/api";
 
@@ -158,7 +158,7 @@ export default function SalonBookingsPage() {
         {/* Search */}
         <div className="w-full sm:w-64">
           <div className="relative">
-            <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+            <SearchNormal1 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -214,7 +214,7 @@ export default function SalonBookingsPage() {
         </Card>
       ) : filteredBookings.length === 0 ? (
         <Card className="p-12 text-center text-mauve border border-dashed border-line rounded-2xl space-y-2">
-          <Calendar className="size-10 text-muted mx-auto" />
+          <Calendar size={40} className="text-muted mx-auto" />
           <p className="font-bold text-ink">Không có yêu cầu đặt lịch nào</p>
           <p className="text-xs text-muted">
             {searchQuery
@@ -251,7 +251,7 @@ export default function SalonBookingsPage() {
                         className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"
                         title="Xem ảnh phóng to"
                       >
-                        <Eye className="size-5" />
+                        <Eye size={20} />
                       </button>
                       <span className="absolute bottom-1 right-1 text-[9px] font-bold bg-pink px-1 rounded text-white shadow">
                         Ảnh thử
@@ -259,7 +259,7 @@ export default function SalonBookingsPage() {
                     </div>
                   ) : (
                     <div className="shrink-0 size-20 sm:size-24 rounded-xl border border-line bg-canvas flex items-center justify-center text-muted">
-                      <User className="size-8 text-muted" />
+                      <User size={32} className="text-muted" />
                     </div>
                   )}
 
@@ -274,20 +274,20 @@ export default function SalonBookingsPage() {
 
                     <div className="flex flex-wrap items-center gap-4 text-mauve">
                       <p className="flex items-center gap-1">
-                        <Phone className="size-3.5 text-pink" />
+                        <Call size={14} className="text-pink" />
                         <a href={`tel:${b.customerPhone}`} className="text-ink font-bold hover:underline">
                           {b.customerPhone}
                         </a>
                       </p>
                       <p className="flex items-center gap-1 font-semibold text-ink">
-                        <Clock className="size-3.5 text-pink" />
+                        <Clock size={14} className="text-pink" />
                         <span>{new Date(b.preferredTime).toLocaleString("vi-VN")}</span>
                       </p>
                     </div>
 
                     {(b.hairstyleName || b.faceShape) && (
                       <p className="flex items-center gap-1 text-muted">
-                        <Sparkles className="size-3.5 text-pink shrink-0" />
+                        <MagicStar size={14} variant="Bold" className="text-pink shrink-0" />
                         <span>Kiểu: <strong className="text-ink">{b.hairstyleName || "Theo ảnh thử"}</strong></span>
                         {b.faceShape && <span>• Dáng mặt: <strong className="text-ink">{b.faceShape}</strong></span>}
                       </p>
@@ -318,7 +318,7 @@ export default function SalonBookingsPage() {
                         size="sm"
                         className="text-xs px-4 py-2 font-bold shadow-sm flex items-center justify-center gap-1.5"
                       >
-                        <Check className="size-3.5" />
+                        <TickCircle size={14} variant="Bold" />
                         <span>Xác nhận lịch</span>
                       </Button>
 
@@ -327,7 +327,7 @@ export default function SalonBookingsPage() {
                         onClick={() => openActionModal(b, "REJECTED")}
                         className="px-3 py-2 rounded-xl border border-rose-500/30 text-rose-600 hover:bg-rose-50 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                       >
-                        <X className="size-3.5" />
+                        <CloseCircle size={14} variant="Bold" />
                         <span>Từ chối</span>
                       </button>
                     </>
@@ -340,7 +340,7 @@ export default function SalonBookingsPage() {
                         onClick={() => openActionModal(b, "COMPLETED")}
                         className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-1 cursor-pointer"
                       >
-                        <Check className="size-3.5" />
+                        <TickCircle size={14} variant="Bold" />
                         <span>Hoàn thành</span>
                       </button>
 
@@ -367,7 +367,7 @@ export default function SalonBookingsPage() {
                     href={`tel:${b.customerPhone}`}
                     className="px-3 py-1.5 rounded-xl border border-line bg-white hover:border-pink text-xs font-semibold text-ink flex items-center justify-center gap-1.5 transition-colors"
                   >
-                    <Phone className="size-3" /> Gọi khách
+                    <Call size={12} /> Gọi khách
                   </a>
                 </div>
               </Card>
@@ -403,7 +403,7 @@ export default function SalonBookingsPage() {
 
             {actionError && (
               <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-600 flex items-center gap-2">
-                <AlertCircle className="size-4 shrink-0" />
+                <Danger size={16} className="shrink-0" />
                 <span>{actionError}</span>
               </div>
             )}
@@ -443,7 +443,7 @@ export default function SalonBookingsPage() {
               onClick={() => setLightboxImage(null)}
               className="absolute top-3 right-3 size-8 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-black transition-colors cursor-pointer"
             >
-              <X className="size-4" />
+              <CloseCircle size={16} />
             </button>
           </div>
         </div>

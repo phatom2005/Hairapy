@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Calendar, MapPin, Phone, Clock } from "lucide-react";
+import { Calendar, Location, Call, Clock } from "iconsax-reactjs";
 import { AnimatedContent, SpotlightCard } from "../components/animated";
 import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/Navbar";
@@ -539,7 +539,7 @@ export default function ProfilePage() {
               </div>
             ) : bookings.length === 0 ? (
               <Card className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-divider bg-transparent text-center p-12">
-                <Calendar className="w-10 h-10 text-muted" />
+                <Calendar size={40} className="text-muted" />
                 <p className="font-bold text-ink">Chưa có lịch hẹn nào</p>
                 <p className="text-sm text-mauve max-w-sm">
                   Thử các kiểu tóc mới trên Hairapy và đặt lịch với các salon đối tác uy tín gần bạn.
@@ -566,7 +566,7 @@ export default function ProfilePage() {
                               {b.salonName}
                             </Link>
                             <p className="text-xs text-mauve flex items-center gap-1 mt-0.5">
-                              <MapPin className="w-3.5 h-3.5 shrink-0 text-muted" /> {b.salonAddress}
+                              <Location size={14} className="shrink-0 text-muted" /> {b.salonAddress}
                             </p>
                           </div>
                           <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${cfg.badge}`}>
@@ -590,12 +590,12 @@ export default function ProfilePage() {
 
                         <div className="space-y-1 text-xs text-mauve">
                           <p className="flex items-center gap-1.5 font-semibold text-ink">
-                            <Clock className="w-3.5 h-3.5 text-pink" />
+                            <Clock size={14} className="text-pink" />
                             <span>Thời gian hẹn: {formatDateTime(b.preferredTime)}</span>
                           </p>
                           {b.salonPhone && (
                             <p className="flex items-center gap-1.5">
-                              <Phone className="w-3.5 h-3.5 text-muted" />
+                              <Call size={14} className="text-muted" />
                               <span>SĐT salon: <a href={`tel:${b.salonPhone}`} className="text-ink font-semibold hover:underline">{b.salonPhone}</a></span>
                             </p>
                           )}

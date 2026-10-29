@@ -1,20 +1,20 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Building2,
-  Phone,
-  MapPin,
-  DollarSign,
-  FileText,
-  Upload,
-  ExternalLink,
-  Save,
-  CheckCircle2,
-  AlertCircle,
-  Navigation,
+  Buildings,
+  Call,
+  Location,
+  Money,
+  DocumentText,
+  DocumentUpload,
+  Export,
+  Save2,
+  TickCircle,
+  Danger,
+  LocationDiscover,
   Clock,
-  Sparkles,
-} from "lucide-react";
+  MagicStar,
+} from "iconsax-reactjs";
 import { Card, Button, Input } from "../../components/ui";
 import api from "../../lib/api";
 
@@ -169,9 +169,9 @@ export default function SalonProfilePage() {
           }`}
         >
           {notification.type === "success" ? (
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            <TickCircle size={20} variant="Bold" className="text-emerald-400 shrink-0" />
           ) : (
-            <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+            <Danger size={20} variant="Bold" className="text-red-400 shrink-0" />
           )}
           <span>{notification.message}</span>
         </div>
@@ -181,7 +181,7 @@ export default function SalonProfilePage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-mauve flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-primary" />
+            <Buildings size={24} className="text-primary" />
             Hồ sơ Salon
           </h1>
           <p className="text-xs sm:text-sm text-muted mt-1">
@@ -195,7 +195,7 @@ export default function SalonProfilePage() {
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-card border border-line text-xs font-medium text-mauve hover:text-primary hover:border-primary/50 transition-colors w-fit"
         >
-          <ExternalLink className="w-4 h-4" />
+          <Export size={16} />
           Xem trang salon công khai
         </a>
       </div>
@@ -204,7 +204,7 @@ export default function SalonProfilePage() {
       <Card className="p-4 border border-line bg-card/60 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary">
-            <Sparkles className="w-5 h-5" />
+            <MagicStar size={20} variant="Bold" />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -222,7 +222,7 @@ export default function SalonProfilePage() {
               </span>
             </div>
             <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5" />
+              <Clock size={14} />
               {salon.partnerUntil ? (
                 <>
                   Hạn gói: {new Date(salon.partnerUntil).toLocaleDateString("vi-VN")} (còn{" "}
@@ -264,7 +264,7 @@ export default function SalonProfilePage() {
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-muted">
-                    <Building2 className="w-10 h-10 opacity-30" />
+                    <Buildings size={40} className="opacity-30" />
                   </div>
                 )}
               </div>
@@ -281,7 +281,7 @@ export default function SalonProfilePage() {
                   htmlFor="salon-image-upload"
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-card border border-line text-xs font-medium text-mauve hover:text-primary hover:border-primary/50 cursor-pointer transition-colors"
                 >
-                  <Upload className="w-4 h-4" />
+                  <DocumentUpload size={16} />
                   {selectedImage ? "Chọn ảnh khác" : "Tải ảnh mới lên"}
                 </label>
                 <p className="text-[11px] text-muted">
@@ -314,7 +314,7 @@ export default function SalonProfilePage() {
             {/* Số điện thoại */}
             <div>
               <label className="block text-xs text-muted mb-1.5 flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-muted" />
+                <Call size={14} className="text-muted" />
                 Số điện thoại liên hệ
               </label>
               <Input
@@ -334,7 +334,7 @@ export default function SalonProfilePage() {
           <div className="space-y-3 pt-4 border-t border-line/40">
             <div>
               <label className="block text-xs text-muted mb-1.5 flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-muted" />
+                <Location size={14} className="text-muted" />
                 Địa chỉ chi tiết
               </label>
               <Input
@@ -392,7 +392,7 @@ export default function SalonProfilePage() {
                   disabled={isGettingLocation}
                   className="w-full text-xs flex items-center justify-center gap-2"
                 >
-                  <Navigation className="w-3.5 h-3.5 text-primary" />
+                  <LocationDiscover size={14} className="text-primary" />
                   {isGettingLocation ? "Đang lấy vị trí..." : "Lấy vị trí GPS hiện tại"}
                 </Button>
               </div>
@@ -406,7 +406,7 @@ export default function SalonProfilePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-line/40">
             <div>
               <label className="block text-xs text-muted mb-1.5 flex items-center gap-1.5">
-                <DollarSign className="w-3.5 h-3.5 text-muted" />
+                <Money size={14} className="text-muted" />
                 Giá khởi điểm tham khảo (VNĐ)
               </label>
               <Input
@@ -444,7 +444,7 @@ export default function SalonProfilePage() {
           {/* Mô tả giới thiệu */}
           <div className="pt-4 border-t border-line/40">
             <label className="block text-xs text-muted mb-1.5 flex items-center gap-1.5">
-              <FileText className="w-3.5 h-3.5 text-muted" />
+              <DocumentText size={14} className="text-muted" />
               Mô tả giới thiệu salon
             </label>
             <textarea
@@ -466,7 +466,7 @@ export default function SalonProfilePage() {
             disabled={updateMutation.isPending}
             className="flex items-center gap-2 bg-primary text-black font-semibold text-sm px-6 py-2.5 shadow-lg shadow-primary/20 hover:opacity-95"
           >
-            <Save className="w-4 h-4" />
+            <Save2 size={16} />
             {updateMutation.isPending ? "Đang lưu thông tin..." : "Lưu thay đổi"}
           </Button>
         </div>

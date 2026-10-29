@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Sparkles, CheckCircle, ShieldCheck, TrendingUp, Users, Calendar, ArrowRight, AlertCircle, Store } from "lucide-react";
+import { MagicStar, TickCircle, ShieldTick, TrendUp, People, Calendar, ArrowRight, Danger, Shop } from "iconsax-reactjs";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import { Card, Button, Input } from "../components/ui";
@@ -91,7 +91,7 @@ export default function ForSalonsPage() {
         <AnimatedContent>
           <div className="mx-auto max-w-3xl space-y-6">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pink/10 border border-pink/30 text-xs font-bold text-pink">
-              <Sparkles className="w-3.5 h-3.5" /> Mạng lưới Salon Đối tác Hairapy
+              <MagicStar size={14} variant="Bold" /> Mạng lưới Salon Đối tác Hairapy
             </span>
 
             <h1 className="font-display text-3xl sm:text-5xl font-black text-ink leading-tight">
@@ -113,7 +113,7 @@ export default function ForSalonsPage() {
                   href="#dang-ky"
                   className="px-6 py-3 rounded-full bg-pink hover:bg-pink-hover text-white font-bold text-sm transition-colors shadow-md inline-flex items-center gap-2"
                 >
-                  Đăng ký hợp tác ngay <ArrowRight className="w-4 h-4" />
+                  Đăng ký hợp tác ngay <ArrowRight size={16} />
                 </a>
               )}
               <Button to="/salons" variant="outline" className="px-6 py-3 font-semibold text-sm">
@@ -135,7 +135,7 @@ export default function ForSalonsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card className="p-6 border border-line bg-canvas/60 space-y-3 rounded-2xl">
               <div className="size-12 rounded-xl bg-pink/10 text-pink flex items-center justify-center">
-                <Users className="w-6 h-6" />
+                <People size={24} />
               </div>
               <h3 className="font-bold text-ink text-base">Khách hàng có nhu cầu rõ ràng</h3>
               <p className="text-xs text-mauve leading-relaxed">
@@ -145,7 +145,7 @@ export default function ForSalonsPage() {
 
             <Card className="p-6 border border-line bg-canvas/60 space-y-3 rounded-2xl">
               <div className="size-12 rounded-xl bg-lime/15 text-lime flex items-center justify-center">
-                <TrendingUp className="w-6 h-6" />
+                <TrendUp size={24} />
               </div>
               <h3 className="font-bold text-ink text-base">Xuất hiện đúng thời điểm vàng</h3>
               <p className="text-xs text-mauve leading-relaxed">
@@ -155,7 +155,7 @@ export default function ForSalonsPage() {
 
             <Card className="p-6 border border-line bg-canvas/60 space-y-3 rounded-2xl">
               <div className="size-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                <ShieldCheck className="w-6 h-6" />
+                <ShieldTick size={24} />
               </div>
               <h3 className="font-bold text-ink text-base">Huy hiệu Đối tác xác thực</h3>
               <p className="text-xs text-mauve leading-relaxed">
@@ -181,25 +181,25 @@ export default function ForSalonsPage() {
             </div>
 
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-700 font-bold text-xs border border-emerald-500/20 mb-6">
-              <CheckCircle className="w-4 h-4 text-emerald-600" />
+              <TickCircle size={16} variant="Bold" className="text-emerald-600" />
               <span>Miễn phí 30 ngày trải nghiệm đầu tiên khi duyệt đơn</span>
             </div>
 
             <ul className="text-left space-y-2.5 text-xs text-ink border-t border-divider/10 pt-6">
               <li className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-pink shrink-0" /> Nhận yêu cầu đặt lịch online từ khách hàng
+                <TickCircle size={16} variant="Bold" className="text-pink shrink-0" /> Nhận yêu cầu đặt lịch online từ khách hàng
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-pink shrink-0" /> Xem ảnh thử tóc khách gửi kèm khi đặt lịch
+                <TickCircle size={16} variant="Bold" className="text-pink shrink-0" /> Xem ảnh thử tóc khách gửi kèm khi đặt lịch
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-pink shrink-0" /> Quản lý danh mục kiểu tóc & bảng giá riêng của tiệm
+                <TickCircle size={16} variant="Bold" className="text-pink shrink-0" /> Quản lý danh mục kiểu tóc & bảng giá riêng của tiệm
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-pink shrink-0" /> Cổng quản trị chuyên biệt dành riêng cho salon (/salon-portal)
+                <TickCircle size={16} variant="Bold" className="text-pink shrink-0" /> Cổng quản trị chuyên biệt dành riêng cho salon (/salon-portal)
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-pink shrink-0" /> Thống kê lượt xem, yêu cầu đặt lịch và kiểu tóc hot
+                <TickCircle size={16} variant="Bold" className="text-pink shrink-0" /> Thống kê lượt xem, yêu cầu đặt lịch và kiểu tóc hot
               </li>
             </ul>
           </Card>
@@ -216,7 +216,7 @@ export default function ForSalonsPage() {
 
           {!user ? (
             <Card className="p-8 text-center space-y-4 bg-canvas/60 border border-line rounded-2xl">
-              <Store className="w-12 h-12 text-pink mx-auto" />
+              <Shop size={48} className="text-pink mx-auto" />
               <h3 className="font-bold text-ink text-lg">Đăng nhập để gửi đơn đăng ký</h3>
               <p className="text-xs text-mauve max-w-md mx-auto">
                 Tài khoản Hairapy của bạn sẽ được nâng cấp thành vai trò Chủ Salon sau khi đơn đăng ký được duyệt.
@@ -227,7 +227,7 @@ export default function ForSalonsPage() {
             </Card>
           ) : isOwner ? (
             <Card className="p-8 text-center space-y-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl">
-              <CheckCircle className="w-12 h-12 text-emerald-600 mx-auto" />
+              <TickCircle size={48} variant="Bold" className="text-emerald-600 mx-auto" />
               <h3 className="font-bold text-ink text-lg">Tài khoản của bạn đã là Chủ Salon Đối tác!</h3>
               <p className="text-xs text-mauve max-w-md mx-auto">
                 Bạn có thể truy cập Cổng quản lý salon để cập nhật thông tin tiệm, danh mục kiểu tóc và xử lý lịch hẹn.
@@ -238,7 +238,7 @@ export default function ForSalonsPage() {
             </Card>
           ) : latestApp && latestApp.status === "PENDING" ? (
             <Card className="p-8 text-center space-y-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl">
-              <Calendar className="w-12 h-12 text-amber-600 mx-auto" />
+              <Calendar size={48} className="text-amber-600 mx-auto" />
               <h3 className="font-bold text-ink text-lg">Đơn đăng ký đang được xét duyệt</h3>
               <p className="text-xs text-mauve max-w-md mx-auto">
                 Bạn đã gửi đơn đăng ký cho <strong>{latestApp.salonName}</strong> lúc{" "}
@@ -247,7 +247,7 @@ export default function ForSalonsPage() {
             </Card>
           ) : submitted ? (
             <Card className="p-8 text-center space-y-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl">
-              <CheckCircle className="w-12 h-12 text-emerald-600 mx-auto" />
+              <TickCircle size={48} variant="Bold" className="text-emerald-600 mx-auto" />
               <h3 className="font-bold text-ink text-lg">Gửi đơn đăng ký thành công!</h3>
               <p className="text-xs text-mauve max-w-md mx-auto">
                 Cảm ơn bạn đã quan tâm. Chúng tôi sẽ liên hệ trong 24-48 giờ làm việc.
@@ -371,7 +371,7 @@ export default function ForSalonsPage() {
 
               {error && (
                 <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-600 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <Danger size={16} className="shrink-0" />
                   <span>{error}</span>
                 </div>
               )}

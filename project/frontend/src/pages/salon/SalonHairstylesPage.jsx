@@ -1,15 +1,14 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Scissors,
-  Search,
+  Scissor,
+  SearchNormal1,
   Filter,
-  Check,
-  Save,
-  CheckCircle2,
-  AlertCircle,
-  HelpCircle,
-} from "lucide-react";
+  Save2,
+  TickCircle,
+  Danger,
+  InfoCircle,
+} from "iconsax-reactjs";
 import { Card, Button, Input } from "../../components/ui";
 import api from "../../lib/api";
 
@@ -185,9 +184,9 @@ export default function SalonHairstylesPage() {
           }`}
         >
           {notification.type === "success" ? (
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            <TickCircle size={20} variant="Bold" className="text-emerald-400 shrink-0" />
           ) : (
-            <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+            <Danger size={20} variant="Bold" className="text-red-400 shrink-0" />
           )}
           <span>{notification.message}</span>
         </div>
@@ -197,7 +196,7 @@ export default function SalonHairstylesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-mauve flex items-center gap-2">
-            <Scissors className="w-6 h-6 text-primary" />
+            <Scissor size={24} className="text-primary" />
             Kiểu tóc phục vụ
           </h1>
           <p className="text-xs sm:text-sm text-muted mt-1">
@@ -223,7 +222,7 @@ export default function SalonHairstylesPage() {
                 : "opacity-50 cursor-not-allowed"
             }`}
           >
-            <Save className="w-4 h-4" />
+            <Save2 size={16} />
             {saveMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
           </Button>
         </div>
@@ -234,7 +233,7 @@ export default function SalonHairstylesPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {/* Ô tìm kiếm */}
           <div className="relative">
-            <Search className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+            <SearchNormal1 size={16} className="text-muted absolute left-3 top-1/2 -translate-y-1/2" />
             <Input
               type="text"
               placeholder="Tìm theo tên kiểu tóc..."
@@ -246,7 +245,7 @@ export default function SalonHairstylesPage() {
 
           {/* Lọc giới tính */}
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-muted shrink-0" />
+            <Filter size={16} className="text-muted shrink-0" />
             <select
               value={genderFilter}
               onChange={(e) => setGenderFilter(e.target.value)}
@@ -300,7 +299,7 @@ export default function SalonHairstylesPage() {
       {/* Grid danh sách kiểu tóc */}
       {filteredHairstyles.length === 0 ? (
         <Card className="p-10 text-center border border-line">
-          <Scissors className="w-8 h-8 text-muted mx-auto mb-2 opacity-50" />
+          <Scissor size={32} className="text-muted mx-auto mb-2 opacity-50" />
           <p className="text-sm text-mauve">Không tìm thấy kiểu tóc nào phù hợp.</p>
           <p className="text-xs text-muted mt-1">
             Hãy thử tìm bằng từ khoá khác hoặc bỏ bớt các bộ lọc.
@@ -333,7 +332,7 @@ export default function SalonHairstylesPage() {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted">
-                        <Scissors className="w-6 h-6 opacity-40" />
+                        <Scissor size={24} className="opacity-40" />
                       </div>
                     )}
                   </div>
@@ -359,7 +358,7 @@ export default function SalonHairstylesPage() {
                           isOffered ? "Bỏ nhận làm" : "Chọn nhận làm kiểu này"
                         }
                       >
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        <TickCircle size={14} variant="Bold" />
                       </button>
                     </div>
 
@@ -394,7 +393,7 @@ export default function SalonHairstylesPage() {
                           title="Giá thực tế salon áp dụng cho mẫu tóc này. Nếu để trống, hệ thống dùng giá khởi điểm của salon."
                           className="cursor-help inline-block"
                         >
-                          <HelpCircle className="w-3 h-3 text-muted/70" />
+                          <InfoCircle size={12} className="text-muted/70" />
                         </span>
                       </label>
                       <input
@@ -428,7 +427,7 @@ export default function SalonHairstylesPage() {
             disabled={saveMutation.isPending}
             className="bg-primary text-black font-semibold text-xs px-4 py-1.5 h-auto flex items-center gap-1.5 shadow-md"
           >
-            <Save className="w-3.5 h-3.5" />
+            <Save2 size={14} />
             {saveMutation.isPending ? "Đang lưu..." : "Lưu ngay"}
           </Button>
         </div>

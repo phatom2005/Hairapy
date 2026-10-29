@@ -669,20 +669,22 @@ export default function SwapPage() {
                 onClick={handleDownload}
                 disabled={downloading}
                 variant="outline"
-                className="flex w-full items-center justify-center gap-1.5 py-2.5 text-xs font-bold"
+                size="xs"
+                className="w-full justify-center gap-1.5 py-2.5 text-xs font-bold whitespace-nowrap"
               >
-                <DownloadIcon size={16} />
-                <span>{downloading ? "Đang tải..." : "Tải ảnh về"}</span>
+                <DownloadIcon size={16} className="shrink-0" />
+                <span className="truncate">{downloading ? "Đang tải..." : "Tải ảnh về"}</span>
               </Button>
 
               <Button
                 onClick={handleShare}
                 disabled={sharing}
                 variant="pink"
-                className="flex w-full items-center justify-center gap-1.5 py-2.5 text-xs font-bold shadow-sm"
+                size="xs"
+                className="w-full justify-center gap-1.5 py-2.5 text-xs font-bold shadow-sm whitespace-nowrap"
               >
-                <ShareIcon size={16} />
-                <span>{sharing ? "Đang xử lý..." : "Chia sẻ"}</span>
+                <ShareIcon size={16} className="shrink-0" />
+                <span className="truncate">{sharing ? "Đang xử lý..." : "Chia sẻ"}</span>
               </Button>
             </div>
           )}

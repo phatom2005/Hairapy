@@ -75,15 +75,29 @@ export default function UserAvatar({
   const sizeClass = SIZE_CLASSES[size] || size;
 
   if (hasFrame) {
+    // Lọc bỏ class border hoặc ring bên ngoài truyền vào để không bao giờ tạo thành viền ô vuông quanh SVG frame
+    const safeClassName = className
+      ? className
+          .split(/\s+/)
+          .filter(
+            (c) =>
+              !c.startsWith("border") &&
+              !c.includes(":border") &&
+              !c.startsWith("ring") &&
+              !c.includes(":ring")
+          )
+          .join(" ")
+      : "";
+
     return (
       <div
         role="img"
         aria-label={name || email || `Avatar người dùng ${effectivePlan}`}
-        className={`relative inline-flex shrink-0 items-center justify-center select-none ${sizeClass} ${className}`}
+        className={`relative inline-flex shrink-0 items-center justify-center rounded-full select-none ${sizeClass} ${safeClassName}`}
       >
         {isPro && <AvatarFramePro animated={animated} />}
         {isPremium && <AvatarFramePremium animated={animated} />}
-        <div className="flex size-full items-center justify-center rounded-full bg-gradient-to-br font-display font-bold text-white shadow-sm overflow-hidden border border-white/20">
+        <div className="flex size-full items-center justify-center rounded-full font-display font-bold text-white shadow-sm overflow-hidden">
           <div className={`flex size-full items-center justify-center bg-gradient-to-br ${gradient}`}>
             {src ? (
               <img src={src} alt={name || "Avatar"} className="size-full object-cover" />

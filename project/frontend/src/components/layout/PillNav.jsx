@@ -122,7 +122,7 @@ export default function PillNav({ items = DEFAULT_ITEMS }) {
                         email={user?.email}
                         plan={user?.plan}
                         size="sm"
-                        className="border-2 border-white group-hover:ring-2 group-hover:ring-primary/40 transition-all"
+                        className="transition-transform group-hover:scale-105"
                       />
                     </Link>
                     <button

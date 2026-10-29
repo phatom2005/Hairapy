@@ -54,6 +54,7 @@ export default function UserAvatar({
   size = "md",
   plan: planProp,
   animated = true,
+  showLabel = true,
   className = "",
 }) {
   const authUser = useAuthStore((s) => s.user);
@@ -95,8 +96,8 @@ export default function UserAvatar({
         aria-label={name || email || `Avatar người dùng ${effectivePlan}`}
         className={`relative inline-flex shrink-0 items-center justify-center rounded-full select-none ${sizeClass} ${safeClassName}`}
       >
-        {isPro && <AvatarFramePro animated={animated} />}
-        {isPremium && <AvatarFramePremium animated={animated} />}
+        {isPro && <AvatarFramePro animated={animated} showLabel={showLabel} />}
+        {isPremium && <AvatarFramePremium animated={animated} showLabel={showLabel} />}
         <div className="flex size-full items-center justify-center rounded-full font-display font-bold text-white shadow-sm overflow-hidden">
           <div className={`flex size-full items-center justify-center bg-gradient-to-br ${gradient}`}>
             {src ? (

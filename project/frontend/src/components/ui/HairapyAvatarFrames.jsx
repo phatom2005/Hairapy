@@ -3,17 +3,17 @@ import "./avatar-frames.css";
 
 /**
  * Khung viền PRO (Gói Tuần - 7 ngày)
- * Thiết kế: 4 ngôi sao kim cương 4 hướng (12h, 3h, 6h, 9h) viền vàng Champagne và dải ribbon công nghệ xanh-hồng.
+ * Thiết kế: 4 ngôi sao kim cương 4 hướng (12h, 3h, 6h, 9h) viền vàng Champagne, dải ribbon công nghệ xanh-hồng và huy hiệu chữ PRO tinh xảo phía dưới.
  */
-export function AvatarFramePro({ animated = true, className = "" }) {
+export function AvatarFramePro({ animated = true, showLabel = true, className = "" }) {
   const rawId = useId();
   const id = rawId.replace(/[^a-zA-Z0-9_-]/g, "");
 
   return (
     <svg
-      viewBox="0 0 200 200"
+      viewBox="0 0 200 206"
       aria-hidden="true"
-      className={`pointer-events-none select-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[143%] h-[143%] z-10 ${className}`}
+      className={`pointer-events-none select-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[143%] h-[147%] z-10 ${className}`}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -73,10 +73,9 @@ export function AvatarFramePro({ animated = true, className = "" }) {
       {/* Vòng viền trong mạ vàng */}
       <circle cx="100" cy="100" r="69.5" stroke={`url(#proGold-${id})`} strokeWidth="1.8" />
 
-      {/* 4 Ngôi sao kim cương 4 hướng */}
+      {/* 3 Ngôi sao kim cương hướng trên, trái, phải */}
       {[
         [100, 23],
-        [100, 177],
         [23, 100],
         [177, 100],
       ].map(([x, y], idx) => (
@@ -92,6 +91,63 @@ export function AvatarFramePro({ animated = true, className = "" }) {
         </g>
       ))}
 
+      {/* Ngôi sao đáy (chỉ hiện khi không có nhãn chữ) */}
+      {!showLabel && (
+        <g transform="translate(100, 177)" filter={`url(#proGlow-${id})`}>
+          <path
+            d="M0 -15 L4.5 -4.5 L15 0 L4.5 4.5 L0 15 L-4.5 4.5 L-15 0 L-4.5 -4.5 Z"
+            fill={`url(#proGold-${id})`}
+            stroke="#b8811d"
+            strokeWidth="0.8"
+          />
+          <path d="M0 -10 L3 -3 L10 0 L3 3 L0 10 L-3 3 L-10 0 L-3 -3 Z" fill={`url(#proGem-${id})`} />
+          <circle cx="-1.5" cy="-2" r="1.5" fill="#ffffff" opacity="0.9" />
+        </g>
+      )}
+
+      {/* HUY HIỆU CHỮ "PRO" DƯỚI KHUNG VIỀN */}
+      {showLabel && (
+        <g transform="translate(100, 185)" filter={`url(#proGlow-${id})`}>
+          {/* Nền cartouche bo tròn mạ vàng */}
+          <rect
+            x="-26"
+            y="-8.5"
+            width="52"
+            height="17"
+            rx="8.5"
+            fill="#0c0e18"
+            stroke={`url(#proGold-${id})`}
+            strokeWidth="1.3"
+          />
+          {/* Lớp nền neon gradient mờ phía trong */}
+          <rect
+            x="-24"
+            y="-6.5"
+            width="48"
+            height="13"
+            rx="6.5"
+            fill={`url(#proRibbon-${id})`}
+            opacity="0.3"
+          />
+          {/* Chữ PRO */}
+          <text
+            x="0"
+            y="3.2"
+            textAnchor="middle"
+            fontFamily="'Unbounded', 'Be Vietnam Pro', system-ui, sans-serif"
+            fontWeight="800"
+            fontSize="8.5"
+            fill="#ffffff"
+            letterSpacing="1.2"
+          >
+            PRO
+          </text>
+          {/* Hạt ngọc phản chiếu hai bên */}
+          <circle cx="-19" cy="0" r="1.2" fill="#ffd775" />
+          <circle cx="19" cy="0" r="1.2" fill="#ffd775" />
+        </g>
+      )}
+
       {/* Hạt sao lấp lánh phụ */}
       <circle cx="16" cy="74" r="1.8" fill="#e1ff97" className={animated ? "hairapy-frame-twinkle-1" : ""} />
       <circle cx="184" cy="126" r="1.8" fill="#e1ff97" className={animated ? "hairapy-frame-twinkle-2" : ""} />
@@ -103,17 +159,17 @@ export function AvatarFramePro({ animated = true, className = "" }) {
 
 /**
  * Khung viền PREMIUM (Gói Tháng - 30 ngày)
- * Thiết kế: Vương miện Haute Tiara uốn lượn thanh mảnh, ngọc Marquise Ruby và đôi cánh thiên thần ôm nhẹ cung tròn.
+ * Thiết kế: Vương miện Haute Tiara uốn lượn thanh mảnh, ngọc Marquise Ruby, đôi cánh thiên thần và huy hiệu chữ PREMIUM mạ vàng sang trọng phía dưới.
  */
-export function AvatarFramePremium({ animated = true, className = "" }) {
+export function AvatarFramePremium({ animated = true, showLabel = true, className = "" }) {
   const rawId = useId();
   const id = rawId.replace(/[^a-zA-Z0-9_-]/g, "");
 
   return (
     <svg
-      viewBox="0 0 200 215"
+      viewBox="0 0 200 220"
       aria-hidden="true"
-      className={`pointer-events-none select-none absolute left-1/2 -translate-x-1/2 -top-[32%] w-[143%] h-[154%] z-10 ${className}`}
+      className={`pointer-events-none select-none absolute left-1/2 -translate-x-1/2 -top-[32%] w-[143%] h-[157%] z-10 ${className}`}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -123,7 +179,7 @@ export function AvatarFramePremium({ animated = true, className = "" }) {
           <feComposite in="SourceGraphic" in2="blur" operator="over" />
         </filter>
 
-        <linearGradient id={`premGold-${id}`} x1="0" y1="0" x2="200" y2="215" gradientUnits="userSpaceOnUse">
+        <linearGradient id={`premGold-${id}`} x1="0" y1="0" x2="200" y2="220" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#ffd775" />
           <stop offset="25%" stopColor="#ffffff" />
           <stop offset="50%" stopColor="#b8811d" />
@@ -258,7 +314,7 @@ export function AvatarFramePremium({ animated = true, className = "" }) {
         <circle cx="100" cy="44" r="1.2" fill="#ffffff" opacity="0.6" />
       </g>
 
-      {/* 3 Viên đá quý phụ ở 3 hướng (9h, 3h, 6h) */}
+      {/* 2 Viên đá quý phụ ở 2 hướng (9h, 3h) */}
       {/* Góc trái (9h) */}
       <g transform="translate(23, 115)" filter={`url(#premGlow-${id})`}>
         <path d="M0 -14 L4 -4 L14 0 L4 4 L0 14 L-4 4 L-14 0 L-4 -4 Z" fill={`url(#premGold-${id})`} />
@@ -273,12 +329,60 @@ export function AvatarFramePremium({ animated = true, className = "" }) {
         <circle cx="-1" cy="-1.5" r="1.3" fill="#ffffff" opacity="0.9" />
       </g>
 
-      {/* Đáy (6h) */}
-      <g transform="translate(100, 192)" filter={`url(#premGlow-${id})`}>
-        <path d="M0 -10 L4.5 0 L0 14 L-4.5 0 Z" fill={`url(#premGold-${id})`} />
-        <path d="M0 -7 L3 0 L0 10 L-3 0 Z" fill={`url(#premGem-${id})`} />
-        <circle cx="-0.8" cy="0" r="1" fill="#ffffff" opacity="0.9" />
-      </g>
+      {/* Đáy (6h) - Nếu không bật nhãn chữ thì hiện viên ngọc giọt lệ */}
+      {!showLabel && (
+        <g transform="translate(100, 192)" filter={`url(#premGlow-${id})`}>
+          <path d="M0 -10 L4.5 0 L0 14 L-4.5 0 Z" fill={`url(#premGold-${id})`} />
+          <path d="M0 -7 L3 0 L0 10 L-3 0 Z" fill={`url(#premGem-${id})`} />
+          <circle cx="-0.8" cy="0" r="1" fill="#ffffff" opacity="0.9" />
+        </g>
+      )}
+
+      {/* HUY HIỆU CHỮ "PREMIUM" DƯỚI KHUNG VIỀN */}
+      {showLabel && (
+        <g transform="translate(100, 196)" filter={`url(#premGlow-${id})`}>
+          {/* Cánh ribbon hai bên */}
+          <path d="M-42 0 L-34 -5.5 L-34 5.5 Z" fill={`url(#premGold-${id})`} />
+          <path d="M42 0 L34 -5.5 L34 5.5 Z" fill={`url(#premGold-${id})`} />
+
+          {/* Khung dải băng mạ vàng sang trọng */}
+          <rect
+            x="-35"
+            y="-8.5"
+            width="70"
+            height="17"
+            rx="8.5"
+            fill="#17091c"
+            stroke={`url(#premGold-${id})`}
+            strokeWidth="1.3"
+          />
+          {/* Nền phản quang hồng lụa */}
+          <rect
+            x="-33"
+            y="-6.5"
+            width="66"
+            height="13"
+            rx="6.5"
+            fill="#ff57cf"
+            opacity="0.25"
+          />
+          {/* Chữ PREMIUM */}
+          <text
+            x="0"
+            y="3.2"
+            textAnchor="middle"
+            fontFamily="'Unbounded', 'Be Vietnam Pro', system-ui, sans-serif"
+            fontWeight="800"
+            fontSize="7.2"
+            fill="#ffd775"
+            letterSpacing="1.4"
+          >
+            PREMIUM
+          </text>
+          {/* Hạt đá quý ngọc nhỏ ở đáy */}
+          <circle cx="0" cy="8.5" r="1.2" fill="#ff57cf" />
+        </g>
+      )}
 
       {/* Hạt sao 4 cánh lơ lửng */}
       <path
@@ -298,7 +402,13 @@ export function AvatarFramePremium({ animated = true, className = "" }) {
 /**
  * AvatarFrame: Component bọc thống nhất cho avatar
  */
-export default function AvatarFrame({ plan = "FREE", animated = true, className = "", children }) {
+export default function AvatarFrame({
+  plan = "FREE",
+  animated = true,
+  showLabel = true,
+  className = "",
+  children,
+}) {
   const isPro = plan === "PRO";
   const isPremium = plan === "PREMIUM";
 
@@ -308,8 +418,8 @@ export default function AvatarFrame({ plan = "FREE", animated = true, className 
 
   return (
     <div className={`relative inline-flex shrink-0 items-center justify-center ${className}`}>
-      {isPro && <AvatarFramePro animated={animated} />}
-      {isPremium && <AvatarFramePremium animated={animated} />}
+      {isPro && <AvatarFramePro animated={animated} showLabel={showLabel} />}
+      {isPremium && <AvatarFramePremium animated={animated} showLabel={showLabel} />}
       {children}
     </div>
   );

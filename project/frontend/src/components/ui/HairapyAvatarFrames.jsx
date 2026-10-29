@@ -106,46 +106,46 @@ export function AvatarFramePro({ animated = true, showLabel = true, className = 
         </g>
       )}
 
-      {/* HUY HIỆU CHỮ "PRO" DƯỚI KHUNG VIỀN (VỪA VẶN, TINH TẾ) */}
+      {/* HUY HIỆU CHỮ "PRO" DƯỚI KHUNG VIỀN (ĐÃ TĂNG 1.25x) */}
       {showLabel && (
         <g transform="translate(100, 185)" filter={`url(#proGlow-${id})`}>
           {/* Nền cartouche bo tròn mạ vàng */}
           <rect
-            x="-29"
-            y="-9"
-            width="58"
-            height="18"
-            rx="9"
+            x="-36"
+            y="-11"
+            width="72"
+            height="22"
+            rx="11"
             fill="#0b0e19"
             stroke={`url(#proGold-${id})`}
-            strokeWidth="1.2"
+            strokeWidth="1.4"
           />
           {/* Lớp nền neon gradient mờ phía trong */}
           <rect
-            x="-27"
-            y="-7"
-            width="54"
-            height="14"
-            rx="7"
+            x="-33"
+            y="-8.5"
+            width="66"
+            height="17"
+            rx="8.5"
             fill={`url(#proRibbon-${id})`}
-            opacity="0.3"
+            opacity="0.32"
           />
-          {/* Chữ PRO vừa vặn sắc nét */}
+          {/* Chữ PRO to x1.25 sắc nét */}
           <text
             x="0"
-            y="3.5"
+            y="4.2"
             textAnchor="middle"
             fontFamily="'Unbounded', 'Be Vietnam Pro', system-ui, sans-serif"
             fontWeight="700"
-            fontSize="9.5"
+            fontSize="12"
             fill="#ffffff"
-            letterSpacing="1"
+            letterSpacing="1.2"
           >
             PRO
           </text>
           {/* Hạt ngọc vàng hai bên */}
-          <circle cx="-21" cy="0" r="1.3" fill="#ffd775" />
-          <circle cx="21" cy="0" r="1.3" fill="#ffd775" />
+          <circle cx="-26" cy="0" r="1.5" fill="#ffd775" />
+          <circle cx="26" cy="0" r="1.5" fill="#ffd775" />
         </g>
       )}
 
@@ -339,49 +339,49 @@ export function AvatarFramePremium({ animated = true, showLabel = true, classNam
         </g>
       )}
 
-      {/* HUY HIỆU CHỮ "PREMIUM" DƯỚI KHUNG VIỀN (VỪA VẶN, SANG TRỌNG) */}
+      {/* HUY HIỆU CHỮ "PREMIUM" DƯỚI KHUNG VIỀN (ĐÃ TĂNG 1.25x) */}
       {showLabel && (
         <g transform="translate(100, 196)" filter={`url(#premGlow-${id})`}>
           {/* Cánh ribbon vàng vuốt nhọn hai bên */}
-          <path d="M-44 0 L-36 -6 L-36 6 Z" fill={`url(#premGold-${id})`} />
-          <path d="M44 0 L36 -6 L36 6 Z" fill={`url(#premGold-${id})`} />
+          <path d="M-55 0 L-45 -7.5 L-45 7.5 Z" fill={`url(#premGold-${id})`} />
+          <path d="M55 0 L45 -7.5 L45 7.5 Z" fill={`url(#premGold-${id})`} />
 
           {/* Khung dải băng mạ vàng sang trọng */}
           <rect
-            x="-38"
-            y="-9.5"
-            width="76"
-            height="19"
-            rx="9.5"
+            x="-47.5"
+            y="-12"
+            width="95"
+            height="24"
+            rx="12"
             fill="#16081b"
             stroke={`url(#premGold-${id})`}
-            strokeWidth="1.3"
+            strokeWidth="1.5"
           />
           {/* Nền phản quang hồng lụa */}
           <rect
-            x="-36"
-            y="-7.5"
-            width="72"
-            height="15"
-            rx="7.5"
+            x="-45"
+            y="-9.5"
+            width="90"
+            height="19"
+            rx="9.5"
             fill="#ff57cf"
-            opacity="0.25"
+            opacity="0.28"
           />
-          {/* Chữ PREMIUM vừa vặn, thanh lịch */}
+          {/* Chữ PREMIUM to x1.25 thanh lịch */}
           <text
             x="0"
-            y="3.5"
+            y="4.2"
             textAnchor="middle"
             fontFamily="'Unbounded', 'Be Vietnam Pro', system-ui, sans-serif"
             fontWeight="700"
-            fontSize="8.5"
+            fontSize="10.8"
             fill="#ffd775"
-            letterSpacing="1.2"
+            letterSpacing="1.4"
           >
             PREMIUM
           </text>
           {/* Hạt đá quý ngọc nhỏ ở đáy */}
-          <circle cx="0" cy="9.5" r="1.3" fill="#ff57cf" />
+          <circle cx="0" cy="12" r="1.5" fill="#ff57cf" />
         </g>
       )}
 

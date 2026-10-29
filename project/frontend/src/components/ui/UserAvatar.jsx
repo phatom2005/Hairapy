@@ -47,23 +47,23 @@ const SIZE_CLASSES = {
   xl: "size-40 text-5xl",
 };
 
-// Tỷ lệ co giãn toán học chuẩn xác theo kích thước avatar (lấy chuẩn từ size 'lg' 96px trên Profile card)
-// sm: 36px / 96px = 0.375
-// md: 48px / 96px = 0.50
-// lg: 96px / 96px = 1.00
-// xl: 160px / 96px = 1.67
+// Tỷ lệ co giãn toán học chuẩn xác theo kích thước avatar (đã nhân hệ số 1.25x theo yêu cầu)
+// sm: (36px / 96px) * 1.25 = 0.46875
+// md: (48px / 96px) * 1.25 = 0.625
+// lg: 1.00 * 1.25 = 1.25
+// xl: 1.67 * 1.25 = 2.0875
 const BADGE_SCALES = {
-  sm: 0.375,
-  md: 0.50,
-  lg: 1.0,
-  xl: 1.67,
+  sm: 0.46875,
+  md: 0.625,
+  lg: 1.25,
+  xl: 2.0875,
 };
 
 const BADGE_OFFSETS = {
-  sm: "-bottom-[2.5px]",
-  md: "-bottom-[3px]",
-  lg: "-bottom-1.5",
-  xl: "-bottom-3",
+  sm: "-bottom-[3px]",
+  md: "-bottom-[3.5px]",
+  lg: "-bottom-2",
+  xl: "-bottom-4",
 };
 
 export default function UserAvatar({

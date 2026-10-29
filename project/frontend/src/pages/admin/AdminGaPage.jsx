@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import api from "../../lib/api";
 import { Columns, List, Section, Stat } from "../../components/admin/GaWidgets";
 import {
-  CHANNEL_LABEL, DEVICE_LABEL, EVENT_LABEL, FACE_SHAPE_LABEL, FUNNEL, HAIR_COLOR_LABEL, PERIODS, VISITOR_LABEL,
+  BUSINESS_FUNNEL, CHANNEL_LABEL, DEVICE_LABEL, EVENT_LABEL, FACE_SHAPE_LABEL, FUNNEL, HAIR_COLOR_LABEL, PERIODS, VISITOR_LABEL,
   deltaText, fmtDuration, fmtGaDate, nf, toRows, useGaData, useGaRealtime,
 } from "../../components/admin/gaUtils";
 
@@ -38,12 +38,12 @@ function RealtimeCard() {
 }
 
 /** Khối kết quả thử nghiệm A/B (Z-test). */
-function AbTestingSection({ days }) {
+function AbTestingSection({ days, onlyVietnam }) {
   const { data: exp, isLoading } = useQuery({
-    queryKey: ["admin-experiment-salon-cta", days],
+    queryKey: ["admin-experiment-salon-cta", days, onlyVietnam],
     queryFn: async () => {
       try {
-        const { data } = await api.get("/admin/experiments/salon_cta", { params: { days } });
+        const { data } = await api.get("/admin/experiments/salon_cta", { params: { days, onlyVietnam } });
         return data;
       } catch {
         return null;
@@ -116,7 +116,8 @@ const NEED_DIM = "Chưa có dữ liệu. Cần đăng ký custom dimension trong
 
 export default function AdminGaPage() {
   const [days, setDays] = useState(30);
-  const { data, isLoading, error, refreshing, refresh } = useGaData(days);
+  const [onlyVietnam, setOnlyVietnam] = useState(false);
+  const { data, isLoading, error, refreshing, refresh } = useGaData(days, onlyVietnam);
 
   const o = data?.overview || {};
   const x = data?.extra || {};
@@ -145,6 +146,23 @@ export default function AdminGaPage() {
     .filter((r) => r.metrics[0] > 0)
     .map((r) => ({ label: r.dims[0], value: r.metrics[0], unit: " đ", note: `· ${nf.format(r.metrics[1])} giao dịch`, color: "#2f9e5e" }));
 
+  // Phễu kinh doanh (North Star: Thử tóc AI -> Hoàn thành cắt tóc tại salon)
+  const businessFunnel = BUSINESS_FUNNEL.map((name, i) => {
+    const value = eventCount(name);
+    const prev = i > 0 ? eventCount(BUSINESS_FUNNEL[i - 1]) : 0;
+    const startVal = eventCount(BUSINESS_FUNNEL[0]);
+    const stepPct = i > 0 && prev > 0 ? Math.round((value / prev) * 100) : 0;
+    const totalPct = i > 0 && startVal > 0 ? Math.round((value / startVal) * 100) : 0;
+    return {
+      label: EVENT_LABEL[name] || name,
+      value,
+      note: i > 0
+        ? `· ${stepPct}% so với bước trước (tổng ${totalPct}%)`
+        : "· Điểm bắt đầu phễu",
+      color: i === BUSINESS_FUNNEL.length - 1 ? "#1039da" : "#2f9e5e",
+    };
+  });
+
   const funnel = FUNNEL.map((name, i) => {
     const value = eventCount(name);
     const prev = i > 0 ? eventCount(FUNNEL[i - 1]) : 0;
@@ -155,8 +173,9 @@ export default function AdminGaPage() {
       color: "#2f9e5e",
     };
   });
+  const allFunnelEvents = [...FUNNEL, ...BUSINESS_FUNNEL];
   const otherEvents = (data?.events || [])
-    .filter((r) => !FUNNEL.includes(r.dims[0]) && r.dims[0] !== "page_timing" && r.dims[0] !== "page_view")
+    .filter((r) => !allFunnelEvents.includes(r.dims[0]) && r.dims[0] !== "page_timing" && r.dims[0] !== "page_view")
     .map((r) => ({ label: EVENT_LABEL[r.dims[0]] || r.dims[0], value: r.metrics[0], note: `· ${nf.format(r.metrics[1])} người`, color: "#8e949b" }));
   const social = (data?.social || []).map((r) => ({
     label: r.platform, value: r.sessions, note: `· ${nf.format(r.users)} người · ${nf.format(r.keyEvents)} sự kiện chính`, color: "#e0457b",
@@ -197,7 +216,18 @@ export default function AdminGaPage() {
               : ""}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setOnlyVietnam((v) => !v)}
+            className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
+              onlyVietnam
+                ? "border-primary bg-primary/10 text-primary font-bold shadow-xs"
+                : "border-line bg-white text-mauve hover:text-ink"
+            }`}
+          >
+            {onlyVietnam ? "Đang lọc: Chỉ Việt Nam" : "Chỉ Việt Nam"}
+          </button>
           <div className="flex rounded-xl border border-line bg-white p-0.5">
             {PERIODS.map((p) => (
               <button
@@ -273,6 +303,12 @@ export default function AdminGaPage() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
+            <Section
+              title="Phễu kinh doanh (North Star)"
+              subtitle="Hiệu quả chuyển đổi từ Thử tóc AI sang Hoàn thành cắt tóc tại salon đối tác"
+            >
+              <List rows={businessFunnel} empty="Chưa có dữ liệu phễu kinh doanh." />
+            </Section>
             <Section title="Phễu sử dụng" subtitle="Số lần mỗi bước và tỷ lệ chuyển đổi so với bước trước">
               <List rows={funnel} empty="Chưa có dữ liệu." />
             </Section>
@@ -320,7 +356,7 @@ export default function AdminGaPage() {
             </div>
           </Section>
 
-          <AbTestingSection days={days} />
+          <AbTestingSection days={days} onlyVietnam={onlyVietnam} />
 
           <Section title="Sức khoẻ trang web" subtitle="Lỗi giao diện được ghi nhận (không có nghĩa là lỗi thật nếu ít)">
             <List title="Trang có lỗi" rows={toRows(x.errorPages, { limit: 10 })} empty="Không ghi nhận lỗi nào. Tốt." />

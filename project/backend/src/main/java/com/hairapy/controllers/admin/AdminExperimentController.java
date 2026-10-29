@@ -20,8 +20,9 @@ public class AdminExperimentController {
     @GetMapping("/{name}")
     public ResponseEntity<ExperimentResponse> getExperiment(
             @PathVariable String name,
-            @RequestParam(defaultValue = "30") int days) {
-        return ResponseEntity.ok(experimentService.getExperimentResults(name, days));
+            @RequestParam(defaultValue = "30") int days,
+            @RequestParam(defaultValue = "false") boolean onlyVietnam) {
+        return ResponseEntity.ok(experimentService.getExperimentResults(name, days, onlyVietnam));
     }
 }
 

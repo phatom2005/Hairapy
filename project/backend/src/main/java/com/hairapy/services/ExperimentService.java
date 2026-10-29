@@ -19,6 +19,10 @@ public class ExperimentService {
     private final GaReportService gaReportService;
 
     public ExperimentResponse getExperimentResults(String name, int days) {
+        return getExperimentResults(name, days, false);
+    }
+
+    public ExperimentResponse getExperimentResults(String name, int days, boolean onlyVietnam) {
         int d = Math.max(1, Math.min(days, 365));
         String startDate = LocalDate.now().minusDays(d).toString();
 
@@ -28,11 +32,17 @@ public class ExperimentService {
 
         try {
             String expDimension = "customUser:exp_" + name;
-            Map<String, Object> filter = Map.of(
+            Map<String, Object> eventFilter = Map.of(
                     "filter", Map.of("fieldName", "eventName", "inListFilter", Map.of("values", List.of(
                             "experiment_exposure", "salon_match_open", "booking_submit"
                     )))
             );
+            Map<String, Object> filter = eventFilter;
+            if (onlyVietnam) {
+                Map<String, Object> vnFilter = Map.of("filter", Map.of("fieldName", "country",
+                        "stringFilter", Map.of("value", "Vietnam", "matchType", "EXACT")));
+                filter = Map.of("andGroup", Map.of("expressions", List.of(eventFilter, vnFilter)));
+            }
 
             List<GaReportService.Row> rows = gaReportService.runReport(
                     d + "daysAgo", "today",

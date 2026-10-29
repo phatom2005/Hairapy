@@ -22,8 +22,9 @@ public class AdminGaController {
     @GetMapping
     public ResponseEntity<GaReportService.GaSnapshot> get(
             @RequestParam(defaultValue = "30") int days,
-            @RequestParam(defaultValue = "false") boolean refresh) {
-        return ResponseEntity.ok(gaReportService.getSnapshot(days, refresh));
+            @RequestParam(defaultValue = "false") boolean refresh,
+            @RequestParam(defaultValue = "false") boolean onlyVietnam) {
+        return ResponseEntity.ok(gaReportService.getSnapshot(days, refresh, onlyVietnam));
     }
 
     /** Số người đang online (30 phút qua), cache 30 giây. */

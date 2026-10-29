@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import api from "../../lib/api";
 import { Columns, List, Section, Stat } from "../../components/admin/GaWidgets";
 import {
   CHANNEL_LABEL, DEVICE_LABEL, EVENT_LABEL, FACE_SHAPE_LABEL, FUNNEL, HAIR_COLOR_LABEL, PERIODS, VISITOR_LABEL,
@@ -29,6 +31,81 @@ function RealtimeCard() {
           <List title="Quốc gia" rows={countries} empty="Không có ai đang online." />
           <List title="Trang đang xem" rows={pages} empty="Không có ai đang online." />
           <List title="Thiết bị" rows={devices} empty="Không có ai đang online." />
+        </div>
+      )}
+    </Section>
+  );
+}
+
+/** Khối kết quả thử nghiệm A/B (Z-test). */
+function AbTestingSection({ days }) {
+  const { data: exp, isLoading } = useQuery({
+    queryKey: ["admin-experiment-salon-cta", days],
+    queryFn: async () => {
+      try {
+        const { data } = await api.get("/admin/experiments/salon_cta", { params: { days } });
+        return data;
+      } catch {
+        return null;
+      }
+    },
+  });
+
+  return (
+    <Section title="Thử nghiệm A/B" subtitle="Đánh giá hiệu quả các biến thể giao diện và nút bấm (Z-Test)">
+      {isLoading ? (
+        <div className="h-32 animate-pulse rounded-2xl bg-line" />
+      ) : !exp ? (
+        <p className="text-xs text-mauve">Chưa có dữ liệu thử nghiệm A/B.</p>
+      ) : (
+        <div className="rounded-2xl border border-line bg-white p-5 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-line/60">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-ink text-sm uppercase tracking-wide">
+                  Thử nghiệm: {exp.experimentName}
+                </span>
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                  exp.verdict === "B tốt hơn" ? "bg-emerald-500/15 text-emerald-700 border border-emerald-500/30" :
+                  exp.verdict === "A tốt hơn" ? "bg-rose-500/15 text-rose-700 border border-rose-500/30" :
+                  "bg-canvas text-mauve border border-line"
+                }`}>
+                  {exp.verdict}
+                </span>
+              </div>
+              <p className="text-xs text-mauve mt-1">
+                Bắt đầu từ: {exp.startDate} · Kỳ phân tích: {exp.days} ngày · p-value: {exp.pValue}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+            {/* Nhánh A */}
+            <div className="rounded-xl border border-line/80 bg-canvas/50 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-bold text-xs text-ink uppercase tracking-wider">Nhánh A (Gốc)</span>
+                <span className="text-xs font-black text-ink">{exp.variantA?.rate}%</span>
+              </div>
+              <p className="text-xs text-mauve mb-3">Nút viền: &quot;Cắt kiểu này ở đâu?&quot;</p>
+              <div className="flex items-baseline justify-between text-xs text-ink border-t border-line/40 pt-2">
+                <span className="text-mauve">Người dùng: <strong>{exp.variantA?.users?.toLocaleString("vi-VN")}</strong></span>
+                <span className="text-mauve">Chuyển đổi: <strong>{exp.variantA?.conversions?.toLocaleString("vi-VN")}</strong></span>
+              </div>
+            </div>
+
+            {/* Nhánh B */}
+            <div className="rounded-xl border border-pink/30 bg-pink/[0.02] p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-bold text-xs text-pink uppercase tracking-wider">Nhánh B (Thử nghiệm)</span>
+                <span className="text-xs font-black text-pink">{exp.variantB?.rate}%</span>
+              </div>
+              <p className="text-xs text-mauve mb-3">Nút đậm: &quot;Đặt lịch cắt kiểu này gần bạn (X salon)&quot;</p>
+              <div className="flex items-baseline justify-between text-xs text-ink border-t border-pink/20 pt-2">
+                <span className="text-mauve">Người dùng: <strong>{exp.variantB?.users?.toLocaleString("vi-VN")}</strong></span>
+                <span className="text-mauve">Chuyển đổi: <strong>{exp.variantB?.conversions?.toLocaleString("vi-VN")}</strong></span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </Section>
@@ -242,6 +319,8 @@ export default function AdminGaPage() {
               <List title="Từ khoá tìm kiếm kiểu tóc" rows={toRows(x.searchTerms)} empty={NEED_DIM} />
             </div>
           </Section>
+
+          <AbTestingSection days={days} />
 
           <Section title="Sức khoẻ trang web" subtitle="Lỗi giao diện được ghi nhận (không có nghĩa là lỗi thật nếu ít)">
             <List title="Trang có lỗi" rows={toRows(x.errorPages, { limit: 10 })} empty="Không ghi nhận lỗi nào. Tốt." />

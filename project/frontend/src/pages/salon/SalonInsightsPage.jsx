@@ -183,7 +183,7 @@ export default function SalonInsightsPage() {
           {funnelSteps.map((step, idx) => {
             const Icon = step.icon;
             const prevCount = idx > 0 ? funnelSteps[idx - 1].count : null;
-            const convRate = prevCount && prevCount > 0
+            const convRate = step.count != null && prevCount && prevCount > 0
               ? Math.round((step.count / prevCount) * 100)
               : null;
 
@@ -206,7 +206,8 @@ export default function SalonInsightsPage() {
                   <p className="text-xs text-mauve">{step.label}</p>
                 </div>
                 <p className="font-display text-2xl font-black text-ink mt-2">
-                  {step.count.toLocaleString("vi-VN")}
+                  {/* null = chưa có dữ liệu (lượt hiển thị cần GA) */}
+                  {step.count == null ? "—" : step.count.toLocaleString("vi-VN")}
                 </p>
               </div>
             );

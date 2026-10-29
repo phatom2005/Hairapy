@@ -3,6 +3,8 @@ import { AI_STYLIST_ENABLED } from "../lib/features";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import useAuthStore from "../store/useAuthStore";
+import { trackEvent } from "../lib/analytics";
+import { Scan, MagicStar, CalendarTick, ArrowRight as IconsaxArrowRight } from "iconsax-reactjs";
 import {
   AnimatedContent,
   BorderGlow,
@@ -208,9 +210,6 @@ const FEATURES = [
   { icon: CameraIcon, iconBg: "bg-[#8093ff]/10", iconColor: "text-[#8093ff]", title: "Thử tóc AI",
     desc: "Trải nghiệm trực quan nhiều kiểu tóc và màu sắc thời thượng ngay trên ảnh chân dung với công nghệ AI.",
     spotlight: "rgba(128, 147, 255, 0.2)" },
-  { icon: StarIcon, iconBg: "bg-lime", iconColor: "text-ink", title: AI_STYLIST_ENABLED ? "AI Stylist" : "AI Stylist (sắp ra mắt)",
-    desc: "Trợ lý tạo mẫu tóc AI thông minh, hỗ trợ giải đáp thắc mắc về tạo kiểu, giữ nếp và chăm sóc tóc.",
-    spotlight: "rgba(208, 238, 136, 0.25)" },
 ];
 
 function Features() {
@@ -245,6 +244,15 @@ function Features() {
                           <ScanIconComp size={26} className="text-brand animate-pulse" />
                         </div>
                       </div>
+                      {/* Chấm landmark mờ quanh icon giữa gợi ý đo đạc khuôn mặt */}
+                      <span className="absolute top-6 left-12 size-1 rounded-full bg-pink/30" />
+                      <span className="absolute top-6 right-12 size-1 rounded-full bg-pink/30" />
+                      <span className="absolute top-1/2 left-8 size-1 rounded-full bg-pink/30" />
+                      <span className="absolute top-1/2 right-8 size-1 rounded-full bg-pink/30" />
+                      <span className="absolute bottom-8 left-11 size-1 rounded-full bg-pink/30" />
+                      <span className="absolute bottom-8 right-11 size-1 rounded-full bg-pink/30" />
+                      <span className="absolute bottom-5 left-1/2 -translate-x-1/2 size-1 rounded-full bg-pink/30" />
+
                       <div className="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-pink/30" />
                       <div className="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-pink/30" />
                       <div className="absolute bottom-2 left-2 w-3 h-3 border-b-2 border-l-2 border-pink/30" />
@@ -264,7 +272,12 @@ function Features() {
             return (
               <Link to="/catalog" className="block h-full">
                 <SpotlightCard spotlightColor={FEATURES[1].spotlight} className="h-full rounded-3xl hover:-translate-y-1.5 transition-all duration-300">
-                  <Card className="h-full flex flex-col justify-between">
+                  <Card className="h-full flex flex-col justify-between relative">
+                    {AI_STYLIST_ENABLED && (
+                      <span className="absolute top-4 right-4 rounded-full bg-lime/20 border border-lime/40 px-2.5 py-0.5 text-[11px] font-bold text-brand">
+                        Mới: AI Stylist
+                      </span>
+                    )}
                     <div>
                       <span className={`mb-4 flex size-14 items-center justify-center rounded-2xl ${FEATURES[1].iconBg} ${FEATURES[1].iconColor}`}>
                         <CameraIconComp size={26} />
@@ -274,7 +287,7 @@ function Features() {
                     </div>
                     <div className="mt-6 flex items-center gap-2 text-xs font-bold text-brand uppercase tracking-wider">
                       <span className="flex h-2 w-2 rounded-full bg-brand animate-pulse" />
-                      AI Trial Ready
+                      Dùng thử miễn phí
                     </div>
                   </Card>
                 </SpotlightCard>
@@ -283,29 +296,69 @@ function Features() {
           })()}
         </AnimatedContent>
 
-        {/* Card 3 (Gợi ý chuyên gia) - Rộng 3 cột */}
+        {/* Card 3 (Điểm nhấn đặt lịch salon) - Rộng full (3 cột) */}
         <AnimatedContent delay={0.3} className="md:col-span-3">
-          {(() => {
-            const StarIconComp = FEATURES[2].icon;
-            return (
-              <SpotlightCard spotlightColor={FEATURES[2].spotlight} className="rounded-3xl hover:-translate-y-1.5 transition-all duration-300">
-                <Card className="flex flex-col md:flex-row gap-6 md:gap-12 items-start md:items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-4 mb-3">
-                      <span className={`flex size-14 items-center justify-center rounded-2xl ${FEATURES[2].iconBg} ${FEATURES[2].iconColor}`}>
-                        <StarIconComp size={26} />
-                      </span>
-                      <h3 className="text-2xl font-bold text-ink">{FEATURES[2].title}</h3>
-                    </div>
-                    <p className="leading-relaxed text-mauve max-w-2xl">{FEATURES[2].desc}</p>
+          <SpotlightCard
+            spotlightColor="rgba(255, 255, 255, 0.2)"
+            className="rounded-3xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden"
+          >
+            <div className="rounded-3xl bg-gradient-to-r from-magenta to-brand p-6 sm:p-8 text-white shadow-sm flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 lg:gap-8">
+              {/* Trái: Tiêu đề + mô tả */}
+              <div className="flex-1 max-w-xl">
+                <h3 className="mb-2 text-2xl font-bold text-white">
+                  Ưng kiểu nào – đặt lịch salon ngay
+                </h3>
+                <p className="leading-relaxed text-white/80 text-sm sm:text-base">
+                  Thử tóc AI xong, gửi luôn ảnh cho salon đối tác gần bạn – không cần tả kiểu bằng lời.
+                </p>
+              </div>
+
+              {/* Giữa: Mini-flow 3 bước nằm ngang (xuống dọc trên mobile khi card xếp dọc) */}
+              <div className="flex items-center justify-center gap-2 sm:gap-3 py-1 self-center lg:self-auto shrink-0">
+                <div className="flex flex-col items-center gap-1.5 text-center">
+                  <div className="size-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white">
+                    <Scan size={18} />
                   </div>
-                  <Button to="/salons" variant="outline" className="w-full md:w-auto shrink-0 border-primary text-primary hover:bg-primary/5">
-                    Tìm Salon gần nhất
-                  </Button>
-                </Card>
-              </SpotlightCard>
-            );
-          })()}
+                  <span className="text-xs font-medium text-white/90">Quét</span>
+                </div>
+
+                <IconsaxArrowRight size={16} className="text-white/60 shrink-0 -mt-5" />
+
+                <div className="flex flex-col items-center gap-1.5 text-center">
+                  <div className="size-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white">
+                    <MagicStar size={18} />
+                  </div>
+                  <span className="text-xs font-medium text-white/90">Thử</span>
+                </div>
+
+                <IconsaxArrowRight size={16} className="text-white/60 shrink-0 -mt-5" />
+
+                <div className="flex flex-col items-center gap-1.5 text-center">
+                  <div className="size-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white">
+                    <CalendarTick size={18} />
+                  </div>
+                  <span className="text-xs font-medium text-white/90">Đặt lịch</span>
+                </div>
+              </div>
+
+              {/* Phải: CTA button + link đối tác */}
+              <div className="flex flex-col items-start lg:items-end gap-2 shrink-0 w-full lg:w-auto">
+                <Link
+                  to="/salons"
+                  onClick={() => trackEvent("landing_salon_cta_click")}
+                  className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-white font-bold text-brand shadow-sm hover:bg-white/95 transition-all text-sm w-full lg:w-auto text-center"
+                >
+                  Tìm salon gần bạn
+                </Link>
+                <Link
+                  to="/for-salons"
+                  className="text-xs text-white/70 hover:text-white transition-colors underline-offset-2 hover:underline self-start lg:self-end"
+                >
+                  Bạn là chủ salon? Trở thành đối tác →
+                </Link>
+              </div>
+            </div>
+          </SpotlightCard>
         </AnimatedContent>
       </div>
     </Section>

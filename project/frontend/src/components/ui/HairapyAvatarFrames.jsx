@@ -11,9 +11,9 @@ export function AvatarFramePro({ animated = true, showLabel = true, className = 
 
   return (
     <svg
-      viewBox="0 0 200 206"
+      viewBox="0 0 200 212"
       aria-hidden="true"
-      className={`pointer-events-none select-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[143%] h-[147%] z-10 ${className}`}
+      className={`pointer-events-none select-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[143%] h-[151%] z-10 ${className}`}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -105,46 +105,46 @@ export function AvatarFramePro({ animated = true, showLabel = true, className = 
         </g>
       )}
 
-      {/* HUY HIỆU CHỮ "PRO" DƯỚI KHUNG VIỀN */}
+      {/* HUY HIỆU CHỮ "PRO" DƯỚI KHUNG VIỀN (CỠ LỚN NỔI BẬT) */}
       {showLabel && (
-        <g transform="translate(100, 185)" filter={`url(#proGlow-${id})`}>
+        <g transform="translate(100, 184)" filter={`url(#proGlow-${id})`}>
           {/* Nền cartouche bo tròn mạ vàng */}
           <rect
-            x="-26"
-            y="-8.5"
-            width="52"
-            height="17"
-            rx="8.5"
-            fill="#0c0e18"
+            x="-38"
+            y="-12"
+            width="76"
+            height="24"
+            rx="12"
+            fill="#0b0e19"
             stroke={`url(#proGold-${id})`}
-            strokeWidth="1.3"
+            strokeWidth="1.6"
           />
           {/* Lớp nền neon gradient mờ phía trong */}
           <rect
-            x="-24"
-            y="-6.5"
-            width="48"
-            height="13"
-            rx="6.5"
+            x="-35"
+            y="-9"
+            width="70"
+            height="18"
+            rx="9"
             fill={`url(#proRibbon-${id})`}
-            opacity="0.3"
+            opacity="0.35"
           />
-          {/* Chữ PRO */}
+          {/* Chữ PRO to đậm sắc nét */}
           <text
             x="0"
-            y="3.2"
+            y="4.5"
             textAnchor="middle"
             fontFamily="'Unbounded', 'Be Vietnam Pro', system-ui, sans-serif"
-            fontWeight="800"
-            fontSize="8.5"
+            fontWeight="900"
+            fontSize="13.5"
             fill="#ffffff"
-            letterSpacing="1.2"
+            letterSpacing="1.5"
           >
             PRO
           </text>
-          {/* Hạt ngọc phản chiếu hai bên */}
-          <circle cx="-19" cy="0" r="1.2" fill="#ffd775" />
-          <circle cx="19" cy="0" r="1.2" fill="#ffd775" />
+          {/* Hạt ngọc vàng hai bên */}
+          <circle cx="-27" cy="0" r="1.6" fill="#ffd775" />
+          <circle cx="27" cy="0" r="1.6" fill="#ffd775" />
         </g>
       )}
 
@@ -167,9 +167,9 @@ export function AvatarFramePremium({ animated = true, showLabel = true, classNam
 
   return (
     <svg
-      viewBox="0 0 200 220"
+      viewBox="0 0 200 226"
       aria-hidden="true"
-      className={`pointer-events-none select-none absolute left-1/2 -translate-x-1/2 -top-[32%] w-[143%] h-[157%] z-10 ${className}`}
+      className={`pointer-events-none select-none absolute left-1/2 -translate-x-1/2 -top-[32%] w-[143%] h-[161%] z-10 ${className}`}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -338,49 +338,49 @@ export function AvatarFramePremium({ animated = true, showLabel = true, classNam
         </g>
       )}
 
-      {/* HUY HIỆU CHỮ "PREMIUM" DƯỚI KHUNG VIỀN */}
+      {/* HUY HIỆU CHỮ "PREMIUM" DƯỚI KHUNG VIỀN (CỠ LỚN SANG TRỌNG) */}
       {showLabel && (
         <g transform="translate(100, 196)" filter={`url(#premGlow-${id})`}>
-          {/* Cánh ribbon hai bên */}
-          <path d="M-42 0 L-34 -5.5 L-34 5.5 Z" fill={`url(#premGold-${id})`} />
-          <path d="M42 0 L34 -5.5 L34 5.5 Z" fill={`url(#premGold-${id})`} />
+          {/* Cánh ribbon vàng vuốt nhọn hai bên */}
+          <path d="M-56 0 L-46 -7 L-46 7 Z" fill={`url(#premGold-${id})`} />
+          <path d="M56 0 L46 -7 L46 7 Z" fill={`url(#premGold-${id})`} />
 
           {/* Khung dải băng mạ vàng sang trọng */}
           <rect
-            x="-35"
-            y="-8.5"
-            width="70"
-            height="17"
-            rx="8.5"
-            fill="#17091c"
+            x="-48"
+            y="-12.5"
+            width="96"
+            height="25"
+            rx="12.5"
+            fill="#16081b"
             stroke={`url(#premGold-${id})`}
-            strokeWidth="1.3"
+            strokeWidth="1.6"
           />
           {/* Nền phản quang hồng lụa */}
           <rect
-            x="-33"
-            y="-6.5"
-            width="66"
-            height="13"
-            rx="6.5"
+            x="-45"
+            y="-10"
+            width="90"
+            height="20"
+            rx="10"
             fill="#ff57cf"
-            opacity="0.25"
+            opacity="0.3"
           />
-          {/* Chữ PREMIUM */}
+          {/* Chữ PREMIUM to, đậm nét, mạ vàng hoàng gia */}
           <text
             x="0"
-            y="3.2"
+            y="4.2"
             textAnchor="middle"
             fontFamily="'Unbounded', 'Be Vietnam Pro', system-ui, sans-serif"
-            fontWeight="800"
-            fontSize="7.2"
+            fontWeight="900"
+            fontSize="11.5"
             fill="#ffd775"
-            letterSpacing="1.4"
+            letterSpacing="1.5"
           >
             PREMIUM
           </text>
           {/* Hạt đá quý ngọc nhỏ ở đáy */}
-          <circle cx="0" cy="8.5" r="1.2" fill="#ff57cf" />
+          <circle cx="0" cy="12.5" r="1.5" fill="#ff57cf" />
         </g>
       )}
 

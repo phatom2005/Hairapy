@@ -47,6 +47,15 @@ const SIZE_CLASSES = {
   xl: "size-40 text-5xl",
 };
 
+// Cỡ chữ và kích thước của huy hiệu Tier Badge đặt ở đáy avatar
+// Dùng HTML/CSS để chữ to rõ, sắc nét, không bị teo nhỏ khi scale SVG trên mobile / navbar
+const BADGE_SIZE_CLASSES = {
+  sm: "-bottom-1.5 px-2 py-0.5 text-[9.5px] font-black tracking-wider",
+  md: "-bottom-2 px-2.5 py-0.5 text-[11px] font-black tracking-wider",
+  lg: "-bottom-2.5 px-3.5 py-1 text-[13px] font-black tracking-widest",
+  xl: "-bottom-3.5 px-5 py-1.5 text-[15px] font-black tracking-widest",
+};
+
 export default function UserAvatar({
   name = "",
   email = "",
@@ -74,6 +83,7 @@ export default function UserAvatar({
   const gradient = getGradientByHash(email || name);
   const initial = getInitial(name, email);
   const sizeClass = SIZE_CLASSES[size] || size;
+  const badgeSizeClass = BADGE_SIZE_CLASSES[size] || BADGE_SIZE_CLASSES.md;
 
   if (hasFrame) {
     // Lọc bỏ class border hoặc ring bên ngoài truyền vào để không bao giờ tạo thành viền ô vuông quanh SVG frame
@@ -96,8 +106,11 @@ export default function UserAvatar({
         aria-label={name || email || `Avatar người dùng ${effectivePlan}`}
         className={`relative inline-flex shrink-0 items-center justify-center rounded-full select-none ${sizeClass} ${safeClassName}`}
       >
-        {isPro && <AvatarFramePro animated={animated} showLabel={showLabel} />}
-        {isPremium && <AvatarFramePremium animated={animated} showLabel={showLabel} />}
+        {/* Khung viền vector SVG (vương miện, cánh, vòng hào quang xoay sáng) */}
+        {isPro && <AvatarFramePro animated={animated} showLabel={false} />}
+        {isPremium && <AvatarFramePremium animated={animated} showLabel={false} />}
+
+        {/* Lõi Avatar tròn bên trong */}
         <div className="flex size-full items-center justify-center rounded-full font-display font-bold text-white shadow-sm overflow-hidden">
           <div className={`flex size-full items-center justify-center bg-gradient-to-br ${gradient}`}>
             {src ? (
@@ -107,6 +120,19 @@ export default function UserAvatar({
             )}
           </div>
         </div>
+
+        {/* Huy hiệu chữ PRO / PREMIUM to rõ, đậm nét ở đáy Avatar */}
+        {showLabel && (
+          <span
+            className={`absolute left-1/2 -translate-x-1/2 z-20 whitespace-nowrap rounded-full border shadow-lg font-display uppercase leading-none ${badgeSizeClass} ${
+              isPro
+                ? "bg-gradient-to-r from-[#1039da] via-[#2a4ae8] to-[#ff57cf] text-white border-[#ffd775] shadow-[#1039da]/40"
+                : "bg-gradient-to-r from-[#17061d] via-[#a80084] to-[#17061d] text-[#ffe699] border-2 border-[#ffd775] shadow-[#ff57cf]/50"
+            }`}
+          >
+            {isPro ? "PRO" : "PREMIUM"}
+          </span>
+        )}
       </div>
     );
   }

@@ -34,7 +34,7 @@ public class ExperimentService {
             String expDimension = "customUser:exp_" + name;
             Map<String, Object> eventFilter = Map.of(
                     "filter", Map.of("fieldName", "eventName", "inListFilter", Map.of("values", List.of(
-                            "experiment_exposure", "salon_match_open", "booking_submit"
+                            "experiment_exposure", "salon_match_open"
                     )))
             );
             Map<String, Object> filter = eventFilter;
@@ -54,32 +54,31 @@ public class ExperimentService {
                 return emptyResponse(name, d, startDate);
             }
 
+            // Đơn vị đếm là NGƯỜI (totalUsers), không phải số sự kiện:
+            // - users      = số người đã thấy nút (experiment_exposure)
+            // - conversion = số người đã mở "Cắt kiểu này ở đâu?" (salon_match_open) — chỉ số chính
+            // Trước đây cộng eventCount của salon_match_open + booking_submit -> 1 người bấm nhiều lần
+            // bị đếm nhiều lần, tỉ lệ có thể > 100% và z-test sai.
             long usersA = 0;
             long conversionsA = 0;
             long usersB = 0;
             long conversionsB = 0;
-
             for (GaReportService.Row r : rows) {
                 String variant = r.dims().get(0);
                 String eventName = r.dims().get(1);
                 long users = Math.round(r.metrics().get(0));
-                long eventCount = Math.round(r.metrics().get(1));
-
-                if ("A".equalsIgnoreCase(variant)) {
-                    if ("experiment_exposure".equalsIgnoreCase(eventName)) {
-                        usersA = Math.max(usersA, Math.max(users, eventCount));
-                    } else if ("booking_submit".equalsIgnoreCase(eventName) || "salon_match_open".equalsIgnoreCase(eventName)) {
-                        conversionsA += eventCount;
-                    }
-                } else if ("B".equalsIgnoreCase(variant)) {
-                    if ("experiment_exposure".equalsIgnoreCase(eventName)) {
-                        usersB = Math.max(usersB, Math.max(users, eventCount));
-                    } else if ("booking_submit".equalsIgnoreCase(eventName) || "salon_match_open".equalsIgnoreCase(eventName)) {
-                        conversionsB += eventCount;
-                    }
+                boolean isA = "A".equalsIgnoreCase(variant);
+                boolean isB = "B".equalsIgnoreCase(variant);
+                if (!isA && !isB) continue;
+                if ("experiment_exposure".equalsIgnoreCase(eventName)) {
+                    if (isA) usersA = users; else usersB = users;
+                } else if ("salon_match_open".equalsIgnoreCase(eventName)) {
+                    if (isA) conversionsA = users; else conversionsB = users;
                 }
             }
-
+            // Người chuyển đổi không thể nhiều hơn người được thấy nút
+            conversionsA = Math.min(conversionsA, usersA);
+            conversionsB = Math.min(conversionsB, usersB);
             return calculateResult(name, d, startDate, usersA, conversionsA, usersB, conversionsB);
         } catch (Exception e) {
             log.warn("Lỗi khi lấy kết quả thử nghiệm A/B {}: {}", name, e.getMessage());

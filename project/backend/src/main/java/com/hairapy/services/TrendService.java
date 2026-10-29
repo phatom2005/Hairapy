@@ -81,6 +81,9 @@ public class TrendService {
     public List<FaceShapeStyleResponse> getFaceShapeStyles(String shape) {
         if (shape == null || shape.isBlank()) return List.of();
         String normalizedShape = shape.trim().toLowerCase();
+        // Endpoint public: chỉ nhận 6 dáng mặt đã biết. Không kiểm tra thì mỗi chuỗi lạ tạo 1 key cache mới
+        // + 1 lần query GA/DB -> có thể bị spam làm đầy bộ nhớ và hết quota GA.
+        if (!SHAPE_SYNONYMS.containsKey(normalizedShape)) return List.of();
         ensureCacheValid();
         return cachedFaceShapes.computeIfAbsent(normalizedShape, this::computeFaceShapeStyles);
     }
@@ -357,7 +360,8 @@ public class TrendService {
         LocalDateTime since = now.minusDays(30);
 
         // Lấy tất cả lượt quét sắp xếp mới nhất trước
-        List<ScanHistory> scans = scanHistoryRepository.findAllByOrderByCreatedAtDesc();
+        // Chỉ lấy lượt quét trong cửa sổ 30 ngày (trước đây tải TOÀN BỘ lịch sử quét mỗi lần tính)
+        List<ScanHistory> scans = scanHistoryRepository.findByCreatedAtAfterOrderByCreatedAtDesc(since);
         // Lấy dáng mặt quét gần nhất của mỗi user
         Map<Long, String> latestUserShape = new HashMap<>();
         for (ScanHistory s : scans) {

@@ -110,8 +110,17 @@ public class GaMeasurementService {
             restTemplate.postForObject(url, entity, String.class);
             log.debug("Đã gửi GA4 MP event: {} cho clientId={}, userId={}", eventName, resolvedClientId, userId);
         } catch (Exception e) {
-            log.warn("Lỗi khi gửi GA4 Measurement Protocol event {}: {}", eventName, e.getMessage());
+            // KHÔNG log e.getMessage(): lỗi I/O của RestTemplate chứa nguyên URL (có api_secret)
+            log.warn("Lỗi khi gửi GA4 Measurement Protocol event {}: {}", eventName, describeError(e));
         }
+    }
+
+    /** Mô tả lỗi an toàn để log: chỉ tên lớp + HTTP status (nếu có), không kèm URL chứa secret. */
+    static String describeError(Exception e) {
+        if (e instanceof org.springframework.web.client.HttpStatusCodeException h) {
+            return e.getClass().getSimpleName() + " status=" + h.getStatusCode().value();
+        }
+        return e.getClass().getSimpleName();
     }
 
     @PreDestroy

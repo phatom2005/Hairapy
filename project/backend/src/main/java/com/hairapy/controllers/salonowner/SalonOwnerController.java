@@ -462,8 +462,11 @@ public class SalonOwnerController {
 
         // Fallback DB
         List<LocalDateTime> times = usageHistoryRepository.findSwapTimesSince(since30d);
+        java.time.ZoneId serverZone = java.time.ZoneId.systemDefault();
+        java.time.ZoneId vnZone = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
         for (LocalDateTime t : times) {
-            int h = t.getHour();
+            // usedAt lưu theo giờ server (UTC trên Railway) -> quy về giờ VN, nếu không biểu đồ lệch 7 tiếng
+            int h = t.atZone(serverZone).withZoneSameInstant(vnZone).getHour();
             hourCounts[h]++;
         }
         List<SalonOwnerInsightsResponse.HourCount> list = new ArrayList<>();
@@ -511,9 +514,8 @@ public class SalonOwnerController {
                 + bookingRequestRepository.countBySalonIdAndStatus(s.getId(), BookingStatus.COMPLETED);
         long completed = bookingRequestRepository.countBySalonIdAndStatus(s.getId(), BookingStatus.COMPLETED);
         long click = s.getViewCount();
-        long impression = click > 0 ? click * 3 : 0L;
-
-        return new SalonOwnerInsightsResponse.SalonFunnel(impression, click, bookingSubmit, confirmed, completed);
+        // Không có GA thì không biết lượt hiển thị thật -> trả null (FE hiện "—"), KHÔNG ước lượng/bịa số
+        return new SalonOwnerInsightsResponse.SalonFunnel(null, click, bookingSubmit, confirmed, completed);
     }
 
     /** Escape HTML cho dữ liệu người dùng nhập trước khi chèn vào email (chống chèn link/HTML giả mạo). */

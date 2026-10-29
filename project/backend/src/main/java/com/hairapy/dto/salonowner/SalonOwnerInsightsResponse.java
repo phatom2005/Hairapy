@@ -15,6 +15,7 @@ public record SalonOwnerInsightsResponse(
 ) {
     public record DistrictRequestedHairstyle(String hairstyleName, long count) {}
     public record HourCount(int hour, long count) {}
-    public record SalonFunnel(long impression, long click, long bookingSubmit, long confirmed, long completed) {}
+    // impression = null khi không có GA (không có nguồn dữ liệu thật -> không bịa số)
+    public record SalonFunnel(Long impression, long click, long bookingSubmit, long confirmed, long completed) {}
 }
 

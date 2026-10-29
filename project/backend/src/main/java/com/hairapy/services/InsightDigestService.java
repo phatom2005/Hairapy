@@ -410,7 +410,9 @@ public class InsightDigestService {
                 }
             }
         } catch (Exception e) {
-            log.warn("Lỗi gọi Gemini cho Weekly Insight summary (chuyển sang fallback): {}", e.getMessage());
+            // KHÔNG log e.getMessage(): lỗi I/O chứa nguyên URL có ?key=<API key>
+            log.warn("Lỗi gọi Gemini cho Weekly Insight summary (chuyển sang fallback): {}",
+                    GaMeasurementService.describeError(e));
         }
 
         return new AiSummaryResult(buildFallbackSummary(users, scans, swaps, revenue, bookings, anomalies), false);

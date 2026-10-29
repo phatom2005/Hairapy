@@ -171,7 +171,7 @@ class TrendServiceTest {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        when(scanHistoryRepository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(scan));
+        when(scanHistoryRepository.findByCreatedAtAfterOrderByCreatedAtDesc(any())).thenReturn(List.of(scan));
         when(usageHistoryRepository.countSwapsByUserIdsSince(eq(List.of(100L)), any()))
                 .thenReturn(List.<Object[]>of(new Object[]{5L, 8L}));
 
@@ -182,5 +182,12 @@ class TrendServiceTest {
         assertEquals(8L, result.get(0).tries());
         assertEquals("db", result.get(0).source());
     }
-}
 
+    @Test
+    void getFaceShapeStyles_UnknownShape_ReturnsEmptyWithoutQuerying() {
+        // Dáng mặt lạ (có thể là spam) -> trả rỗng, không query DB/GA, không tạo key cache mới
+        List<FaceShapeStyleResponse> result = trendService.getFaceShapeStyles("xyz-random-123");
+        assertTrue(result.isEmpty());
+        verify(scanHistoryRepository, never()).findByCreatedAtAfterOrderByCreatedAtDesc(any());
+    }
+}

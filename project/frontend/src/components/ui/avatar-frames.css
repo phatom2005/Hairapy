@@ -1,0 +1,64 @@
+/* Hairapy Avatar Tier Frames Animations */
+
+@keyframes hairapy-frame-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes hairapy-frame-pulse {
+  0%, 100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes hairapy-frame-twinkle {
+  0%, 100% {
+    opacity: 0.25;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes hairapy-frame-gem-shimmer {
+  0%, 100% {
+    filter: drop-shadow(0 0 2px rgba(255, 87, 207, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 7px rgba(255, 87, 207, 0.9));
+  }
+}
+
+.hairapy-frame-spin {
+  animation: hairapy-frame-spin 16s linear infinite;
+  transform-origin: 100px 100px;
+}
+
+.hairapy-frame-pulse {
+  animation: hairapy-frame-pulse 3.5s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.hairapy-frame-twinkle-1 {
+  animation: hairapy-frame-twinkle 2.2s ease-in-out infinite;
+}
+
+.hairapy-frame-twinkle-2 {
+  animation: hairapy-frame-twinkle 2.2s ease-in-out 1.1s infinite;
+}
+
+.hairapy-frame-gem-shimmer {
+  animation: hairapy-frame-gem-shimmer 2.8s ease-in-out infinite;
+}
+

@@ -1,5 +1,8 @@
+import useAuthStore from "../../store/useAuthStore";
+import { AvatarFramePro, AvatarFramePremium } from "./HairapyAvatarFrames";
+
 // Avatar hiển thị chữ cái đầu với gradient màu thương hiệu theo hash của email.
-// Thay thế cho ảnh mock mặt cười avatar.svg cũ.
+// Hỗ trợ hiển thị khung viền PRO & PREMIUM tương ứng với gói tài khoản của người dùng.
 
 const GRADIENTS = [
   "from-pink to-brand",
@@ -43,24 +46,132 @@ const SIZE_CLASSES = {
   xl: "size-40 text-5xl",
 };
 
+// Tỷ lệ co giãn toán học chuẩn xác theo kích thước avatar (đã nhân hệ số 1.25x theo yêu cầu)
+// sm: (36px / 96px) * 1.25 = 0.46875
+// md: (48px / 96px) * 1.25 = 0.625
+// lg: 1.00 * 1.25 = 1.25
+// xl: 1.67 * 1.25 = 2.0875
+const BADGE_SCALES = {
+  sm: 0.46875,
+  md: 0.625,
+  lg: 1.25,
+  xl: 2.0875,
+};
+
+const BADGE_OFFSETS = {
+  sm: "-bottom-[3px]",
+  md: "-bottom-[3.5px]",
+  lg: "-bottom-2",
+  xl: "-bottom-4",
+};
+
 export default function UserAvatar({
   name = "",
   email = "",
+  src = "",
   size = "md",
+  plan: planProp,
+  animated = true,
+  showLabel = true,
   className = "",
 }) {
+  const authUser = useAuthStore((s) => s.user);
+
+  // Tự động nhận diện plan từ authUser nếu không truyền prop trực tiếp
+  const effectivePlan =
+    planProp !== undefined
+      ? planProp
+      : !email || (authUser?.email && authUser.email.toLowerCase() === email.toLowerCase())
+      ? authUser?.plan || "FREE"
+      : "FREE";
+
+  const isPro = effectivePlan === "PRO";
+  const isPremium = effectivePlan === "PREMIUM";
+  const hasFrame = isPro || isPremium;
+
   const gradient = getGradientByHash(email || name);
   const initial = getInitial(name, email);
   const sizeClass = SIZE_CLASSES[size] || size;
+
+  if (hasFrame) {
+    // Lọc bỏ class border hoặc ring bên ngoài truyền vào để không bao giờ tạo thành viền ô vuông quanh SVG frame
+    const safeClassName = className
+      ? className
+          .split(/\s+/)
+          .filter(
+            (c) =>
+              !c.startsWith("border") &&
+              !c.includes(":border") &&
+              !c.startsWith("ring") &&
+              !c.includes(":ring")
+          )
+          .join(" ")
+      : "";
+
+    return (
+      <div
+        role="img"
+        aria-label={name || email || `Avatar người dùng ${effectivePlan}`}
+        className={`relative inline-flex shrink-0 items-center justify-center rounded-full select-none ${sizeClass} ${safeClassName}`}
+      >
+        {/* Khung viền vector SVG (vương miện, cánh, vòng hào quang xoay sáng) */}
+        {isPro && (
+          <AvatarFramePro
+            animated={animated}
+            showLabel={false}
+            showBottomStar={!showLabel}
+          />
+        )}
+        {isPremium && (
+          <AvatarFramePremium
+            animated={animated}
+            showLabel={false}
+            showBottomGem={!showLabel}
+          />
+        )}
+
+        {/* Lõi Avatar tròn bên trong */}
+        <div className="flex size-full items-center justify-center rounded-full font-display font-bold text-white shadow-sm overflow-hidden">
+          <div className={`flex size-full items-center justify-center bg-gradient-to-br ${gradient}`}>
+            {src ? (
+              <img src={src} alt={name || "Avatar"} className="size-full object-cover" />
+            ) : (
+              <span>{initial}</span>
+            )}
+          </div>
+        </div>
+
+        {/* Huy hiệu chữ PRO / PREMIUM đồng bộ tỷ lệ toán học 100% với avatar */}
+        {showLabel && (
+          <span
+            style={{
+              transform: `translateX(-50%) scale(${BADGE_SCALES[size] || 1})`,
+              transformOrigin: "center bottom",
+            }}
+            className={`absolute left-1/2 z-20 whitespace-nowrap rounded-full border shadow-sm font-display uppercase leading-none px-2.5 py-0.5 text-[10px] font-bold tracking-wider ${BADGE_OFFSETS[size] || "-bottom-1.5"} ${
+              isPro
+                ? "bg-gradient-to-r from-[#1039da] to-[#ff57cf] text-white border-[#ffd775]/70"
+                : "bg-gradient-to-r from-[#17061d] via-[#850069] to-[#17061d] text-[#ffe699] border-[#ffd775]/80"
+            }`}
+          >
+            {isPro ? "PRO" : "PREMIUM"}
+          </span>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
       role="img"
       aria-label={name || email || "Avatar người dùng"}
-      className={`inline-flex shrink-0 select-none items-center justify-center rounded-full bg-gradient-to-br ${gradient} font-display font-bold text-white shadow-sm border border-white/20 ${sizeClass} ${className}`}
+      className={`inline-flex shrink-0 select-none items-center justify-center rounded-full bg-gradient-to-br ${gradient} font-display font-bold text-white shadow-sm border border-white/20 overflow-hidden ${sizeClass} ${className}`}
     >
-      <span>{initial}</span>
+      {src ? (
+        <img src={src} alt={name || "Avatar"} className="size-full object-cover" />
+      ) : (
+        <span>{initial}</span>
+      )}
     </div>
   );
 }
-

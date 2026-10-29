@@ -8,6 +8,7 @@ import com.hairapy.repositories.HairstyleCatalogRepository;
 import com.hairapy.repositories.SalonRepository;
 import com.hairapy.repositories.SwapHistoryRepository;
 import com.hairapy.services.EmailService;
+import com.hairapy.services.GaMeasurementService;
 import com.hairapy.services.UsageService;
 import com.hairapy.utils.VnTime;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -40,6 +42,7 @@ public class BookingController {
     private final SwapHistoryRepository swapHistoryRepository;
     private final UsageService usageService;
     private final EmailService emailService;
+    private final GaMeasurementService gaMeasurementService;
 
     @Value("${app.frontend.url:http://localhost:5173}")
     private String frontendUrl;
@@ -49,7 +52,9 @@ public class BookingController {
      */
     @PostMapping
     @org.springframework.transaction.annotation.Transactional
-    public ResponseEntity<?> createBooking(@RequestBody CreateBookingRequest request) {
+    public ResponseEntity<?> createBooking(
+            @RequestBody CreateBookingRequest request,
+            @RequestHeader(value = "X-GA-Client-Id", required = false) String gaClientIdHeader) {
         User currentUser = usageService.getCurrentUser();
         if (currentUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
@@ -141,6 +146,8 @@ public class BookingController {
             }
         }
 
+        String sanitizedGaClientId = PaymentController.sanitizeGaClientId(gaClientIdHeader);
+
         // 8. Tạo và lưu booking
         BookingRequest booking = BookingRequest.builder()
                 .user(currentUser)
@@ -154,11 +161,23 @@ public class BookingController {
                 .customerPhone(request.customerPhone().trim())
                 .note(request.note())
                 .status(BookingStatus.PENDING)
+                .gaClientId(sanitizedGaClientId)
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
 
         booking = bookingRequestRepository.save(booking);
+
+        // Bắn sự kiện booking_created lên GA4 Measurement Protocol
+        if (gaMeasurementService != null) {
+            Map<String, Object> gaParams = new HashMap<>();
+            gaParams.put("salon_id", salon.getId());
+            if (request.hairstyleId() != null) {
+                gaParams.put("hairstyle_id", request.hairstyleId());
+            }
+            gaParams.put("has_try_on_image", validTryOnImageUrl != null);
+            gaMeasurementService.send(sanitizedGaClientId, currentUser.getId(), "booking_created", gaParams);
+        }
 
         // 9. Gửi email thông báo cho chủ salon (best-effort, không gửi SĐT trong email)
         if (salon.getOwner() != null && salon.getOwner().getEmail() != null) {

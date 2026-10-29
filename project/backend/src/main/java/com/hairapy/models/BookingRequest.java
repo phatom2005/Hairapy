@@ -70,6 +70,9 @@ public class BookingRequest {
     @Column(name = "salon_note", length = 300)
     private String salonNote;
 
+    @Column(name = "ga_client_id", length = 100)
+    private String gaClientId;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

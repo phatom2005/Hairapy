@@ -42,6 +42,7 @@ class PaymentServiceTest {
     @Mock SubscriptionRepository subscriptionRepository;
     @Mock SubscriptionService subscriptionService;
     @Mock AlertService alertService;
+    @Mock GaMeasurementService gaMeasurementService;
 
     PaymentService service;
     User user;
@@ -49,7 +50,7 @@ class PaymentServiceTest {
     @BeforeEach
     void setUp() {
         service = new PaymentService(paymentRepository, subscriptionRepository, subscriptionService,
-                alertService, new ObjectMapper(), new RestTemplateBuilder());
+                alertService, new ObjectMapper(), new RestTemplateBuilder(), gaMeasurementService);
         ReflectionTestUtils.setField(service, "checksumKey", CHECKSUM);
         ReflectionTestUtils.setField(service, "clientId", "cid");
         ReflectionTestUtils.setField(service, "apiKey", "key");
@@ -141,5 +142,23 @@ class PaymentServiceTest {
         assertEquals(PaymentStatus.PENDING, p.getStatus());
         verify(alertService).alert(startsWith("PAYMENT_MISMATCH_777"), anyString(), anyString());
         verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    void grantSubscriptionIfNeeded_goiHaiLan_chiSendPurchaseMotLan() {
+        Payment p = payment(PaymentStatus.PAID, false);
+        p.setGaClientId("12345.67890");
+        when(paymentRepository.findById(1L)).thenReturn(Optional.of(p));
+
+        // Gọi lần 1: cấp gói và bắn event
+        service.grantSubscriptionIfNeeded(p);
+        // Gọi lần 2: subscriptionGranted đã true -> không bắn event lần 2
+        service.grantSubscriptionIfNeeded(p);
+
+        verify(gaMeasurementService, org.mockito.Mockito.times(1))
+                .send(org.mockito.ArgumentMatchers.eq("12345.67890"),
+                        org.mockito.ArgumentMatchers.eq(5L),
+                        org.mockito.ArgumentMatchers.eq("purchase"),
+                        any());
     }
 }

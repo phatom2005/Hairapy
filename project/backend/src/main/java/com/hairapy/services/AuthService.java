@@ -163,7 +163,8 @@ public class AuthService {
                 plan, planEndDate,
                 user.getProvider() == null ? "LOCAL" : user.getProvider().name(),
                 user.getPasswordHash() != null,
-                salonId);
+                salonId,
+                user.getId());
     }
 
     /**

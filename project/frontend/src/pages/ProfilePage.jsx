@@ -7,7 +7,7 @@ import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/Navbar";
 import { Badge, Button, Card, Section, SectionHeading } from "../components/ui";
 import api from "../lib/api";
-import { PROFILE_IMG } from "../lib/figmaAssets";
+import UserAvatar from "../components/ui/UserAvatar";
 import useAuthStore from "../store/useAuthStore";
 import { useScanStore } from "../store/useScanStore";
 import PremiumGateModal from "../components/PremiumGateModal";
@@ -197,8 +197,7 @@ export default function ProfilePage() {
           <div className="mx-auto max-w-[1100px] rounded-3xl border border-line bg-canvas p-6 sm:p-8">
             <div className="flex flex-col items-center gap-6 sm:flex-row">
               <div className="relative shrink-0">
-                <img src={PROFILE_IMG} alt={userName}
-                  className="size-24 rounded-full border-4 border-white object-cover shadow-lg" />
+                <UserAvatar name={userName} email={user?.email} size="lg" className="border-4 border-white shadow-lg" />
               </div>
               <div className="flex-1 text-center sm:text-left">
                 <div className="flex flex-col items-center gap-2 sm:flex-row">

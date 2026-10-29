@@ -1,0 +1,3 @@
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS ga_client_id VARCHAR(100);
+ALTER TABLE booking_requests ADD COLUMN IF NOT EXISTS ga_client_id VARCHAR(100);
+

@@ -45,6 +45,7 @@ public class SalonOwnerController {
     private final UsageService usageService;
     private final CloudinaryService cloudinaryService;
     private final EmailService emailService;
+    private final com.hairapy.services.GaMeasurementService gaMeasurementService;
 
     private Salon getOwnedSalon() {
         User currentUser = usageService.getCurrentUser();
@@ -221,6 +222,34 @@ public class SalonOwnerController {
         }
         booking.setUpdatedAt(LocalDateTime.now());
         bookingRequestRepository.save(booking);
+
+        // Bắn sự kiện cập nhật trạng thái đặt lịch lên GA4 Measurement Protocol
+        if (gaMeasurementService != null) {
+            long leadTimeHours = 0;
+            if (booking.getPreferredTime() != null && booking.getCreatedAt() != null) {
+                leadTimeHours = java.time.Duration.between(booking.getCreatedAt(), booking.getPreferredTime()).toHours();
+            }
+
+            String eventName = switch (target) {
+                case CONFIRMED -> "booking_confirmed";
+                case COMPLETED -> "booking_completed";
+                case REJECTED -> "booking_rejected";
+                case NO_SHOW -> "booking_no_show";
+                default -> null;
+            };
+
+            if (eventName != null) {
+                Map<String, Object> gaParams = new HashMap<>();
+                gaParams.put("salon_id", s.getId());
+                if (booking.getHairstyleId() != null) {
+                    gaParams.put("hairstyle_id", booking.getHairstyleId());
+                }
+                gaParams.put("lead_time_hours", leadTimeHours);
+                gaMeasurementService.send(booking.getGaClientId(),
+                        booking.getUser() != null ? booking.getUser().getId() : null,
+                        eventName, gaParams);
+            }
+        }
 
         // Gửi email cho khách khi CONFIRMED hoặc REJECTED (best-effort)
         if (target == BookingStatus.CONFIRMED || target == BookingStatus.REJECTED) {

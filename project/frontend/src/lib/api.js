@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getGaClientId } from "./analytics";
 
 // Base URL: Vercel/prod set VITE_API_URL env var, local dùng Vite proxy (/api)
 const api = axios.create({
@@ -8,12 +9,18 @@ const api = axios.create({
 // Các endpoint auth công khai: KHÔNG đính token cũ/hết hạn (tránh server từ chối request đăng nhập vì token rác)
 const PUBLIC_AUTH = /^\/auth\/(login|register|google|facebook|forgot-password|reset-password|verify-email|resend-verification)/;
 
-// Tự đính JWT token + xử lý Content-Type cho FormData
+// Tự đính JWT token + xử lý Content-Type cho FormData + đính kèm X-GA-Client-Id nếu có
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token && !PUBLIC_AUTH.test(config.url || "")) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  const gaClientId = getGaClientId();
+  if (gaClientId) {
+    config.headers["X-GA-Client-Id"] = gaClientId;
+  }
+
   // Nếu data là FormData → xóa Content-Type để Axios tự set multipart/form-data kèm boundary
   // Ngược lại mặc định JSON
   if (config.data instanceof FormData) {

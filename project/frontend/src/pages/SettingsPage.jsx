@@ -236,8 +236,8 @@ export default function SettingsPage() {
               {/* Avatar */}
               <div className="flex flex-col gap-4">
                 <div className="relative w-40">
-                  <div className="overflow-hidden rounded-full border-4 border-[#f3f3f3] shadow">
-                    <UserAvatar name={fullName || user?.fullName} email={user?.email} size="xl" className="size-40" />
+                  <div className="relative flex items-center justify-center">
+                    <UserAvatar name={fullName || user?.fullName} email={user?.email} plan={user?.plan} size="xl" />
                   </div>
                 </div>
                 <div>

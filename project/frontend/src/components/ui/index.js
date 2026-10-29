@@ -6,3 +6,4 @@ export { Section, SectionHeading } from "./Section";
 export { default as DragScroll } from "./DragScroll";
 export { default as DisclosureModal } from "./DisclosureModal";
 export { default as UserAvatar } from "./UserAvatar";
+export { default as AvatarFrame, AvatarFramePro, AvatarFramePremium } from "./HairapyAvatarFrames";

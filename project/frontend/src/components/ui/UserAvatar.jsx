@@ -1,5 +1,9 @@
+import React from "react";
+import useAuthStore from "../../store/useAuthStore";
+import { AvatarFramePro, AvatarFramePremium } from "./HairapyAvatarFrames";
+
 // Avatar hiển thị chữ cái đầu với gradient màu thương hiệu theo hash của email.
-// Thay thế cho ảnh mock mặt cười avatar.svg cũ.
+// Hỗ trợ hiển thị khung viền PRO & PREMIUM tương ứng với gói tài khoản của người dùng.
 
 const GRADIENTS = [
   "from-pink to-brand",
@@ -46,21 +50,63 @@ const SIZE_CLASSES = {
 export default function UserAvatar({
   name = "",
   email = "",
+  src = "",
   size = "md",
+  plan: planProp,
+  animated = true,
   className = "",
 }) {
+  const authUser = useAuthStore((s) => s.user);
+
+  // Tự động nhận diện plan từ authUser nếu không truyền prop trực tiếp
+  const effectivePlan =
+    planProp !== undefined
+      ? planProp
+      : !email || (authUser?.email && authUser.email.toLowerCase() === email.toLowerCase())
+      ? authUser?.plan || "FREE"
+      : "FREE";
+
+  const isPro = effectivePlan === "PRO";
+  const isPremium = effectivePlan === "PREMIUM";
+  const hasFrame = isPro || isPremium;
+
   const gradient = getGradientByHash(email || name);
   const initial = getInitial(name, email);
   const sizeClass = SIZE_CLASSES[size] || size;
+
+  if (hasFrame) {
+    return (
+      <div
+        role="img"
+        aria-label={name || email || `Avatar người dùng ${effectivePlan}`}
+        className={`relative inline-flex shrink-0 items-center justify-center select-none ${sizeClass} ${className}`}
+      >
+        {isPro && <AvatarFramePro animated={animated} />}
+        {isPremium && <AvatarFramePremium animated={animated} />}
+        <div className="flex size-full items-center justify-center rounded-full bg-gradient-to-br font-display font-bold text-white shadow-sm overflow-hidden border border-white/20">
+          <div className={`flex size-full items-center justify-center bg-gradient-to-br ${gradient}`}>
+            {src ? (
+              <img src={src} alt={name || "Avatar"} className="size-full object-cover" />
+            ) : (
+              <span>{initial}</span>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
       role="img"
       aria-label={name || email || "Avatar người dùng"}
-      className={`inline-flex shrink-0 select-none items-center justify-center rounded-full bg-gradient-to-br ${gradient} font-display font-bold text-white shadow-sm border border-white/20 ${sizeClass} ${className}`}
+      className={`inline-flex shrink-0 select-none items-center justify-center rounded-full bg-gradient-to-br ${gradient} font-display font-bold text-white shadow-sm border border-white/20 overflow-hidden ${sizeClass} ${className}`}
     >
-      <span>{initial}</span>
+      {src ? (
+        <img src={src} alt={name || "Avatar"} className="size-full object-cover" />
+      ) : (
+        <span>{initial}</span>
+      )}
     </div>
   );
 }
-

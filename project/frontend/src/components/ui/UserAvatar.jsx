@@ -1,4 +1,3 @@
-import React from "react";
 import useAuthStore from "../../store/useAuthStore";
 import { AvatarFramePro, AvatarFramePremium } from "./HairapyAvatarFrames";
 

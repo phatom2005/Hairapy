@@ -1,12 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
-import React from "react";
 
 vi.mock("../../store/useAuthStore", () => ({
   default: () => ({ user: null }),
 }));
 import { renderToStaticMarkup } from "react-dom/server";
 import UserAvatar from "./UserAvatar";
-import { AvatarFramePro, AvatarFramePremium } from "./HairapyAvatarFrames";
 
 describe("UserAvatar Component & Tiers", () => {
   it("renders basic FREE avatar without frames", () => {

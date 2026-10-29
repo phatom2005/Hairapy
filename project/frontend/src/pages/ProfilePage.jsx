@@ -380,7 +380,7 @@ export default function ProfilePage() {
                         </div>
                       </div>
                       <Button
-                        size="sm"
+                        size="xs"
                         variant="outline"
                         onClick={async () => {
                           await hydrateFromHistory(s);
@@ -489,12 +489,12 @@ export default function ProfilePage() {
                           <h4 className="font-bold text-ink">{sv.name}</h4>
                           <p className="text-xs text-muted mt-1">Độ dài: {sv.hairLength} | Dáng mặt: {sv.faceShape}</p>
                           <div className="mt-3 flex gap-2">
-                            <Button to={`/results?hairstyleId=${sv.id}`} size="sm" variant="outline" className="flex-1 px-2 py-2 text-xs">Xem chi tiết</Button>
+                            <Button to={`/results?hairstyleId=${sv.id}`} size="xs" variant="outline" className="flex-1 justify-center py-2 text-xs">Xem chi tiết</Button>
                             <Button
                               onClick={() => handleTryStyle(sv)}
                               disabled={sv.active === false}
-                              size="sm"
-                              className="flex-1 px-2 py-2 text-xs"
+                              size="xs"
+                              className="flex-1 justify-center py-2 text-xs"
                             >
                               {sv.active === false ? "Ngừng hỗ trợ" : "Thử lại ngay"}
                             </Button>

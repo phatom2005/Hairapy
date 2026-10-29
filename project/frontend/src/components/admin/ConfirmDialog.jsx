@@ -78,6 +78,7 @@ export default function ConfirmDialog({
           <Button
             type="button"
             variant="outline"
+            size="xs"
             onClick={handleCancel}
             disabled={loading}
             className="text-xs"
@@ -86,6 +87,7 @@ export default function ConfirmDialog({
           </Button>
           <Button
             type="button"
+            size="xs"
             onClick={handleConfirm}
             disabled={loading || (requireReason && !reason.trim())}
             className={`text-xs ${

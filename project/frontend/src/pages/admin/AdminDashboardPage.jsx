@@ -213,13 +213,13 @@ export default function AdminDashboardPage() {
           <h1 className="font-display text-xl font-bold text-ink">Tổng quan</h1>
           <p className="text-xs text-muted">Số liệu kinh doanh và sử dụng của Hairapy</p>
         </div>
-        <div className="inline-flex rounded-2xl border border-line bg-white p-1">
+        <div className="inline-flex rounded-2xl border border-line bg-white p-1 overflow-x-auto no-scrollbar max-w-full">
           {PERIODS.map((p) => (
             <button
               key={p.value}
               type="button"
               onClick={() => setPeriod(p.value)}
-              className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+              className={`rounded-xl px-3 sm:px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap transition-colors ${
                 period === p.value ? "bg-ink text-white" : "text-mauve hover:text-ink"
               }`}
             >
@@ -272,14 +272,14 @@ export default function AdminDashboardPage() {
 
       {/* KPI Salon Đối tác (Phase 4) */}
       <div className="rounded-3xl border border-line bg-gradient-to-r from-canvas to-card/60 p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-3 px-1">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 px-1">
           <div className="flex items-center gap-2">
-            <Shop size={18} variant="Bold" className="text-primary" />
+            <Shop size={18} variant="Bold" className="text-primary shrink-0" />
             <h2 className="text-xs font-bold uppercase tracking-wider text-ink">
               Mảng kinh doanh Salon Đối tác (B2B)
             </h2>
           </div>
-          <span className="text-[11px] font-medium text-muted bg-surface px-2.5 py-0.5 rounded-full border border-line">
+          <span className="text-[11px] font-medium text-muted bg-surface px-2.5 py-0.5 rounded-full border border-line w-fit">
             Gói dịch vụ 500.000₫ / tháng
           </span>
         </div>

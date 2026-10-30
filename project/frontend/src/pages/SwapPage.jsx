@@ -541,10 +541,10 @@ export default function SwapPage() {
     <div className="min-h-screen">
       <Navbar />
 
-      <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-8 px-6 py-12 sm:px-16 lg:grid-cols-[380px_1fr]">
-        {/* ASIDE: bộ chọn kiểu tóc và màu sắc */}
-        <div className="flex flex-col gap-6">
-          <Card className="flex flex-col gap-6">
+      <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-6 sm:gap-8 px-4 sm:px-10 lg:px-16 py-6 sm:py-12 lg:grid-cols-[380px_1fr]">
+        {/* ASIDE: bộ chọn kiểu tóc và màu sắc (Trên desktop ở trái, trên mobile ở dưới preview) */}
+        <div className="flex flex-col gap-6 order-2 lg:order-1">
+          <Card className="flex flex-col gap-5 sm:gap-6 p-4 sm:p-6 lg:p-8">
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-bold text-ink">Chọn kiểu tóc</h2>
@@ -560,7 +560,7 @@ export default function SwapPage() {
                 Đang tải danh sách kiểu tóc...
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4 max-h-[300px] overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-4 max-h-[300px] overflow-y-auto pr-1">
                 {displayedStyles.map((s) => {
                   const isActive = activeStyle?.id === s.id;
                   return (
@@ -701,8 +701,8 @@ export default function SwapPage() {
         <AiStylistPanel hairstyleId={activeStyle?.id} defaultOpen={false} />
       </div>
 
-        {/* PREVIEW KHU VỰC CHÍNH */}
-        <div className="flex flex-col gap-6">
+        {/* PREVIEW KHU VỰC CHÍNH (Trên desktop ở phải, trên mobile đưa lên đầu trang) */}
+        <div className="flex flex-col gap-6 order-1 lg:order-2">
           <input
             type="file"
             ref={fileInputRef}
@@ -713,7 +713,7 @@ export default function SwapPage() {
 
           {!previewUrl ? (
             /* Panel Chọn ảnh chân dung khi chưa có ảnh */
-            <div className="relative overflow-hidden rounded-[32px] border-2 border-dashed border-divider bg-canvas p-8 sm:p-12 text-center flex flex-col items-center justify-center min-h-[460px]">
+            <div className="relative overflow-hidden rounded-[32px] border-2 border-dashed border-divider bg-canvas p-5 sm:p-10 lg:p-12 text-center flex flex-col items-center justify-center min-h-[360px] sm:min-h-[460px]">
               <div className="size-16 rounded-3xl bg-pink/15 text-pink flex items-center justify-center mb-4">
                 <UploadIcon size={32} />
               </div>

@@ -192,26 +192,26 @@ export default function ProfilePage() {
       <Navbar />
 
       {/* Header hồ sơ */}
-      <section className="bg-transparent px-6 py-12 sm:px-16">
+      <section className="bg-transparent px-4 py-6 sm:px-10 sm:py-12 lg:px-16">
         <AnimatedContent>
-          <div className="mx-auto max-w-[1100px] rounded-3xl border border-line bg-canvas p-6 sm:p-8">
-            <div className="flex flex-col items-center gap-6 sm:flex-row">
+          <div className="mx-auto max-w-[1100px] rounded-3xl border border-line bg-canvas p-5 sm:p-8">
+            <div className="flex flex-col items-center gap-5 sm:gap-6 sm:flex-row">
               <div className="relative shrink-0">
                 <UserAvatar name={userName} email={user?.email} plan={user?.plan} size="lg"
                   className="shadow-lg" />
               </div>
               <div className="flex-1 text-center sm:text-left">
                 <div className="flex flex-col items-center gap-2 sm:flex-row">
-                  <h1 className="font-display text-3xl font-bold text-ink">{userName}</h1>
+                  <h1 className="font-display text-2xl sm:text-3xl font-bold text-ink">{userName}</h1>
                   <Badge variant={user?.role === "ADMIN" ? "new" : "premium"}>{userRole}</Badge>
                 </div>
-                <p className="mt-1 text-sm text-mauve">{user?.email}</p>
+                <p className="mt-1 text-xs sm:text-sm text-mauve">{user?.email}</p>
               </div>
-              <div className="flex flex-wrap justify-center gap-3">
-                <Button to="/settings" variant="outline">Sửa hồ sơ</Button>
-                <Button to="/scan">Quét AI mới</Button>
+              <div className="flex flex-wrap justify-center sm:justify-start gap-2.5">
+                <Button to="/settings" variant="outline" size="sm">Sửa hồ sơ</Button>
+                <Button to="/scan" size="sm">Quét AI mới</Button>
                 {user?.role === "ADMIN" && (
-                  <Button to="/admin" variant="pink">Dashboard quản trị</Button>
+                  <Button to="/admin" variant="pink" size="sm">Dashboard quản trị</Button>
                 )}
               </div>
             </div>
@@ -276,14 +276,14 @@ export default function ProfilePage() {
         </AnimatedContent>
       </section>
 
-      {/* Thanh tab */}
-      <div className="mx-auto max-w-[1100px] px-6 sm:px-16">
-        <div className="flex gap-2 border-b border-line">
+      {/* Thanh tab (Hỗ trợ cuộn ngang mượt mà trên mobile, không vỡ layout) */}
+      <div className="mx-auto max-w-[1100px] px-4 sm:px-10 lg:px-16">
+        <div className="flex gap-1 sm:gap-2 border-b border-line overflow-x-auto no-scrollbar whitespace-nowrap py-0.5">
           {TABS.map((t) => (
             <button
               key={t.key}
               onClick={() => setActiveTab(t.key)}
-              className={`px-4 py-3 text-sm font-bold transition-colors ${
+              className={`px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-colors shrink-0 cursor-pointer ${
                 activeTab === t.key
                   ? "border-b-2 border-primary text-primary"
                   : "border-b-2 border-transparent text-mauve hover:text-ink"

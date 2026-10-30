@@ -22,10 +22,20 @@
 
 * { box-sizing: border-box; }
 
-body {
+html, body {
   margin: 0;
   font-family: var(--font-sans);
   background: var(--color-canvas);
   color: var(--color-mauve);
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Ẩn scrollbar nhưng vẫn cho phép vuốt cuộn mượt mà trên mobile */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

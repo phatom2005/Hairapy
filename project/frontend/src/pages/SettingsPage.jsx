@@ -196,32 +196,33 @@ export default function SettingsPage() {
     <div className="min-h-screen">
       <Navbar />
 
-      <div className="mx-auto grid max-w-[1100px] grid-cols-1 gap-6 px-6 py-12 sm:px-16 lg:grid-cols-[260px_1fr]">
-        {/* Sidebar */}
-        <Card className="h-fit p-5">
-          <h1 className="mb-6 text-2xl font-bold text-ink">Cài đặt</h1>
-          <nav className="flex flex-col gap-1">
+      <div className="mx-auto grid max-w-[1100px] grid-cols-1 gap-6 px-4 sm:px-10 py-6 sm:py-12 lg:px-16 lg:grid-cols-[260px_1fr]">
+        {/* Sidebar (Dạng cuộn ngang trên mobile, menu dọc trên desktop) */}
+        <Card className="h-fit p-3.5 sm:p-5">
+          <h1 className="mb-3 sm:mb-6 text-xl sm:text-2xl font-bold text-ink">Cài đặt</h1>
+          <nav className="flex overflow-x-auto no-scrollbar gap-1.5 lg:flex-col lg:gap-1 pb-1 lg:pb-0">
             {NAV_ITEMS.map((item) => {
               const IconComp = item.icon;
               return (
                 <button
                   key={item.id}
                   onClick={() => setActive(item.id)}
-                  className={`flex items-center gap-3 rounded-xl px-4 py-3 text-left text-base transition ${
-                    active === item.id ? "bg-brand text-white font-medium" : "text-mauve hover:bg-canvas"
+                  className={`flex items-center gap-2 sm:gap-3 rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-base font-semibold whitespace-nowrap shrink-0 transition cursor-pointer ${
+                    active === item.id ? "bg-brand text-white font-medium" : "text-mauve hover:bg-canvas bg-canvas/60 lg:bg-transparent"
                   }`}
                 >
-                  <IconComp size={18} /> {item.label}
+                  <IconComp size={16} className="shrink-0" />
+                  <span>{item.label}</span>
                 </button>
               );
             })}
-            <div className="my-2 h-px bg-divider/30" />
+            <div className="hidden lg:block my-2 h-px bg-divider/30" />
             <button
               onClick={() => {
                 logout();
                 navigate("/login");
               }}
-              className="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-base text-[#ba1a1a] hover:bg-[#ba1a1a]/5 cursor-pointer"
+              className="flex items-center gap-2 sm:gap-3 rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-base font-semibold text-[#ba1a1a] hover:bg-[#ba1a1a]/5 cursor-pointer whitespace-nowrap shrink-0"
             >
               Đăng xuất
             </button>
@@ -229,20 +230,19 @@ export default function SettingsPage() {
         </Card>
 
         {/* Panel chính */}
-        <Card className="flex flex-col gap-8 p-8 sm:p-12">
+        <Card className="flex flex-col gap-6 sm:gap-8 p-4 sm:p-8 lg:p-12">
           {/* TAB 1: THÔNG TIN CÁ NHÂN */}
           {active === "Thông tin cá nhân" && (
             <>
               {/* Avatar */}
-              <div className="flex flex-col gap-4">
-                <div className="relative w-40">
-                  <div className="relative flex items-center justify-center">
-                    <UserAvatar name={fullName || user?.fullName} email={user?.email} plan={user?.plan} size="xl" />
-                  </div>
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                <div className="relative shrink-0 flex items-center justify-center">
+                  <UserAvatar name={fullName || user?.fullName} email={user?.email} plan={user?.plan} size="lg" className="sm:hidden" />
+                  <UserAvatar name={fullName || user?.fullName} email={user?.email} plan={user?.plan} size="xl" className="hidden sm:inline-flex" />
                 </div>
-                <div>
-                  <h2 className="text-3xl font-bold tracking-tight text-ink">Thông tin cá nhân</h2>
-                  <p className="text-mauve">Cập nhật chi tiết hồ sơ của bạn để có trải nghiệm AI tốt hơn.</p>
+                <div className="text-center sm:text-left">
+                  <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink">Thông tin cá nhân</h2>
+                  <p className="text-xs sm:text-sm text-mauve mt-1">Cập nhật chi tiết hồ sơ của bạn để có trải nghiệm AI tốt hơn.</p>
                 </div>
               </div>
 

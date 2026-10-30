@@ -44,7 +44,7 @@ export default function LandingPage() {
 /* ---------- Hero ---------- */
 function Hero() {
   return (
-    <section className="relative overflow-hidden bg-transparent px-6 py-24 sm:px-10 sm:py-32">
+    <section className="relative isolate overflow-hidden bg-transparent px-6 py-24 sm:px-10 sm:py-32">
       {/* DitherVeil làm nền cho cả Hero, đặt giữa (căn theo section, không lệch
           trái/phải như mấy bản thử trước). Giờ phần "ink" trong chính component
           đã tự trong suốt (xem DitherVeil.jsx: alpha dựa theo độ giống uInk) nên

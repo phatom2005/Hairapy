@@ -22,7 +22,11 @@
 
 * { box-sizing: border-box; }
 
-html, body {
+html {
+  overflow-x: hidden;
+}
+
+body {
   margin: 0;
   font-family: var(--font-sans);
   background: var(--color-canvas);

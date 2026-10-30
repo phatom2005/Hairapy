@@ -128,7 +128,7 @@ export default function App() {
   }
 
   return (
-    <div className="relative">
+    <div className="relative isolate">
       {/* Background mơ màng cho mỗi route - fixed, GPU compositor xử lý */}
       <SoftAurora intensity={1.05} />
       <Routes>

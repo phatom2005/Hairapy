@@ -79,7 +79,7 @@ export default function WeeklyInsightPanel() {
             <Magicpen size={18} variant="Bulk" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               <h2 className="text-sm font-bold text-ink">Insight tuần này</h2>
               <span className="rounded-full border border-line bg-canvas px-2.5 py-0.5 text-[11px] font-semibold text-muted">
                 {digest.period}

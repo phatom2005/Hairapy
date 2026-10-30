@@ -153,16 +153,16 @@ export default function ScanPage() {
     <div className="min-h-screen">
       <Navbar />
 
-      <section className="mx-auto grid max-w-[1100px] grid-cols-1 items-center gap-12 px-6 py-16 sm:px-10 lg:grid-cols-2">
+      <section className="mx-auto grid max-w-[1100px] grid-cols-1 items-center gap-10 lg:gap-12 px-4 sm:px-10 py-10 sm:py-16 lg:grid-cols-2">
         {/* Trái: nội dung */}
-        <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-6 sm:gap-8">
           <AnimatedContent>
-            <div className="flex flex-col items-start gap-4">
+            <div className="flex flex-col items-start gap-3 sm:gap-4">
               <Badge variant="new" className="uppercase tracking-wider text-[#3a4d00]">Gợi ý AI</Badge>
-              <h1 className="font-display text-5xl font-extrabold leading-tight tracking-tight text-ink">
+              <h1 className="font-display text-2xl sm:text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight text-ink">
                 Để AI gợi ý <span className="text-pink">kiểu tóc phù hợp với bạn</span>
               </h1>
-              <p className="max-w-lg text-lg leading-7 text-mauve">
+              <p className="max-w-lg text-sm sm:text-base lg:text-lg leading-relaxed text-mauve">
                 AI đo tỉ lệ khuôn mặt từ ảnh chân dung để <strong>gợi ý</strong> dáng mặt và kiểu tóc tham khảo.
                 Kết quả phụ thuộc chất lượng ảnh — bạn luôn có thể tự chỉnh lại.
               </p>
@@ -229,11 +229,11 @@ export default function ScanPage() {
           />
 
           <AnimatedContent delay={0.3}>
-            <div className="flex gap-8 pt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-6 pt-4 border-t border-divider/20">
               {STATS.map((s) => (
-                <div key={s.label}>
-                  <p className="text-xl font-bold text-magenta">{s.value}</p>
-                  <p className="text-xs font-bold uppercase tracking-wider text-mauve">{s.label}</p>
+                <div key={s.label} className="flex sm:flex-col items-baseline sm:items-start gap-2 sm:gap-0.5">
+                  <p className="text-sm sm:text-base font-bold text-magenta shrink-0">{s.value}</p>
+                  <p className="text-xs text-mauve leading-snug">{s.label}</p>
                 </div>
               ))}
             </div>

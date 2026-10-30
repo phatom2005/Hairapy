@@ -135,14 +135,31 @@ export default function PillNav({ items = DEFAULT_ITEMS }) {
                 )}
               </div>
 
-              {/* Mobile hamburger */}
-              <button
-                onClick={() => setMobileOpen(true)}
-                aria-label="Mở menu"
-                className="flex size-9 items-center justify-center rounded-full bg-line/60 text-ink hover:bg-line transition-colors md:hidden cursor-pointer"
-              >
-                <Hamburger />
-              </button>
+              {/* Mobile controls (avatar when logged in + hamburger) */}
+              <div className="flex items-center gap-2.5 md:hidden">
+                {token && (
+                  <Link
+                    to="/profile"
+                    aria-label="Tài khoản cá nhân"
+                    className="group flex items-center shrink-0 transition-transform active:scale-95"
+                  >
+                    <UserAvatar
+                      name={user?.fullName}
+                      email={user?.email}
+                      plan={user?.plan}
+                      size="sm"
+                      className="transition-transform group-hover:scale-105"
+                    />
+                  </Link>
+                )}
+                <button
+                  onClick={() => setMobileOpen(true)}
+                  aria-label="Mở menu"
+                  className="flex size-9 items-center justify-center rounded-full bg-line/60 text-ink hover:bg-line transition-colors cursor-pointer shrink-0"
+                >
+                  <Hamburger />
+                </button>
+              </div>
             </nav>
           </div>
         </div>

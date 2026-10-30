@@ -93,6 +93,7 @@ export default function SalonsPage() {
 
   const [bookingSalon, setBookingSalon] = useState(null);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [mobileView, setMobileView] = useState("list"); // "list" | "map"
 
   // Debounce tìm kiếm theo tên
   useEffect(() => {
@@ -109,6 +110,13 @@ export default function SalonsPage() {
 
   const mapRef = useRef(null);
   const mapWrapperRef = useRef(null);
+
+  useEffect(() => {
+    if (mobileView === "map") {
+      const timer = setTimeout(() => mapRef.current?.invalidateSize(), 150);
+      return () => clearTimeout(timer);
+    }
+  }, [mobileView]);
 
   useEffect(() => {
     const wrapper = mapWrapperRef.current;
@@ -293,9 +301,9 @@ export default function SalonsPage() {
       </section>
 
       {/* List + Map */}
-      <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-8 px-6 py-10 sm:px-16 lg:grid-cols-[1.2fr_1fr]">
-        {/* Danh sách salon */}
-        <div>
+      <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-8 px-4 sm:px-10 py-6 sm:py-10 lg:px-16 lg:grid-cols-[1.2fr_1fr]">
+        {/* Danh sách salon (ẩn trên mobile khi đang xem bản đồ) */}
+        <div className={mobileView === "list" ? "block" : "hidden lg:block"}>
           <div className="mb-6 flex items-center justify-between">
             <h1 className="font-display text-2xl font-bold text-ink">
               {isLoading ? "Đang tải..." : `${list.length} Salon`}
@@ -425,8 +433,13 @@ export default function SalonsPage() {
           )}
         </div>
 
-        {/* Bản đồ Leaflet */}
-        <div ref={mapWrapperRef} className="sticky top-24 hidden h-[600px] w-full overflow-hidden rounded-3xl border border-line shadow-lg lg:block">
+        {/* Bản đồ Leaflet (hiển thị khi mobileView === 'map' hoặc desktop) */}
+        <div
+          ref={mapWrapperRef}
+          className={`sticky top-24 h-[500px] sm:h-[600px] w-full overflow-hidden rounded-3xl border border-line shadow-lg ${
+            mobileView === "map" ? "block" : "hidden lg:block"
+          }`}
+        >
           <MapContainer
             ref={mapRef}
             center={[10.7769, 106.7009]}
@@ -465,6 +478,35 @@ export default function SalonsPage() {
               ))}
           </MapContainer>
         </div>
+      </div>
+
+      {/* Floating View Switcher trên Mobile */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 rounded-full border border-line bg-white/95 p-1 shadow-2xl backdrop-blur-md lg:hidden">
+        <button
+          type="button"
+          onClick={() => setMobileView("list")}
+          className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition cursor-pointer ${
+            mobileView === "list"
+              ? "bg-primary text-white shadow-xs"
+              : "text-mauve hover:text-ink"
+          }`}
+        >
+          <span>📋 Danh sách ({list.length})</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setMobileView("map");
+            setTimeout(() => mapRef.current?.invalidateSize(), 150);
+          }}
+          className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition cursor-pointer ${
+            mobileView === "map"
+              ? "bg-primary text-white shadow-xs"
+              : "text-mauve hover:text-ink"
+          }`}
+        >
+          <span>🗺️ Bản đồ</span>
+        </button>
       </div>
 
       {/* Booking Form Modal */}

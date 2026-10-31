@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
-import { Danger } from "iconsax-reactjs";
+import { Danger, DocumentDownload } from "iconsax-reactjs";
 import api from "../../lib/api";
 import { Card, Button } from "../../components/ui";
 import ConfirmDialog from "../../components/admin/ConfirmDialog";
 import UserDetailDrawer from "../../components/admin/UserDetailDrawer";
 import { PLAN_LABEL } from "../../lib/plans";
+import { toCsv, downloadCsv } from "../../lib/csv";
 
 export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState([]);
@@ -31,6 +32,8 @@ export default function AdminPaymentsPage() {
 
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [confirmMarkPaidItem, setConfirmMarkPaidItem] = useState(null); // { id, orderCode, email }
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState(null);
 
   const formatVND = (amount) => new Intl.NumberFormat("vi-VN").format(amount ?? 0) + " ₫";
 
@@ -91,6 +94,52 @@ export default function AdminPaymentsPage() {
         setLoading(false);
       });
   }, [page, statusFilter, planFilter, fromDate, toDate, keyword]);
+
+  // Phase 6.3: xuất CSV theo đúng bộ lọc hiện tại (tối đa 1000 dòng mới nhất)
+  const EXPORT_LIMIT = 1000;
+  const handleExportCsv = async () => {
+    setExporting(true);
+    setExportError(null);
+    try {
+      const res = await api.get("/admin/payments", {
+        params: {
+          page: 0,
+          size: EXPORT_LIMIT,
+          status: statusFilter || undefined,
+          plan: planFilter || undefined,
+          from: fromDate || undefined,
+          to: toDate || undefined,
+          keyword: keyword.trim() || undefined,
+        },
+      });
+      const rows = res.data.content || [];
+      const csv = toCsv(
+        [
+          { header: "Mã đơn", value: (p) => p.orderCode },
+          { header: "Email", value: (p) => p.userEmail },
+          { header: "Họ tên", value: (p) => p.userName },
+          { header: "Gói", value: (p) => PLAN_LABEL[p.plan] || p.plan },
+          { header: "Số tiền (VND)", value: (p) => p.amount },
+          { header: "Trạng thái", value: (p) => p.status },
+          { header: "Đã cấp gói", value: (p) => (p.subscriptionGranted ? "Có" : "Không") },
+          { header: "Thời gian tạo", value: (p) => formatDateTime(p.createdAt) },
+          { header: "Thời gian thanh toán", value: (p) => (p.paidAt ? formatDateTime(p.paidAt) : "") },
+          { header: "Mã GD PayOS", value: (p) => p.payosTransactionId || "" },
+        ],
+        rows
+      );
+      const stamp = new Date().toISOString().slice(0, 10);
+      downloadCsv(`hairapy-giao-dich-${stamp}.csv`, csv);
+      if ((res.data.totalElements || 0) > EXPORT_LIMIT) {
+        setExportError(`Chỉ xuất ${EXPORT_LIMIT} giao dịch mới nhất. Thu hẹp bộ lọc ngày để xuất phần còn lại.`);
+      }
+    } catch (err) {
+      console.error("Lỗi xuất CSV:", err);
+      setExportError("Không xuất được CSV. Vui lòng thử lại.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -323,8 +372,20 @@ export default function AdminPaymentsPage() {
           </div>
 
           <div className="flex justify-between items-center pt-2 border-t border-line text-xs">
-            <span className="text-muted font-medium">
-              Tìm thấy <strong className="text-ink">{totalElements}</strong> giao dịch
+            <span className="flex flex-wrap items-center gap-3 text-muted font-medium">
+              <span>Tìm thấy <strong className="text-ink">{totalElements}</strong> giao dịch</span>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={exporting || totalElements === 0}
+                onClick={handleExportCsv}
+                className="px-3 py-1 text-xs font-bold whitespace-nowrap"
+              >
+                <DocumentDownload size={14} className="mr-1 inline -mt-0.5" />
+                {exporting ? "Đang xuất..." : "Xuất CSV"}
+              </Button>
+              {exportError && <span className="text-[#ba1a1a] font-semibold">{exportError}</span>}
             </span>
             {(statusFilter || planFilter || fromDate || toDate || keyword) && (
               <button

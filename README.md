@@ -8,129 +8,169 @@
 *Read this in other languages: [Tiếng Việt](README.vi.md)*
 
 > **Scan. Style. Smile.**
-> AI-powered hairstyle analysis and recommendation web app for Gen Z.
+> AI-powered face analysis and virtual hairstyle try-on for the Vietnamese market.
 
-Hairapy is a web application that uses AI to analyze face shape and suggest suitable hairstyles. Built as a monorepo with a modern React frontend and a high-performance Java Spring Boot backend.
+**Live demo:** https://hairapy.io.vn
+
+Hairapy analyzes your face shape from a portrait, recommends hairstyles that suit it, lets you try them on with AI, and connects you with partner salons that can cut the style you liked. Built as a monorepo: React web app, Spring Boot API and a Flutter mobile app.
+
+## Key Features
+
+- **Face analysis** – face-shape detection runs in the browser (MediaPipe Face Landmarker); you can correct the result and pick your gender after the scan.
+- **AI hairstyle try-on** – swap your hair with styles from the catalog (AILab Hairstyle), plus instant drag-and-drop hair recoloring in the browser.
+- **Hairstyle catalog** – styles with color variants, AI-generated sample images and a "Trending this week" section driven by real usage data.
+- **Partner salon network** – after a try-on, find partner salons near you that do that style and send a booking request with your try-on image attached.
+- **Salon portal** – partner salons manage bookings, the styles they offer and their prices, and see regional trend insights.
+- **Admin dashboard** – users (incl. account locking), subscriptions, payments (with CSV export), catalog, salons, bookings, usage, GA4 analytics, A/B experiments and a weekly insight digest.
 
 ## Tech Stack
 
 | Layer | Technology |
 |---|---|
-| **Frontend** | React 18 + Vite, TailwindCSS, Zustand, React Query |
-| **Backend** | Java 21, Spring Boot 3, Spring Security + JWT |
-| **Database** | PostgreSQL 16, Flyway migration |
-| **Cache** | Redis 7 |
-| **Storage** | Cloudflare R2 (auto-delete after 24h) |
-| **Payment** | PayOS + VietQR |
+| **Frontend** | React 19, Vite 8, TailwindCSS 4, Zustand, TanStack Query, React Router 7, Motion, Leaflet |
+| **Backend** | Java 21, Spring Boot 3.5, Spring Security + JWT (jjwt), Spring Data JPA |
+| **Database** | PostgreSQL (Supabase in production, PostgreSQL 16 in Docker for local dev), Flyway migrations |
+| **Cache** | Redis 7 (JWT blacklist on logout) |
+| **Image storage** | Cloudinary |
+| **AI** | MediaPipe Tasks Vision (in-browser face landmarks and hair segmentation), AILab Hairstyle API (try-on), Google Gemini (AI Stylist, weekly insight summary) |
+| **Payment** | PayOS + VietQR (webhook) |
+| **Email** | Resend |
+| **Analytics** | Google Analytics 4 (gtag + server-side Measurement Protocol, GA4 Data API) |
+| **Mobile** | Flutter (`project/mobile`) |
 | **DevOps** | Docker, Docker Compose, GitHub Actions |
-| **Security** | Snyk, Bucket4j rate limiting, HTTPS |
+| **Hosting** | Railway (backend), Vercel (frontend), Supabase (database) |
+| **Security** | Bucket4j rate limiting, CodeQL, Snyk, Sentry (optional) |
 
 ## Project Structure
 
 ```text
 .
 ├── project/
-│   ├── frontend/         # React + Vite source code
-│   └── backend/          # Java Spring Boot source code
-├── docker-compose.yml    # Build & run the entire stack
-├── .env.example          # Environment variables template
-└── README.md
+│   ├── frontend/         # React + Vite web app
+│   ├── backend/          # Java Spring Boot API (Flyway migrations in src/main/resources/db/migration)
+│   └── mobile/           # Flutter mobile app
+├── .github/workflows/    # CI/CD (main.yml) and CodeQL (codeql.yml)
+├── docker-compose.yml    # Run the whole stack locally
+├── .env.example          # Environment variable template
+├── README.md
+└── README.vi.md
 ```
 
 ## Getting Started
 
 ### 1. Prerequisites
 
-- [Docker Desktop](https://www.docker.com/) — required to run the full stack
-- [Node.js 20+](https://nodejs.org/) — optional, for running frontend independently
-- [Java JDK 21+](https://adoptium.net/) — optional, for running backend independently
+- [Docker Desktop](https://www.docker.com/) – required to run the full stack
+- [Node.js 20+](https://nodejs.org/) – optional, to run the frontend on its own
+- [Java JDK 21](https://adoptium.net/) – optional, to run the backend on its own
 
-### 2. Setup environment
-
-Copy the example env file and fill in your values:
+### 2. Set up environment variables
 
 ```bash
 cp .env.example .env
 ```
 
-Minimum required for local dev:
-
-```env
-DB_PASSWORD=YourPassword123
-JWT_SECRET=hairapy_jwt_secret_key_minimum_32_chars
-```
+For local development you need at least `DB_PASSWORD` and `JWT_SECRET` (generate with `openssl rand -base64 32`). AI, payment, email and analytics features stay disabled or fall back gracefully until their keys are set. See [Environment Variables](#environment-variables).
 
 ### 3. Run with Docker
-
-Launch the full stack (Frontend + Backend + PostgreSQL + Redis) with one command:
 
 ```bash
 docker compose up --build
 ```
 
-After a successful build, services are available at:
-
 | Service | URL |
 |---|---|
 | **Frontend** | http://localhost:5173 |
 | **Backend API** | http://localhost:8090 |
-| **Health Check** | http://localhost:8090/actuator/health |
+| **Health check** | http://localhost:8090/actuator/health |
 | **PostgreSQL** | localhost:5433 |
 | **Redis** | localhost:6379 |
 
-> Add `-d` flag to run in background: `docker compose up -d`
-> Stop all services: `docker compose down`
+> Run in the background with `docker compose up -d`, stop with `docker compose down`.
 
 ### 4. Run services individually
 
-**Frontend** (requires Node.js):
+**Frontend**
 ```bash
 cd project/frontend
 npm install
-npm run dev
-# Available at http://localhost:5173
+npm run dev          # http://localhost:5173
 ```
 
-**Backend** (requires Java 21):
+**Backend** (needs PostgreSQL and Redis running, e.g. `docker compose up db redis`)
 ```bash
 cd project/backend
 ./mvnw spring-boot:run
-# Ensure PostgreSQL is running locally first
 ```
 
-## User Tiers
+## Plans
 
-| Feature | Guest | Free | Premium |
+Subscriptions are one-time purchases: they **do not auto-renew** and fall back to Free when they expire. Buying again while a plan is active extends it from the current end date.
+
+| Feature | Free | Weekly plan | Monthly plan |
 |---|---|---|---|
-| Face analysis | ✗ | 1x/day | 5x/day |
-| Hairstyle try-on | ✗ | 5x/day | 20x/day |
-| Hairstyle catalog | ✗ | Limited | Full |
-| Image quality | ✗ | Watermark | HD, clean |
-| Outfit suggestions | ✗ | ✗ | ✓ |
+| Price | 0đ | 49,000đ / 7 days | 99,000đ / 30 days |
+| Face analysis | Unlimited | Unlimited | Unlimited |
+| Scans saved to history | 5 / day | 5 / day | 5 / day |
+| AI hairstyle try-on | 1 / day | 5 / day | 8 / day |
+| Result image without watermark | — | Yes | Yes |
+| Exclusive hairstyles | — | Yes | Yes |
+| AI Stylist | — | — | Coming soon (5 / day when enabled) |
+
+If an AI try-on fails or times out, the used credit is refunded automatically.
+
+### For salons
+
+**Salon Partner plan – 299,000đ / month** (payment is simulated and recorded by an admin in the MVP; new partners get a 30-day free trial). Partners appear in "Where can I get this cut?" suggestions, receive booking requests with the customer's try-on image, manage their styles and prices, and get regional trend reports. Apply at `/for-salons`.
 
 ## Environment Variables
 
-See `.env.example` for all required variables. Key ones:
+All variables are listed in [`.env.example`](.env.example). Never commit real values.
 
-```env
-DB_PASSWORD=          # PostgreSQL password
-JWT_SECRET=           # Min 32 chars
-R2_BUCKET=            # Cloudflare R2 bucket name
-R2_ACCESS_KEY=        # Cloudflare R2 access key
-R2_SECRET_KEY=        # Cloudflare R2 secret key
-PAYOS_API_KEY=        # PayOS API key
-SENTRY_DSN=           # Sentry error tracking DSN
+| Group | Variables | Purpose |
+|---|---|---|
+| Database | `DB_PASSWORD`, `DB_URL`, `DB_USERNAME` | PostgreSQL connection (production uses the Supabase Session Pooler) |
+| Cache | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | Redis for the JWT blacklist |
+| Auth | `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET` | JWT signing key and social login |
+| Web | `CORS_ALLOWED_ORIGINS`, `FRONTEND_URL` | Allowed web origins and links in emails |
+| AI | `AILAB_API_KEY`, `GEMINI_API_KEY`, `GEMINI_MODEL` | Hairstyle try-on and Gemini (set `GEMINI_MODEL` to a currently available model) |
+| Payment | `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY` | PayOS checkout and webhook verification |
+| Images | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Image upload |
+| Email | `RESEND_API_KEY`, `EMAIL_FROM`, `ALERT_EMAIL` | Transactional email and admin alerts / weekly digest |
+| Analytics | `GA_MEASUREMENT_ID`, `GA_MP_API_SECRET`, `GA_PROPERTY_ID`, `GA_SERVICE_ACCOUNT_JSON` | Server-side GA4 events and reading GA4 reports |
+| Monitoring | `SENTRY_DSN` | Optional error tracking |
+| Frontend (Vite) | `VITE_API_URL`, `VITE_GA_ID`, `VITE_GOOGLE_CLIENT_ID`, `VITE_FACEBOOK_APP_ID`, `VITE_AI_STYLIST_ENABLED` | Values baked into the web build |
+
+Rate limits (`RATE_LIMIT_*`) have sensible defaults and are optional.
+
+## Testing
+
+```bash
+# Backend (JUnit, H2 in-memory database)
+cd project/backend
+./mvnw test
+
+# Frontend
+cd project/frontend
+npm run lint
+npm test
+npm run build
 ```
 
 ## Security & DevOps
 
-- **GitHub Actions** — CI/CD pipeline: test → build → deploy on push to `main`
-- **Snyk** — automatic vulnerability scanning on every build
-- **CodeQL** — static code analysis
-- **JWT + Spring Security** — stateless auth with 3-tier access control
-- **Bucket4j** — rate limiting per user tier
-- **HTTPS** — Let's Encrypt via Cloudflare
+- **GitHub Actions** – on every push / pull request: backend tests and JAR build, frontend lint + tests + build, Snyk scan (when `SNYK_TOKEN` is set); Docker images are built and pushed on pushes to `main`
+- **CodeQL** – static analysis for Java and JavaScript
+- **Snyk** – dependency vulnerability scanning
+- **Spring Security + JWT** – stateless auth with roles (user, admin, tester, salon owner), logout token blacklist and admin account locking
+- **Bucket4j** – rate limiting on login, register, password reset, verification-email resend and payment endpoints
+- **Flyway** – versioned schema migrations; production runs with `ddl-auto=validate`
+- **Privacy** – analytics events carry only an internal numeric user id; no email, phone number, name or image is sent to Google Analytics
+
+## License
+
+[MIT](LICENSE)
 
 ---
 
-**Hairapy** — FPT University HCM · EXE101 · 2026
+**Hairapy** – FPT University HCMC · EXE101 · 2026

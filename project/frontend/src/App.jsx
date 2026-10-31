@@ -1,4 +1,4 @@
-import { lazy, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { trackPageView, setUserProps, markInternalTraffic } from "./lib/analytics";
 import { SoftAurora } from "./components/animated";
@@ -16,40 +16,45 @@ import ResultsPage from "./pages/ResultsPage";
 import SwapPage from "./pages/SwapPage";
 import CatalogPage from "./pages/CatalogPage";
 import PricingPage from "./pages/PricingPage";
-import SettingsPage from "./pages/SettingsPage";
 import ProfilePage from "./pages/ProfilePage";
-import SalonsPage from "./pages/SalonsPage";
-import SalonDetailPage from "./pages/SalonDetailPage";
-import ForSalonsPage from "./pages/ForSalonsPage";
-import PrivacyPage from "./pages/PrivacyPage";
-import TermsPage from "./pages/TermsPage";
-import DeleteAccountPage from "./pages/DeleteAccountPage";
-import CheckoutPage from "./pages/CheckoutPage";
-import PaymentSuccessPage from "./pages/PaymentSuccessPage";
-import PaymentCancelPage from "./pages/PaymentCancelPage";
 import AdminRoute from "./components/auth/AdminRoute";
 import AdminLayout from "./components/admin/AdminLayout";
 import SalonOwnerRoute from "./components/auth/SalonOwnerRoute";
 import SalonPortalLayout from "./components/salon/SalonPortalLayout";
-import SalonOverviewPage from "./pages/salon/SalonOverviewPage";
-import SalonBookingsPage from "./pages/salon/SalonBookingsPage";
-import SalonHairstylesPage from "./pages/salon/SalonHairstylesPage";
-import SalonInsightsPage from "./pages/salon/SalonInsightsPage";
-import SalonProfilePage from "./pages/salon/SalonProfilePage";
-// Lazy-load dashboard để tách bundle recharts khỏi trang chính
+
+
+// ===== Phase 6.6: tách bundle =====
+// Trang chính của luồng khách (Landing/Scan/Results/Swap/Catalog/Auth) vẫn import tĩnh để mở tức thì.
+// Trang ít vào, cổng salon và toàn bộ admin tải theo nhu cầu -> bundle đầu nhẹ hơn nhiều.
+// SalonsPage/SalonDetailPage kéo theo leaflet (bản đồ) -> tách riêng
+const SalonsPage = lazy(() => import("./pages/SalonsPage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const SalonDetailPage = lazy(() => import("./pages/SalonDetailPage"));
+const ForSalonsPage = lazy(() => import("./pages/ForSalonsPage"));
+const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
+const TermsPage = lazy(() => import("./pages/TermsPage"));
+const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
+const CheckoutPage = lazy(() => import("./pages/CheckoutPage"));
+const PaymentSuccessPage = lazy(() => import("./pages/PaymentSuccessPage"));
+const PaymentCancelPage = lazy(() => import("./pages/PaymentCancelPage"));
+const SalonOverviewPage = lazy(() => import("./pages/salon/SalonOverviewPage"));
+const SalonBookingsPage = lazy(() => import("./pages/salon/SalonBookingsPage"));
+const SalonHairstylesPage = lazy(() => import("./pages/salon/SalonHairstylesPage"));
+const SalonInsightsPage = lazy(() => import("./pages/salon/SalonInsightsPage"));
+const SalonProfilePage = lazy(() => import("./pages/salon/SalonProfilePage"));
 const AdminDashboardPage = lazy(() => import("./pages/admin/AdminDashboardPage"));
-import AdminUsersPage from "./pages/admin/AdminUsersPage";
-import AdminCatalogPage from "./pages/admin/AdminCatalogPage";
-import AdminSalonsPage from "./pages/admin/AdminSalonsPage";
-import AdminSalonApplicationsPage from "./pages/admin/AdminSalonApplicationsPage";
-import AdminBookingsPage from "./pages/admin/AdminBookingsPage";
-import AdminSubscriptionsPage from "./pages/admin/AdminSubscriptionsPage";
-import AdminPaymentsPage from "./pages/admin/AdminPaymentsPage";
-import AdminFeedbackPage from "./pages/admin/AdminFeedbackPage";
-import AdminAiReportsPage from "./pages/admin/AdminAiReportsPage";
-import AdminUsagePage from "./pages/admin/AdminUsagePage";
-import AdminAnalyticsPage from "./pages/admin/AdminAnalyticsPage";
-import AdminGaPage from "./pages/admin/AdminGaPage";
+const AdminUsersPage = lazy(() => import("./pages/admin/AdminUsersPage"));
+const AdminCatalogPage = lazy(() => import("./pages/admin/AdminCatalogPage"));
+const AdminSalonsPage = lazy(() => import("./pages/admin/AdminSalonsPage"));
+const AdminSalonApplicationsPage = lazy(() => import("./pages/admin/AdminSalonApplicationsPage"));
+const AdminBookingsPage = lazy(() => import("./pages/admin/AdminBookingsPage"));
+const AdminSubscriptionsPage = lazy(() => import("./pages/admin/AdminSubscriptionsPage"));
+const AdminPaymentsPage = lazy(() => import("./pages/admin/AdminPaymentsPage"));
+const AdminFeedbackPage = lazy(() => import("./pages/admin/AdminFeedbackPage"));
+const AdminAiReportsPage = lazy(() => import("./pages/admin/AdminAiReportsPage"));
+const AdminUsagePage = lazy(() => import("./pages/admin/AdminUsagePage"));
+const AdminAnalyticsPage = lazy(() => import("./pages/admin/AdminAnalyticsPage"));
+const AdminGaPage = lazy(() => import("./pages/admin/AdminGaPage"));
 
 // Luồng chính: / -> /scan -> /results -> /swap
 export default function App() {
@@ -131,6 +136,7 @@ export default function App() {
     <div className="relative isolate">
       {/* Background mơ màng cho mỗi route - fixed, GPU compositor xử lý */}
       <SoftAurora intensity={1.05} />
+      <Suspense fallback={<PageLoader />}>
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
@@ -192,7 +198,16 @@ export default function App() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
     </div>
   );
 }
 
+// Spinner giữa màn hình khi đang tải chunk của trang lazy
+function PageLoader() {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="size-10 animate-spin rounded-full border-4 border-brand border-t-transparent" />
+    </div>
+  );
+}

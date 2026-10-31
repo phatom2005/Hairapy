@@ -1,5 +1,4 @@
-import { FaceLandmarker } from "@mediapipe/tasks-vision";
-import { getVisionFileset } from "./visionFileset";
+import { getVisionFileset, loadTasksVision } from "./visionFileset";
 
 // Khởi tạo thực thể FaceLandmarker dạng Singleton
 let faceLandmarkerInstance = null;
@@ -29,6 +28,7 @@ export async function initFaceAnalyzer() {
     try {
       // Tải bộ giải quyết tệp tin WASM dùng chung từ getVisionFileset
       const filesetResolver = await getVisionFileset();
+      const { FaceLandmarker } = await loadTasksVision();
 
       // Khởi tạo FaceLandmarker từ model task CDN của Google
       // Ưu tiên GPU, fallback CPU nếu thiết bị không hỗ trợ WebGPU

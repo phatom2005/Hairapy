@@ -1,5 +1,4 @@
-import { ImageSegmenter } from "@mediapipe/tasks-vision";
-import { getVisionFileset } from "./visionFileset";
+import { getVisionFileset, loadTasksVision } from "./visionFileset";
 
 // Model selfie multiclass: category 0 = nền, 1 = TÓC, 2 = da người, 3 = da mặt, 4 = quần áo, 5 = khác
 const MODEL_URL =
@@ -14,6 +13,7 @@ export async function initHairSegmenter() {
   if (!segmenterPromise) {
     segmenterPromise = (async () => {
       const fileset = await getVisionFileset();
+      const { ImageSegmenter } = await loadTasksVision();
       try {
         return await ImageSegmenter.createFromOptions(fileset, {
           baseOptions: {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { NavLink, Outlet, Link, useNavigate } from "react-router-dom";
 import {
   Calendar,
@@ -157,7 +157,15 @@ export default function SalonPortalLayout() {
         {/* Page Content */}
         <main className="flex-1 p-6 sm:p-8 overflow-y-auto">
           <div className="mx-auto max-w-6xl">
-            <Outlet />
+            <Suspense
+              fallback={
+                <div className="flex h-[50vh] items-center justify-center">
+                  <div className="size-10 animate-spin rounded-full border-4 border-brand border-t-transparent" />
+                </div>
+              }
+            >
+              <Outlet />
+            </Suspense>
           </div>
         </main>
       </div>

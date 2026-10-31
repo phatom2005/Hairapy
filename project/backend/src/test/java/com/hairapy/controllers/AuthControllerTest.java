@@ -607,5 +607,37 @@ class AuthControllerTest {
         org.junit.jupiter.api.Assertions.assertNotNull(updated.getPasswordHash());
         org.junit.jupiter.api.Assertions.assertTrue(passwordEncoder.matches("createdPassword123", updated.getPasswordHash()));
     }
-}
 
+    // ===== Phase 6.1: tài khoản bị khoá =====
+
+    @Test
+    void login_LockedAccount_Returns403AccountLocked() throws Exception {
+        userRepository.save(User.builder()
+                .email("locked@example.com")
+                .passwordHash(passwordEncoder.encode("password123"))
+                .role(Role.USER)
+                .emailVerified(true)
+                .locked(true)
+                .build());
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest("locked@example.com", "password123"))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCOUNT_LOCKED"))
+                .andExpect(jsonPath("$.token").doesNotExist());
+    }
+
+    @Test
+    void existingToken_AfterAccountLocked_Returns403() throws Exception {
+        String token = createVerifiedUserAndLogin("soon-locked@example.com", "password123", "Nguyễn Anh");
+
+        User user = userRepository.findByEmail("soon-locked@example.com").orElseThrow();
+        user.setLocked(true);
+        userRepository.save(user);
+
+        mockMvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCOUNT_LOCKED"));
+    }
+}

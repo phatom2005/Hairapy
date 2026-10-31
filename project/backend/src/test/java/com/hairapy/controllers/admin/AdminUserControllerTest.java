@@ -177,4 +177,41 @@ class AdminUserControllerTest {
                 .andExpect(jsonPath("$.content", hasSize(1)))
                 .andExpect(jsonPath("$.content[0].email").value("target@hairapy.id.vn"));
     }
+
+    // ===== Phase 6.1: khoá / mở khoá tài khoản =====
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void lockUser_ThenUnlock_TogglesLockedFlag() throws Exception {
+        mockMvc.perform(post("/api/admin/users/" + targetUser.getId() + "/lock"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.locked").value(true));
+        assertTrue(userRepository.findById(targetUser.getId()).orElseThrow().isLocked());
+
+        mockMvc.perform(post("/api/admin/users/" + targetUser.getId() + "/unlock"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.locked").value(false));
+        org.junit.jupiter.api.Assertions.assertFalse(userRepository.findById(targetUser.getId()).orElseThrow().isLocked());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void lockUser_AdminAccount_Returns400() throws Exception {
+        User admin = userRepository.save(User.builder()
+                .email("other-admin@hairapy.id.vn")
+                .role(Role.ADMIN)
+                .emailVerified(true)
+                .build());
+
+        mockMvc.perform(post("/api/admin/users/" + admin.getId() + "/lock"))
+                .andExpect(status().isBadRequest());
+        org.junit.jupiter.api.Assertions.assertFalse(userRepository.findById(admin.getId()).orElseThrow().isLocked());
+    }
+
+    @Test
+    @WithMockUser(roles = "USER")
+    void lockUser_NonAdmin_Forbidden() throws Exception {
+        mockMvc.perform(post("/api/admin/users/" + targetUser.getId() + "/lock"))
+                .andExpect(status().isForbidden());
+    }
 }

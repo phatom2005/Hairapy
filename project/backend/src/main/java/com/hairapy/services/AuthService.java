@@ -95,6 +95,7 @@ public class AuthService {
         }
 
         // Tạo JWT token từ thông tin người dùng
+        ensureNotLocked(user);
         String token = jwtService.generateToken(user);
 
         // Xác định role hiển thị: ADMIN giữ nguyên, USER thường kiểm tra thêm subscription
@@ -202,6 +203,7 @@ public class AuthService {
             userRepository.save(user);
         }
 
+        ensureNotLocked(user);
         String token = jwtService.generateToken(user);
         String effectiveRole = resolveEffectiveRole(user);
 
@@ -244,6 +246,7 @@ public class AuthService {
             userRepository.save(user);
         }
 
+        ensureNotLocked(user);
         String token = jwtService.generateToken(user);
         String effectiveRole = resolveEffectiveRole(user);
 
@@ -270,4 +273,13 @@ public class AuthService {
         userRepository.save(user);
         log.info("Người dùng {} đổi mật khẩu thành công.", user.getEmail());
     }
+
+    /** Tài khoản bị admin khoá (Phase 6.1) -> không cấp token, kể cả đăng nhập Google/Facebook. */
+    private void ensureNotLocked(User user) {
+        if (user.isLocked()) {
+            throw new org.springframework.security.authentication.LockedException(ACCOUNT_LOCKED_MESSAGE);
+        }
+    }
+
+    public static final String ACCOUNT_LOCKED_MESSAGE = "Tài khoản đã bị khoá. Liên hệ hỗ trợ.";
 }

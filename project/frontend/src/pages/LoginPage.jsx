@@ -19,6 +19,7 @@ export default function LoginPage() {
   const { login, loading, error, clearError } = useAuthStore();
 
   const isExpired = searchParams.get("expired") === "1";
+  const isLocked = searchParams.get("locked") === "1";
 
   const from = location.state?.from || (() => {
     try {
@@ -69,6 +70,12 @@ export default function LoginPage() {
           )}
 
           {unverifiedEmail && <ResendVerification email={unverifiedEmail} />}
+
+          {isLocked && !error && (
+            <div className="rounded-2xl border border-[#ba1a1a]/20 bg-[#ba1a1a]/5 p-4 text-center text-sm font-semibold text-[#ba1a1a]">
+              Tài khoản của bạn đã bị khoá. Vui lòng liên hệ hỗ trợ.
+            </div>
+          )}
 
           {isExpired && !error && (
             <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-center text-sm font-semibold text-amber-700">

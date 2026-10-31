@@ -191,6 +191,9 @@ export default function AdminUsersPage() {
                           {u.deleted && (
                             <span className="text-[10px] text-red-500 font-semibold">[Đã xoá]</span>
                           )}
+                          {u.locked && (
+                            <span className="text-[10px] text-[#ba1a1a] font-semibold">[Đã khoá]</span>
+                          )}
                         </div>
                       </td>
 

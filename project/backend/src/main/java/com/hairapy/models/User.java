@@ -62,6 +62,11 @@ public class User implements UserDetails {
     @Builder.Default
     private boolean emailVerified = false;
 
+    // Phase 6.1: admin khoá tài khoản -> không đăng nhập được, token cũ bị JwtFilter chặn (403)
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean locked = false;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;
@@ -82,5 +87,11 @@ public class User implements UserDetails {
     @Override
     public String getUsername() {
         return email;
+    }
+
+    // Spring Security tự ném LockedException khi đăng nhập bằng mật khẩu nếu hàm này trả false
+    @Override
+    public boolean isAccountNonLocked() {
+        return !locked;
     }
 }

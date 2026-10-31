@@ -72,6 +72,14 @@ public class JwtFilter extends OncePerRequestFilter {
                 filterChain.doFilter(request, response);
                 return;
             }
+            // Phase 6.1: tài khoản bị khoá -> chặn ngay cả khi token còn hạn (403 JSON, không chạy tiếp)
+            if (!userDetails.isAccountNonLocked()) {
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write(
+                        "{\"error\":\"Tài khoản đã bị khoá. Liên hệ hỗ trợ.\",\"code\":\"ACCOUNT_LOCKED\"}");
+                return;
+            }
             if (jwtService.isTokenValid(token, userDetails)) {
                 var authToken = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities()

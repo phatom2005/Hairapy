@@ -193,6 +193,47 @@ public class AdminUserController {
     }
 
     /**
+     * Khoá tài khoản (Phase 6.1): user không đăng nhập được nữa, token đang dùng bị JwtFilter chặn ngay.
+     * Không cho khoá ADMIN và không tự khoá chính mình.
+     */
+    @PostMapping("/{id}/lock")
+    @Transactional
+    public ResponseEntity<?> lockUser(@PathVariable Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + id));
+        if (user.getRole() == Role.ADMIN) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Không thể khoá tài khoản quản trị viên."));
+        }
+        String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        if (user.getEmail().equalsIgnoreCase(currentEmail)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Bạn không thể tự khoá tài khoản của mình."));
+        }
+        if (!user.isLocked()) {
+            user.setLocked(true);
+            userRepository.save(user);
+            log.info("Admin {} đã khoá tài khoản userId={}", currentEmail, id);
+        }
+        return ResponseEntity.ok(mapToAdminUserResponse(user));
+    }
+
+    /**
+     * Mở khoá tài khoản (Phase 6.1).
+     */
+    @PostMapping("/{id}/unlock")
+    @Transactional
+    public ResponseEntity<?> unlockUser(@PathVariable Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + id));
+        if (user.isLocked()) {
+            user.setLocked(false);
+            userRepository.save(user);
+            String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+            log.info("Admin {} đã mở khoá tài khoản userId={}", currentEmail, id);
+        }
+        return ResponseEntity.ok(mapToAdminUserResponse(user));
+    }
+
+    /**
      * Cập nhật vai trò người dùng (USER, ADMIN, TESTER).
      * Kiểm tra không cho phép Admin tự hạ quyền của bản thân.
      */
@@ -241,7 +282,8 @@ public class AdminUserController {
                 user.getProvider() != null ? user.getProvider().name() : null,
                 plan,
                 planEndDate,
-                deleted
+                deleted,
+                user.isLocked()
         );
     }
 }

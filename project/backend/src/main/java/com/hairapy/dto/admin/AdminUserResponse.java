@@ -13,5 +13,6 @@ public record AdminUserResponse(
     String provider,
     String plan,
     LocalDateTime planEndDate,
-    boolean deleted
+    boolean deleted,
+    boolean locked
 ) {}

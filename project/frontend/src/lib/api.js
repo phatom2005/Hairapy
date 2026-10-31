@@ -47,6 +47,15 @@ api.interceptors.response.use(
     const hadToken = !!error.config?.headers?.Authorization;
     const emptyBody = res && (res.data === "" || res.data == null);
     const expired = res && (res.status === 401 || (res.status === 403 && emptyBody && hadToken));
+    // Phase 6.1: tài khoản bị admin khoá giữa phiên -> đăng xuất và báo rõ lý do
+    const locked = res && res.status === 403 && hadToken && res.data?.code === "ACCOUNT_LOCKED";
+    if (locked) {
+      localStorage.removeItem("token");
+      if (!window.location.pathname.startsWith("/login")) {
+        window.location.href = "/login?locked=1";
+      }
+      return Promise.reject(error);
+    }
     if (expired) {
       localStorage.removeItem("token");
       try {

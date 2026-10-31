@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Add, TickCircle, CloseCircle } from "iconsax-reactjs";
+import { Add, TickCircle, CloseCircle, Lock, Unlock } from "iconsax-reactjs";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../../lib/api";
 import { Badge, Button } from "../ui";
 import { PLAN_LABEL } from "../../lib/plans";
 import GrantSubscriptionForm from "./GrantSubscriptionForm";
+import ConfirmDialog from "./ConfirmDialog";
 
 const PAYMENT_STATUS_MAP = {
   PAID: { label: "Đã thanh toán", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
@@ -17,6 +18,7 @@ export default function UserDetailDrawer({ userId, onClose }) {
   const [showGrantForm, setShowGrantForm] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState(null);
+  const [confirmLock, setConfirmLock] = useState(false);
 
   // Đóng khi bấm Escape
   useEffect(() => {
@@ -59,6 +61,25 @@ export default function UserDetailDrawer({ userId, onClose }) {
       setActionMessage(err.response?.data?.message || "Xác minh email thất bại.");
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  // Phase 6.1: khoá / mở khoá tài khoản (backend chặn khoá ADMIN và tự khoá chính mình)
+  const handleToggleLock = async () => {
+    const action = user?.locked ? "unlock" : "lock";
+    setActionLoading(true);
+    setActionMessage(null);
+    try {
+      await api.post(`/admin/users/${userId}/${action}`);
+      setActionMessage(action === "lock" ? "Đã khoá tài khoản." : "Đã mở khoá tài khoản.");
+      queryClient.invalidateQueries({ queryKey: ["admin-user-overview", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    } catch (err) {
+      console.error(err);
+      setActionMessage(err.response?.data?.error || "Thao tác khoá/mở khoá thất bại.");
+    } finally {
+      setActionLoading(false);
+      setConfirmLock(false);
     }
   };
 
@@ -181,6 +202,11 @@ export default function UserDetailDrawer({ userId, onClose }) {
                       [Tài khoản đã xoá]
                     </div>
                   )}
+                  {user.locked && (
+                    <div className="font-bold text-[#ba1a1a]">
+                      <Lock size={14} variant="Bold" className="mr-1 inline -mt-0.5" />Tài khoản đang bị khoá
+                    </div>
+                  )}
                 </div>
 
                 {/* Các nút thao tác nhanh */}
@@ -194,6 +220,21 @@ export default function UserDetailDrawer({ userId, onClose }) {
                       className="text-xs"
                     >
                       Xác minh email thủ công
+                    </Button>
+                  )}
+                  {user.role !== "ADMIN" && !user.deleted && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={actionLoading}
+                      onClick={() => (user.locked ? handleToggleLock() : setConfirmLock(true))}
+                      className={`text-xs ${user.locked ? "" : "border-[#ba1a1a]/40 text-[#ba1a1a]"}`}
+                    >
+                      {user.locked ? (
+                        <><Unlock size={14} className="mr-1 inline -mt-0.5" />Mở khoá tài khoản</>
+                      ) : (
+                        <><Lock size={14} className="mr-1 inline -mt-0.5" />Khoá tài khoản</>
+                      )}
                     </Button>
                   )}
                   <Button
@@ -406,6 +447,17 @@ export default function UserDetailDrawer({ userId, onClose }) {
           ) : null}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmLock}
+        title="Khoá tài khoản"
+        message={`Khoá tài khoản ${user?.fullName || user?.email || ""}? Người dùng sẽ bị đăng xuất ngay và không đăng nhập lại được cho tới khi mở khoá.`}
+        confirmText="Khoá tài khoản"
+        danger
+        loading={actionLoading}
+        onConfirm={handleToggleLock}
+        onCancel={() => setConfirmLock(false)}
+      />
     </div>
   );
 }

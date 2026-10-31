@@ -51,6 +51,20 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return buildResponse(HttpStatus.UNAUTHORIZED, "Unauthorized", "Email hoặc mật khẩu không đúng", request);
     }
 
+    // Phase 6.1: tài khoản bị admin khoá (đăng nhập mật khẩu -> Spring ném LockedException; Google/Facebook -> AuthService)
+    @ExceptionHandler(org.springframework.security.authentication.LockedException.class)
+    public ResponseEntity<Object> handleLocked(org.springframework.security.authentication.LockedException ex, WebRequest request) {
+        log.warn("[CLIENT_ERROR] 403 Đăng nhập vào tài khoản bị khoá");
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.FORBIDDEN.value());
+        body.put("error", com.hairapy.services.AuthService.ACCOUNT_LOCKED_MESSAGE);
+        body.put("code", "ACCOUNT_LOCKED");
+        body.put("message", com.hairapy.services.AuthService.ACCOUNT_LOCKED_MESSAGE);
+        body.put("path", extractPath(request));
+        return new ResponseEntity<>(body, HttpStatus.FORBIDDEN);
+    }
+
     @ExceptionHandler(EmailNotVerifiedException.class)
     public ResponseEntity<Object> handleEmailNotVerified(EmailNotVerifiedException ex, WebRequest request) {
         log.warn("[CLIENT_ERROR] 403 Đăng nhập khi chưa xác minh email");

@@ -178,3 +178,21 @@ export async function analyzeFace(imageElement) {
 
   return { faceShape, alternativeShape, landmarks, metrics };
 }
+
+/**
+ * Phase 7.1/7.2: landmark khuôn mặt theo PIXEL của nguồn (canvas/ảnh), null nếu không thấy mặt.
+ * Không ném lỗi — caller tự quyết định bỏ qua bước ghép/cắt ảnh.
+ */
+export async function detectLandmarksPx(source) {
+  try {
+    const landmarker = await initFaceAnalyzer();
+    const result = landmarker.detect(source);
+    const lm = result?.faceLandmarks?.[0];
+    if (!lm) return null;
+    const w = source.width, h = source.height;
+    return lm.map((p) => ({ x: p.x * w, y: p.y * h }));
+  } catch (err) {
+    console.warn("Không nhận diện được landmark:", err);
+    return null;
+  }
+}

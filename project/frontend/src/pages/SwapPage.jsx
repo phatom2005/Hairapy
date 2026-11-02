@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Danger, TickCircle, MagicStar } from "iconsax-reactjs";
 import { trackEvent } from "../lib/analytics";
 import { peekVariant, trackExposure } from "../lib/experiments";
+import { composeIdentityPreserving, prepareSwapInput } from "../lib/identityComposite";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { normalizeImage } from "../utils/imageUtils";
 import { Link, useSearchParams } from "react-router-dom";
@@ -77,6 +78,21 @@ export default function SwapPage() {
 
   // Modal gợi ý salon đối tác
   const [showSalonMatch, setShowSalonMatch] = useState(false);
+  // Phase 7.2: ghép ảnh giữ nguyên gương mặt & trang phục gốc (chỉ lấy tóc từ ảnh AI)
+  const [keepIdentity, setKeepIdentity] = useState(() => {
+    try {
+      return localStorage.getItem("hairapy_keep_identity") !== "0";
+    } catch {
+      return true;
+    }
+  });
+  const [compositeStatus, setCompositeStatus] = useState(null); // null | "working" | "done" | "failed"
+  // Ảnh AI gốc (blob URL, đã watermark nếu Free) + ảnh đã ghép của lượt gần nhất — để bật/tắt so sánh
+  const [compositeVariants, setCompositeVariants] = useState(null); // { aiUrl, compositeUrl }
+  // Ảnh ĐÚNG như đã gửi lên AI (có thể đã cắt khung) — làm ảnh "Trước" và nguồn ghép
+  const swapInputRef = useRef(null); // { file, url }
+  const [swapInputUrl, setSwapInputUrl] = useState(null);
+  const activeTaskRef = useRef(null);
   // Thử nghiệm A/B "salon_cta" (5.5): A = nút viền "Cắt kiểu này ở đâu?", B = nút đậm "Đặt lịch cắt kiểu này gần bạn"
   const [salonCtaVariant] = useState(() => peekVariant("salon_cta"));
 
@@ -194,6 +210,73 @@ export default function SwapPage() {
     setLoading(false);
   };
 
+  /**
+   * Phase 7.2: tải ảnh AI gốc qua backend, ghép giữ mặt + trang phục gốc, rồi upload thay ảnh trong lịch sử.
+   * Lỗi ở bất kỳ bước nào -> giữ nguyên ảnh AI (không chặn luồng thử tóc).
+   */
+  const runIdentityComposite = async (taskId, data) => {
+    setCompositeStatus("working");
+    try {
+      const { data: aiBlob } = await api.get(data.rawImagePath, { responseType: "blob", timeout: 20000 });
+      const r = await composeIdentityPreserving({ originalBlob: swapInputRef.current.file, aiBlob });
+      trackEvent("identity_composite", {
+        ok: r.ok ? 1 : 0,
+        reason: r.reason || "ok",
+        align_error_bucket: r.alignError == null ? "na" : r.alignError < 0.03 ? "lt3" : r.alignError < 0.06 ? "lt6" : "gte6",
+      });
+      if (activeTaskRef.current !== taskId) return; // người dùng đã thử kiểu khác
+      if (!r.ok) {
+        setCompositeStatus("failed");
+        return;
+      }
+      const aiUrl = URL.createObjectURL(aiBlob);
+      let compositeUrl = URL.createObjectURL(r.blob);
+      setCompositeVariants({ aiUrl, compositeUrl });
+      setResultImage(compositeUrl);
+
+      // Lưu bản đã ghép vào lịch sử (Free: server tự gắn watermark)
+      if (data.swapHistoryId) {
+        try {
+          const fd = new FormData();
+          fd.append("image", r.blob, "composite.jpg");
+          const { data: saved } = await api.put(`/profile/swaps/${data.swapHistoryId}/composite`, fd, { timeout: 30000 });
+          if (saved?.imageUrl && activeTaskRef.current === taskId) {
+            URL.revokeObjectURL(compositeUrl);
+            compositeUrl = saved.imageUrl;
+            setCompositeVariants({ aiUrl, compositeUrl });
+            setResultImage(compositeUrl);
+          }
+          if (saved?.imageUrl) {
+            // Ảnh cũ trong lịch sử đã bị thay -> cập nhật thumbnail phiên
+            setSessionResults((prev) =>
+              prev.map((x) => (x.imageUrl === data.image ? { ...x, imageUrl: saved.imageUrl } : x))
+            );
+          }
+        } catch (uploadErr) {
+          console.warn("Không lưu được ảnh đã ghép vào lịch sử:", uploadErr);
+        }
+      }
+      setCompositeStatus("done");
+    } catch (err) {
+      console.warn("Không ghép được ảnh giữ gương mặt:", err);
+      if (activeTaskRef.current === taskId) setCompositeStatus("failed");
+    }
+  };
+
+  const toggleKeepIdentity = () => {
+    const next = !keepIdentity;
+    setKeepIdentity(next);
+    try {
+      localStorage.setItem("hairapy_keep_identity", next ? "1" : "0");
+    } catch {
+      /* bỏ qua lỗi storage */
+    }
+    // Đã có 2 phiên bản của lượt hiện tại -> đổi ngay ảnh đang xem
+    if (compositeVariants) {
+      setResultImage(next ? compositeVariants.compositeUrl : compositeVariants.aiUrl);
+    }
+  };
+
   const pollTaskStatus = async (taskId, attempt = 1) => {
     try {
       const { data } = await api.get(`/swap/status/${taskId}`, {
@@ -202,6 +285,9 @@ export default function SwapPage() {
 
       if (data.status === "DONE") {
         setResultImage(data.image);
+        if (keepIdentity && data.rawImagePath && swapInputRef.current?.file) {
+          runIdentityComposite(taskId, data);
+        }
         if (activeStyle) {
           const newEntry = {
             styleId: activeStyle.id,
@@ -462,7 +548,19 @@ export default function SwapPage() {
         uploadFile = new File([blob], "input.jpg", { type: blob.type || "image/jpeg" });
       }
 
-      uploadFile = await normalizeImage(uploadFile);
+      // 7.1: xoay EXIF, cắt về khung đầu + vai nếu chụp xa, cạnh dài tối đa 1280px
+      const prepared = await prepareSwapInput(uploadFile);
+      if (prepared && Math.min(prepared.width, prepared.height) < 400) {
+        setError("Ảnh hơi nhỏ/mờ nên AI khó giữ đúng gương mặt. Hãy chọn ảnh rõ hơn (cạnh ngắn từ 400px).");
+        setLoading(false);
+        return;
+      }
+      uploadFile = prepared ? prepared.file : await normalizeImage(uploadFile);
+      if (swapInputRef.current?.url) URL.revokeObjectURL(swapInputRef.current.url);
+      swapInputRef.current = { file: uploadFile, url: URL.createObjectURL(uploadFile) };
+      setSwapInputUrl(swapInputRef.current.url);
+      setCompositeVariants(null);
+      setCompositeStatus(null);
 
       const formData = new FormData();
       formData.append("image", uploadFile);
@@ -480,6 +578,7 @@ export default function SwapPage() {
       if (!taskId) {
         throw new Error("Không nhận được mã tác vụ từ hệ thống.");
       }
+      activeTaskRef.current = taskId;
 
       trackEvent("hair_swap", {
         hairstyle_id: activeStyle.id,
@@ -822,7 +921,7 @@ export default function SwapPage() {
                 <HairColorStudio
                   ref={colorStudioRef}
                   imageUrl={activeResultImage || previewUrl}
-                  beforeImage={activeResultImage ? previewUrl : null}
+                  beforeImage={activeResultImage ? (resultImage && swapInputUrl) || previewUrl : null}
                   showCompare={showCompare && Boolean(activeResultImage)}
                   onColorChange={setActiveStudioColor}
                 />
@@ -840,6 +939,30 @@ export default function SwapPage() {
                   </div>
                 )}
               </div>
+
+              {/* Phase 7.2: giữ nguyên gương mặt & trang phục */}
+              {(activeResultImage || loading) && (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line bg-white px-4 py-2.5">
+                  <label className="flex cursor-pointer items-center gap-2.5 text-xs font-semibold text-ink">
+                    <input
+                      type="checkbox"
+                      className="size-4 accent-[var(--color-primary,#1039da)]"
+                      checked={keepIdentity}
+                      onChange={toggleKeepIdentity}
+                    />
+                    Giữ nguyên gương mặt &amp; trang phục
+                  </label>
+                  <span className="text-[11px] text-mauve">
+                    {compositeStatus === "working"
+                      ? "Đang giữ lại gương mặt của bạn..."
+                      : compositeStatus === "failed" && keepIdentity
+                      ? "Không giữ được gương mặt gốc cho ảnh này — nếu ảnh sai, bấm Báo lỗi AI để được hoàn lượt."
+                      : keepIdentity
+                      ? "Chỉ thay tóc, giữ mặt và áo trong ảnh gốc"
+                      : "Đang xem ảnh AI tạo nguyên bản"}
+                  </span>
+                </div>
+              )}
 
               {/* Gợi ý salon đối tác khi đã có kết quả thử tóc */}
               {activeResultImage && (

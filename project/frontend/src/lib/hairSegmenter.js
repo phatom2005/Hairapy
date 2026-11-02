@@ -89,3 +89,29 @@ export async function getHairMask(imageSource, targetWidth, targetHeight) {
     }
   }
 }
+
+/**
+ * Phase 7.2: trả về độ tin cậy (0..1) của các lớp selfie_multiclass, mỗi lớp là Float32Array
+ * đúng kích thước targetWidth*targetHeight. Dùng cho ghép ảnh giữ danh tính.
+ * Lớp: 0 nền, 1 tóc, 2 da thân, 3 da mặt, 4 quần áo, 5 khác.
+ */
+export async function getCategoryMasks(imageSource, targetWidth, targetHeight) {
+  const segmenter = await initHairSegmenter();
+  const result = segmenter.segment(imageSource);
+  try {
+    const masks = result.confidenceMasks;
+    if (!masks || masks.length < 5) {
+      throw new Error("Không thể phân vùng ảnh.");
+    }
+    const take = (idx) => {
+      const m = masks[idx];
+      const copy = new Float32Array(m.getAsFloat32Array());
+      return resizeMask(copy, m.width, m.height, targetWidth, targetHeight);
+    };
+    return { hair: take(HAIR_INDEX), bodySkin: take(2), faceSkin: take(3), clothes: take(4) };
+  } finally {
+    if (result.close) {
+      result.close();
+    }
+  }
+}

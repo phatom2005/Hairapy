@@ -196,7 +196,7 @@ public class HairSwapController {
 
         // Task đã kết thúc từ lần poll trước — trả cache, không gọi lại AILab
         if (task.getStatus() == HairSwapTask.Status.DONE) {
-            return ResponseEntity.ok(Map.of("status", "DONE", "image", task.getResultImageUrl()));
+            return ResponseEntity.ok(doneBody(task));
         }
         if (task.getStatus() == HairSwapTask.Status.ERROR) {
             return ResponseEntity.ok(Map.of("status", "ERROR", "error", task.getErrorMessage(), "refunded", true));
@@ -212,10 +212,55 @@ public class HairSwapController {
         // Còn trong hạn — thực hiện ĐÚNG 1 lần check với AILab (logic DONE/ERROR/refund nằm trong HairSwapFinalizer)
         HairSwapTask.Status after = hairSwapFinalizer.pollOnce(task);
         return switch (after) {
-            case DONE -> ResponseEntity.ok(Map.of("status", "DONE", "image", task.getResultImageUrl()));
+            case DONE -> ResponseEntity.ok(doneBody(task));
             case ERROR -> ResponseEntity.ok(Map.of("status", "ERROR", "error", task.getErrorMessage(), "refunded", true));
             // PENDING (kể cả khi luồng khác đang upload): lần poll kế tiếp sẽ thấy DONE đã cache
             default -> ResponseEntity.ok(Map.of("status", "PENDING"));
         };
+    }
+
+    /**
+     * Body khi DONE. Giữ nguyên "status" + "image" (mobile cũ đang đọc), Phase 7.2 THÊM:
+     * - swapHistoryId: id bản ghi lịch sử để web upload ảnh đã ghép (null nếu không lưu được lịch sử)
+     * - rawImagePath: đường dẫn API lấy ảnh AI để ghép (gói trả phí: chưa watermark; Free: đã watermark)
+     */
+    private static Map<String, Object> doneBody(HairSwapTask task) {
+        Map<String, Object> body = new java.util.HashMap<>();
+        body.put("status", "DONE");
+        body.put("image", task.getResultImageUrl());
+        body.put("swapHistoryId", task.getSwapHistoryId());
+        body.put("rawImagePath", task.getRawImageUrl() != null ? "/swap/raw/" + task.getTaskId() : null);
+        return body;
+    }
+
+    /**
+     * Phase 7.2: trả về ảnh AI của task DONE để web ghép giữ danh tính (gói trả phí: ảnh gốc chưa watermark;
+     * Free: ảnh đã watermark).
+     * Đi qua backend vì URL của AILab không gửi header CORS -> canvas trên web không đọc được pixel.
+     * Chỉ chủ task; task chỉ giữ trong bộ nhớ ~10 phút nên quá hạn thì 404 (web bỏ qua bước ghép).
+     */
+    @GetMapping("/raw/{taskId}")
+    public ResponseEntity<?> raw(@PathVariable String taskId) {
+        User currentUser = usageService.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Vui lòng đăng nhập."));
+        }
+        HairSwapTask task = taskStore.get(taskId);
+        if (task == null || !task.getUserId().equals(currentUser.getId())
+                || task.getStatus() != HairSwapTask.Status.DONE || task.getRawImageUrl() == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Không tìm thấy ảnh gốc."));
+        }
+        // Free: trả bản ĐÃ watermark (Cloudinary) để endpoint này không thành lối tải ảnh sạch watermark.
+        // Watermark nằm góc dưới phải (thường là áo/nền) -> khi ghép, vùng đó lấy từ ảnh gốc nên không lặp watermark.
+        String source = task.isPaidUser() ? task.getRawImageUrl() : task.getResultImageUrl();
+        byte[] bytes = hairSwapService.downloadRawResult(source);
+        if (bytes == null) {
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("error", "Không tải được ảnh gốc."));
+        }
+        return ResponseEntity.ok()
+                .contentType(org.springframework.http.MediaType.parseMediaType(
+                        com.hairapy.utils.ImageValidator.detectMimeType(bytes)))
+                .header("Cache-Control", "private, max-age=600")
+                .body(bytes);
     }
 }

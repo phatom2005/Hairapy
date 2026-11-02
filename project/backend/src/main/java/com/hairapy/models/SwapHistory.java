@@ -38,6 +38,11 @@ public class SwapHistory {
     @Column(name = "image_url", nullable = false, length = 500)
     private String imageUrl;
 
+    // Phase 7.2: true khi ảnh đã được web ghép lại (giữ mặt + trang phục gốc, chỉ lấy tóc từ AI)
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean composited = false;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = false)
     private LocalDateTime createdAt;

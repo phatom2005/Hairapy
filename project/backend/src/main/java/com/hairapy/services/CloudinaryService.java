@@ -110,6 +110,27 @@ public class CloudinaryService {
     }
 
     /**
+     * Phase 7.2: upload ảnh dạng byte (ảnh đã ghép từ web), có thể gắn watermark như uploadFromUrl.
+     */
+    public String uploadBytes(byte[] bytes, String folder, boolean watermark) {
+        try {
+            Map<String, Object> options = new java.util.HashMap<>(ObjectUtils.asMap(
+                    "folder", "hairapy/" + folder,
+                    "resource_type", "image"
+            ));
+            if (watermark) {
+                options.put("transformation", WATERMARK_TRANSFORMATION);
+            }
+            Map result = cloudinary.uploader().upload(bytes, options);
+            log.info("Upload ảnh (bytes) lên Cloudinary thành công: folder={}, watermark={}", folder, watermark);
+            return (String) result.get("secure_url");
+        } catch (IOException e) {
+            log.error("Lỗi upload ảnh (bytes) lên Cloudinary: {}", e.getMessage());
+            throw new RuntimeException("Không thể lưu ảnh lên cloud storage.");
+        }
+    }
+
+    /**
      * Xóa ảnh trên Cloudinary theo public_id.
      *
      * @param publicId public_id của ảnh (ví dụ: "hairapy/user-uploads/abc123").

@@ -311,6 +311,32 @@ public class HairSwapService {
      * watermark, Premium thì không. Gọi ĐÚNG 1 LẦN khi checkStatus() lần đầu phát
      * hiện DONE (controller đảm bảo not-double-call qua HairSwapTask.tryMarkUploaded()).
      */
+    /** Giới hạn ảnh gốc tải về để proxy cho web (Phase 7.2). */
+    private static final int MAX_RAW_BYTES = 10 * 1024 * 1024;
+
+    /**
+     * Phase 7.2: tải ảnh kết quả AILab gốc (URL do chính AILab trả về, không phải từ client) để proxy cho web.
+     * Chỉ nhận https, tối đa 10MB, phải đúng là ảnh (magic bytes). Lỗi -> null.
+     */
+    public byte[] downloadRawResult(String url) {
+        try {
+            java.net.URI uri = java.net.URI.create(url);
+            if (!"https".equalsIgnoreCase(uri.getScheme())) {
+                return null;
+            }
+            byte[] bytes = aiRestTemplate.getForObject(uri, byte[].class);
+            if (bytes == null || bytes.length == 0 || bytes.length > MAX_RAW_BYTES
+                    || !com.hairapy.utils.ImageValidator.isSupportedImage(bytes)) {
+                return null;
+            }
+            return bytes;
+        } catch (Exception e) {
+            // Không log URL đầy đủ (có thể chứa token tạm của AILab)
+            log.warn("Không tải được ảnh AILab gốc: {}", e.getClass().getSimpleName());
+            return null;
+        }
+    }
+
     public String uploadResult(String tempUrl, boolean isPaidUser) {
         try {
             return cloudinaryService.uploadFromUrl(tempUrl, "swap-history", !isPaidUser);

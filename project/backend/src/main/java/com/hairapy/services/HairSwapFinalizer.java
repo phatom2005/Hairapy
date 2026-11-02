@@ -33,9 +33,12 @@ public class HairSwapFinalizer {
                 if (task.tryMarkUploaded()) {
                     try {
                         String cloudinaryUrl = hairSwapService.uploadResult(result.imageUrl(), task.isPaidUser());
-                        task.markDone(cloudinaryUrl);
                         // Lưu vào lịch sử thử tóc (lỗi lưu chỉ ghi log, không ảnh hưởng kết quả)
-                        swapHistoryService.record(task.getUserId(), task.getHairstyleId(), task.getHairstyleName(), cloudinaryUrl);
+                        Long historyId = swapHistoryService.record(task.getUserId(), task.getHairstyleId(), task.getHairstyleName(), cloudinaryUrl);
+                        // Phase 7.2: giữ URL ảnh AILab gốc + id lịch sử để web ghép ảnh giữ danh tính
+                        task.setRawImageUrl(result.imageUrl());
+                        task.setSwapHistoryId(historyId);
+                        task.markDone(cloudinaryUrl);
                     } catch (Exception e) {
                         // Upload lỗi: bản cũ để task kẹt PENDING và mất lượt → giờ hoàn lượt luôn
                         log.error("Lỗi lưu ảnh kết quả hair-swap taskId={}", task.getTaskId(), e);

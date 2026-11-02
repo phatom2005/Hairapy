@@ -25,6 +25,8 @@ public class HairSwapTask {
 
     private volatile Status status = Status.PENDING;
     private volatile String resultImageUrl; // Cloudinary URL, cache 1 lần duy nhất khi DONE
+    private volatile String rawImageUrl;    // URL ảnh AILab gốc (chưa watermark, ~24h) — dùng cho ghép ảnh 7.2
+    private volatile Long swapHistoryId;    // id bản ghi lịch sử vừa tạo — để web upload bản đã ghép
     private volatile String errorMessage;
     private final AtomicBoolean refunded = new AtomicBoolean(false);
     private final AtomicBoolean uploaded = new AtomicBoolean(false); // chống double-upload Cloudinary khi 2 poll trùng lúc
@@ -54,6 +56,10 @@ public class HairSwapTask {
     public Status getStatus() { return status; }
     public String getResultImageUrl() { return resultImageUrl; }
     public String getErrorMessage() { return errorMessage; }
+    public String getRawImageUrl() { return rawImageUrl; }
+    public Long getSwapHistoryId() { return swapHistoryId; }
+    public void setRawImageUrl(String rawImageUrl) { this.rawImageUrl = rawImageUrl; }
+    public void setSwapHistoryId(Long swapHistoryId) { this.swapHistoryId = swapHistoryId; }
 
     public synchronized void markDone(String resultImageUrl) {
         this.status = Status.DONE;

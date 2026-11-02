@@ -146,4 +146,19 @@ class HairSwapFinalizerTest {
 
         verify(usageService, times(1)).releaseUsage(reservation);
     }
+
+    @Test
+    void ailabDone_luuUrlGocVaIdLichSu_choGhepAnh() {
+        // Phase 7.2: task DONE phải giữ URL ảnh AILab gốc + id lịch sử để web ghép ảnh giữ danh tính
+        when(hairSwapService.checkStatus("t1")).thenReturn(HairSwapPollResult.done("https://ailab/raw.jpg"));
+        when(hairSwapService.uploadResult("https://ailab/raw.jpg", false)).thenReturn("https://res.cloudinary.com/x.jpg");
+        when(swapHistoryService.record(7L, 3L, "Kiểu A", "https://res.cloudinary.com/x.jpg")).thenReturn(42L);
+        HairSwapTask task = newTask();
+
+        finalizer.pollOnce(task);
+
+        assertEquals("https://ailab/raw.jpg", task.getRawImageUrl());
+        assertEquals(42L, task.getSwapHistoryId());
+        assertEquals("https://res.cloudinary.com/x.jpg", task.getResultImageUrl());
+    }
 }

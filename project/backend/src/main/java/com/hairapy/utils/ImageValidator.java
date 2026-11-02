@@ -27,6 +27,19 @@ public final class ImageValidator {
         } catch (IOException e) {
             return false;
         }
+        return detectMimeType(h) != null;
+    }
+
+    /** Như trên nhưng cho mảng byte (ảnh tải về / ảnh đã ghép từ web). */
+    public static boolean isSupportedImage(byte[] bytes) {
+        return bytes != null && bytes.length >= 12 && detectMimeType(bytes) != null;
+    }
+
+    /** "image/jpeg" | "image/png" | "image/webp" theo magic bytes, null nếu không phải 3 loại này. */
+    public static String detectMimeType(byte[] h) {
+        if (h == null || h.length < 12) {
+            return null;
+        }
         // JPEG: FF D8 FF
         boolean jpeg = (h[0] & 0xFF) == 0xFF && (h[1] & 0xFF) == 0xD8 && (h[2] & 0xFF) == 0xFF;
         // PNG: 89 50 4E 47 0D 0A 1A 0A
@@ -35,7 +48,10 @@ public final class ImageValidator {
         // WebP: "RIFF" .... "WEBP"
         boolean webp = h[0] == 'R' && h[1] == 'I' && h[2] == 'F' && h[3] == 'F'
                 && h[8] == 'W' && h[9] == 'E' && h[10] == 'B' && h[11] == 'P';
-        return jpeg || png || webp;
+        if (jpeg) return "image/jpeg";
+        if (png) return "image/png";
+        if (webp) return "image/webp";
+        return null;
     }
 
     public static final String INVALID_MESSAGE =

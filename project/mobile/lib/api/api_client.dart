@@ -8,6 +8,23 @@ const String kApiBaseUrl = String.fromEnvironment(
   defaultValue: 'https://hairapy-production.up.railway.app/api',
 );
 
+const String kAccountLockedMessage = 'Tài khoản của bạn đã bị khoá. Vui lòng liên hệ hỗ trợ.';
+
+/// Chuyển lỗi gọi API thành câu tiếng Việt dễ hiểu cho người dùng (không lộ "DioException ...").
+String friendlyApiError(Object e, [String fallback = 'Đã có lỗi xảy ra. Vui lòng thử lại.']) {
+  if (e is DioException) {
+    if (e.response == null) return 'Mất kết nối, kiểm tra mạng và thử lại.';
+    final data = e.response?.data;
+    if (data is Map) {
+      for (final key in ['error', 'message']) {
+        final v = data[key];
+        if (v is String && v.trim().isNotEmpty && v != 'Bad Request' && v != 'Forbidden') return v;
+      }
+    }
+  }
+  return fallback;
+}
+
 /// Client dùng chung toàn app: tự gắn JWT vào header, tự log lỗi cơ bản.
 /// KHÔNG cần lo CORS như bên web — app native gọi thẳng API, không qua browser.
 class ApiClient {
@@ -42,9 +59,14 @@ class ApiClient {
               (data is String && data.trim().isEmpty) ||
               (data is Map && data.isEmpty);
           final hadToken = error.requestOptions.headers['Authorization'] != null;
-          if (hadToken && emptyBody && (status == 401 || status == 403)) {
+          // Tài khoản bị admin khoá (backend trả 403 kèm code ACCOUNT_LOCKED) -> đăng xuất và báo lý do
+          final locked = hadToken && status == 403 && data is Map && data['code'] == 'ACCOUNT_LOCKED';
+          if (locked) {
             await TokenStorage.instance.clear();
-            onSessionExpired?.call();
+            onSessionExpired?.call(kAccountLockedMessage);
+          } else if (hadToken && emptyBody && (status == 401 || status == 403)) {
+            await TokenStorage.instance.clear();
+            onSessionExpired?.call(null);
           }
           handler.next(error);
         },
@@ -52,8 +74,9 @@ class ApiClient {
     );
   }
 
-  /// AuthNotifier gán callback này để reset state đăng nhập khi phiên hết hạn.
-  static void Function()? onSessionExpired;
+  /// AuthNotifier gán callback này để reset state đăng nhập khi phiên hết hạn / tài khoản bị khoá.
+  /// [reason] != null thì màn Đăng nhập hiện lý do.
+  static void Function(String? reason)? onSessionExpired;
 
   static final ApiClient instance = ApiClient._internal();
   late final Dio _dio;

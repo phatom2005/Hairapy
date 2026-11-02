@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
 import '../../api/api_client.dart';
 import '../../models/salon.dart';
 import '../../theme.dart';
@@ -22,7 +23,20 @@ class SalonsScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Salon đối tác')),
       body: salonsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Không tải được danh sách salon: $e')),
+        error: (e, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(friendlyApiError(e, 'Không tải được danh sách salon.'),
+                    textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted)),
+                const SizedBox(height: 12),
+                OutlinedButton(onPressed: () => ref.invalidate(salonsProvider), child: const Text('Thử lại')),
+              ],
+            ),
+          ),
+        ),
         data: (salons) {
           if (salons.isEmpty) {
             return const Center(child: Text('Chưa có salon đối tác nào.', style: TextStyle(color: AppColors.muted)));
@@ -33,17 +47,28 @@ class SalonsScreen extends ConsumerWidget {
             separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemBuilder: (context, i) {
               final s = salons[i];
-              return Container(
+              final card = Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(18),
                   boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 12, offset: const Offset(0, 3))],
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: Row(
+                // IntrinsicHeight: Row stretch trong ListView cần chiều cao xác định để ảnh cao bằng nội dung
+                child: IntrinsicHeight(
+                  child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    CachedNetworkImage(imageUrl: s.imageUrl, width: 96, fit: BoxFit.cover),
+                    CachedNetworkImage(
+                      imageUrl: s.imageUrl,
+                      width: 96,
+                      fit: BoxFit.cover,
+                      errorWidget: (context, url, error) => Container(
+                        width: 96,
+                        color: AppColors.canvas,
+                        child: const Icon(Icons.storefront_outlined, color: AppColors.muted),
+                      ),
+                    ),
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.all(12),
@@ -58,6 +83,17 @@ class SalonsScreen extends ConsumerWidget {
                                   const Icon(Icons.verified, size: 16, color: AppColors.primary),
                               ],
                             ),
+                            if (s.partner)
+                              Container(
+                                margin: const EdgeInsets.only(top: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.pink.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: const Text('Đối tác · Đặt lịch online',
+                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.magenta)),
+                              ),
                             const SizedBox(height: 3),
                             Text('${s.district} · ${s.address}', maxLines: 1, overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(fontSize: 11.5, color: AppColors.muted)),
@@ -88,6 +124,12 @@ class SalonsScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
+                ),
+              );
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => context.push('/salons/${s.id}'),
+                child: card,
               );
             },
           );

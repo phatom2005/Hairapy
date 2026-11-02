@@ -65,8 +65,8 @@ String? _extractCode(Object e) {
 class AuthNotifier extends StateNotifier<AuthState> {
   AuthNotifier() : super(const AuthState()) {
     // Phiên hết hạn giữa chừng (token 24h) -> về trạng thái guest, router tự đưa về Login.
-    ApiClient.onSessionExpired = () {
-      if (mounted) state = const AuthState();
+    ApiClient.onSessionExpired = (reason) {
+      if (mounted) state = AuthState(error: reason);
     };
     _restoreSession();
   }
@@ -87,7 +87,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final status = e is DioException ? e.response?.statusCode : null;
       if (status == 401 || status == 403) {
         await TokenStorage.instance.clear();
-        state = const AuthState();
+        state = AuthState(error: _extractCode(e) == 'ACCOUNT_LOCKED' ? kAccountLockedMessage : null);
       }
     }
   }

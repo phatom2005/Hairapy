@@ -11,7 +11,20 @@ class ScanState {
   final String? hairType;
   final FaceShapeMetrics? metrics;
 
-  const ScanState({this.image, this.faceShape, this.hairType, this.metrics});
+  /// Giới tính người dùng chọn SAU khi quét để lọc gợi ý: "Nam" | "Nữ" | null (tất cả).
+  final String? gender;
+
+  /// true nếu người dùng tự sửa dáng mặt (AI đoán chưa đúng).
+  final bool faceShapeOverridden;
+
+  const ScanState({
+    this.image,
+    this.faceShape,
+    this.hairType,
+    this.metrics,
+    this.gender,
+    this.faceShapeOverridden = false,
+  });
 
   ScanState copyWith({File? image, String? faceShape, String? hairType, FaceShapeMetrics? metrics}) =>
       ScanState(
@@ -19,6 +32,8 @@ class ScanState {
         faceShape: faceShape ?? this.faceShape,
         hairType: hairType ?? this.hairType,
         metrics: metrics ?? this.metrics,
+        gender: gender,
+        faceShapeOverridden: faceShapeOverridden,
       );
 }
 
@@ -34,6 +49,27 @@ class ScanStateNotifier extends StateNotifier<ScanState> {
         faceShape: result.faceShape,
         hairType: state.hairType,
         metrics: result.metrics,
+        gender: state.gender, // giữ lựa chọn giới tính lần trước
+      );
+
+  /// Người dùng tự chọn lại dáng mặt (mã tiếng Anh: Oval, Round, ...).
+  void overrideFaceShape(String shape) => state = ScanState(
+        image: state.image,
+        faceShape: shape,
+        hairType: state.hairType,
+        metrics: state.metrics,
+        gender: state.gender,
+        faceShapeOverridden: true,
+      );
+
+  /// null = xem tất cả kiểu tóc.
+  void setGender(String? gender) => state = ScanState(
+        image: state.image,
+        faceShape: state.faceShape,
+        hairType: state.hairType,
+        metrics: state.metrics,
+        gender: gender,
+        faceShapeOverridden: state.faceShapeOverridden,
       );
 
   void clear() => state = const ScanState();

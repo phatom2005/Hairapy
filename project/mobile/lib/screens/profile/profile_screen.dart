@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../api/api_client.dart';
+import '../../config/app_links.dart';
 import '../../config/feature_flags.dart';
+import '../../config/plans.dart';
+import '../../services/link_opener.dart';
 import '../../models/hairstyle.dart';
 import '../../models/scan_record.dart';
 import '../../models/swap_record.dart';
@@ -92,7 +95,7 @@ class ProfileScreen extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
-                      user.isPremium ? 'Tài khoản Premium' : 'Tài khoản Free',
+                      _planBadgeText(user.isStaff, user.plan, user.planEndsAt),
                       style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
                     ),
                   ),
@@ -280,9 +283,16 @@ class ProfileScreen extends ConsumerWidget {
             _MenuTile(icon: Icons.settings_outlined, label: 'Cài đặt tài khoản', onTap: () => context.push('/settings')),
             if (kEnableExternalPayment)
               _MenuTile(icon: Icons.workspace_premium_outlined, label: user.isPremium ? 'Quản lý gói Premium' : 'Nâng cấp Premium', onTap: () => context.push('/pricing'))
-            else if (user.isPremium)
-              const _MenuTile(icon: Icons.workspace_premium_outlined, label: 'Gói hiện tại: Premium'),
+            else if (user.isPremium && !user.isStaff)
+              _MenuTile(icon: Icons.workspace_premium_outlined, label: 'Gói hiện tại: ${planLabel(user.plan)}'),
+            _MenuTile(icon: Icons.event_note_outlined, label: 'Lịch hẹn salon của tôi', onTap: () => context.push('/bookings')),
             _MenuTile(icon: Icons.storefront_outlined, label: 'Salon đối tác', onTap: () => context.push('/salons')),
+            if (user.isSalonOwner)
+              _MenuTile(
+                icon: Icons.open_in_new_rounded,
+                label: 'Quản lý salon (mở trên web)',
+                onTap: () => openExternalUrl(context, '$kWebBaseUrl/salon-portal'),
+              ),
             const SizedBox(height: 8),
             OutlinedButton(
               style: OutlinedButton.styleFrom(foregroundColor: AppColors.magenta),
@@ -473,6 +483,14 @@ Future<void> _showSwapDialog(BuildContext context, WidgetRef ref, SwapRecord sw)
       ),
     ),
   );
+}
+
+/// "Gói Tuần · đến 12/11/2026" / "Miễn phí" / "Tài khoản quản trị"
+String _planBadgeText(bool isStaff, String? plan, DateTime? endsAt) {
+  if (isStaff) return 'Tài khoản quản trị';
+  final label = planLabel(plan);
+  if (endsAt == null || plan == null || plan == 'FREE') return label;
+  return '$label · đến ${formatDate(endsAt)}';
 }
 
 class _StatCard extends StatelessWidget {

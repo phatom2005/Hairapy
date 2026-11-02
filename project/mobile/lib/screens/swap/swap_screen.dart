@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../api/api_client.dart';
 import '../../config/feature_flags.dart';
+import '../../config/hair_colors.dart';
 import '../../models/hairstyle.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/scan_state_provider.dart';
@@ -17,7 +18,9 @@ import '../../screens/scan/scan_screen.dart' show usageSummaryProvider;
 import '../../services/share_card_generator.dart';
 import '../../theme.dart';
 import '../../widgets/ai_report_sheet.dart';
+import '../../widgets/before_after.dart';
 import '../../widgets/feedback_sheet.dart';
+import '../../widgets/salon_match_sheet.dart';
 
 enum _Phase { idle, submitting, polling, done, error }
 
@@ -58,10 +61,12 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
   Timer? _loadingTextTimer;
   int _loadingIndex = 0;
 
+  /// Mã màu AILab đã chọn (null = để AI giữ màu mặc định của kiểu tóc).
+  String? _hairColor;
+  bool _showCompare = true;
+
   bool _sharing = false;
   bool _saving = false;
-  // Đã lưu/chia sẻ ảnh kết quả chưa — nếu chưa mà thoát thì hỏi xác nhận (ảnh không được lưu ở server)
-  bool _saved = false;
   bool _feedbackShown = false;
 
   void _triggerFeedbackOnce() {
@@ -122,6 +127,7 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
         'image': await MultipartFile.fromFile(image.path),
         'hairStyle': hairstyle.ailabProStyle,
         'hairstyleId': hairstyle.id,
+        if (_hairColor != null) 'hairColor': _hairColor,
       });
       final res = await ApiClient.instance.dio.post('/swap/submit', data: formData);
       final taskId = (res.data as Map<String, dynamic>)['taskId'] as String;
@@ -229,7 +235,6 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
         afterImageUrl: resultUrl,
         styleName: widget.hairstyle?.name ?? 'Kiểu tóc mới',
       );
-      _saved = true;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -268,7 +273,6 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
         }
       }
       await Gal.putImage(path, album: 'Hairapy');
-      _saved = true;
       messenger.showSnackBar(const SnackBar(content: Text('Đã lưu ảnh vào thư viện.')));
     } catch (_) {
       messenger.showSnackBar(
@@ -280,8 +284,8 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
   }
 
   /// Rời màn có cần xác nhận không: đang xử lý AI, hoặc đã có kết quả nhưng chưa lưu/chia sẻ.
-  bool get _needsLeaveConfirm =>
-      _phase == _Phase.submitting || _phase == _Phase.polling || (_phase == _Phase.done && !_saved);
+  /// Kết quả thử tóc đã tự lưu vào Cá nhân → Ảnh đã thử tóc, nên chỉ cần hỏi khi AI đang xử lý.
+  bool get _needsLeaveConfirm => _phase == _Phase.submitting || _phase == _Phase.polling;
 
   Future<void> _confirmLeave() async {
     if (!_needsLeaveConfirm) {
@@ -292,10 +296,10 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
     final leave = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(processing ? 'AI đang xử lý' : 'Ảnh chưa được lưu'),
+        title: Text(processing ? 'AI đang xử lý' : 'Rời màn hình?'),
         content: Text(processing
-            ? 'Thoát bây giờ bạn sẽ không nhận được kết quả của lượt này.'
-            : 'Kết quả không được lưu trên hệ thống. Thoát bây giờ bạn sẽ mất ảnh này.'),
+            ? 'Thoát bây giờ bạn sẽ không thấy kết quả ngay, nhưng ảnh vẫn được lưu vào Cá nhân → Ảnh đã thử tóc khi AI xử lý xong.'
+            : 'Ảnh kết quả đã được lưu trong Cá nhân → Ảnh đã thử tóc.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Ở lại')),
           TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Vẫn thoát')),
@@ -399,7 +403,10 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
                   ? Stack(
                       fit: StackFit.expand,
                       children: [
-                        CachedNetworkImage(imageUrl: _resultImage!, fit: BoxFit.cover, width: double.infinity),
+                        if (_showCompare)
+                          BeforeAfterView(before: image, afterUrl: _resultImage!)
+                        else
+                          CachedNetworkImage(imageUrl: _resultImage!, fit: BoxFit.cover, width: double.infinity),
                         // Nhãn minh bạch: ảnh này do AI tạo ra (chính sách Google Play về nội dung AI)
                         Positioned(
                           left: 12,
@@ -469,6 +476,43 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
             ),
           ),
         if (_phase == _Phase.done) ...[
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: (widget.hairstyle == null)
+                        ? null
+                        : () => showSalonMatchSheet(
+                              context,
+                              hairstyleId: widget.hairstyle!.id,
+                              hairstyleName: widget.hairstyle!.name,
+                              tryOnImageUrl: _resultImage,
+                              faceShape: ref.read(scanStateProvider).faceShape,
+                            ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.magenta,
+                      textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    icon: const Icon(Icons.storefront_outlined, size: 18),
+                    label: const Text('Cắt kiểu này ở đâu?', maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              SizedBox(
+                height: 48,
+                child: OutlinedButton(
+                  onPressed: () => setState(() => _showCompare = !_showCompare),
+                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12)),
+                  child: Text(_showCompare ? 'Ẩn so sánh' : 'So sánh', style: const TextStyle(fontSize: 12.5)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
           Row(
             // KHONG dung crossAxisAlignment: stretch (xem ghi chu loi layout cu) -- moi nut co SizedBox(height: 52) rieng.
             children: [
@@ -546,14 +590,73 @@ class _SwapScreenState extends ConsumerState<SwapScreen> {
             ],
           ),
         ]
-        else
+        else ...[
+          if (_phase == _Phase.idle || _phase == _Phase.error) _buildColorPicker(),
           ElevatedButton(
             onPressed: (_phase == _Phase.submitting || _phase == _Phase.polling) ? null : _submit,
             child: (_phase == _Phase.submitting || _phase == _Phase.polling)
                 ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : Text(_phase == _Phase.error ? 'Thử lại' : 'Bắt đầu ghép kiểu tóc'),
           ),
+        ],
       ],
+    );
+  }
+
+  /// Chọn màu tóc gửi kèm cho AI (tham số hairColor). "Mặc định" = giữ màu của kiểu tóc.
+  Widget _buildColorPicker() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _hairColor == null
+                ? 'Màu tóc: Mặc định'
+                : 'Màu tóc: ${kHairColors.firstWhere((c) => c.code == _hairColor).label}',
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.mauve),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 40,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: kHairColors.length + 1,
+              separatorBuilder: (context, index) => const SizedBox(width: 8),
+              itemBuilder: (context, i) {
+                if (i == 0) {
+                  final selected = _hairColor == null;
+                  return ChoiceChip(
+                    label: const Text('Mặc định', style: TextStyle(fontSize: 12)),
+                    selected: selected,
+                    onSelected: (_) => setState(() => _hairColor = null),
+                  );
+                }
+                final c = kHairColors[i - 1];
+                final selected = _hairColor == c.code;
+                return Tooltip(
+                  message: c.label,
+                  child: GestureDetector(
+                    onTap: () => setState(() => _hairColor = c.code),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: c.swatch,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: selected ? AppColors.primary : AppColors.line,
+                          width: selected ? 3 : 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

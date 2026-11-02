@@ -89,10 +89,11 @@ const Map<String, List<({String title, String desc})>> _reasonsMap = {
 /// kho tóc như trước) — khớp query ["hairstyles", faceShapeVi, gender] bên web.
 /// HairstyleCatalogController tự nhận key tiếng Anh viết thường (oval/round/...)
 /// và dịch sang tiếng Việt để so khớp DB, nên chỉ cần lowercase faceShape gốc.
-final _hairstylesByFaceShapeProvider =
-    FutureProvider.autoDispose.family<List<Hairstyle>, String>((ref, faceShape) async {
+final _hairstylesByFaceShapeProvider = FutureProvider.autoDispose
+    .family<List<Hairstyle>, ({String faceShape, String? gender})>((ref, q) async {
   final res = await ApiClient.instance.dio.get('/hairstyles', queryParameters: {
-    'faceShape': faceShape.toLowerCase(),
+    'faceShape': q.faceShape.toLowerCase(),
+    if (q.gender != null) 'gender': q.gender,
   });
   return (res.data as List).map((e) => Hairstyle.fromJson(e as Map<String, dynamic>)).toList();
 });
@@ -135,7 +136,8 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final stylesAsync = ref.watch(_hairstylesByFaceShapeProvider(faceShape));
+    final query = (faceShape: faceShape, gender: scanState.gender);
+    final stylesAsync = ref.watch(_hairstylesByFaceShapeProvider(query));
     final faceShapeText = _faceShapeTranslation[faceShape] ?? faceShape;
     final reasons = _reasonsMap[faceShape] ?? _reasonsMap['Oval']!;
     final metrics = scanState.metrics;
@@ -163,7 +165,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
               const Text('Không tải được danh sách kiểu tóc.', style: TextStyle(color: AppColors.muted)),
               const SizedBox(height: 12),
               OutlinedButton(
-                onPressed: () => ref.invalidate(_hairstylesByFaceShapeProvider(faceShape)),
+                onPressed: () => ref.invalidate(_hairstylesByFaceShapeProvider(query)),
                 child: const Text('Thử lại'),
               ),
             ],
@@ -229,8 +231,54 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                       ],
                     ),
                   ],
+                  const SizedBox(height: 14),
+                  Text(
+                    scanState.faceShapeOverridden
+                        ? 'Bạn đã chọn lại dáng mặt. Bấm dáng khác nếu muốn đổi:'
+                        : 'AI đoán chưa đúng? Chọn lại dáng mặt của bạn:',
+                    style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: _faceShapeTranslation.keys.map((code) {
+                      final label = _faceShapeTranslation[code]!.split(' (').first;
+                      return ChoiceChip(
+                        label: Text(label, style: const TextStyle(fontSize: 12)),
+                        selected: code == faceShape,
+                        onSelected: (_) {
+                          if (code != faceShape) {
+                            ref.read(scanStateProvider.notifier).overrideFaceShape(code);
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ),
                 ],
               ),
+            ),
+            const SizedBox(height: 16),
+
+            // ── Giới tính (chọn SAU khi quét, khớp web 2.3) ─────────────
+            Row(
+              children: [
+                const Text('Gợi ý cho:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Wrap(
+                    spacing: 6,
+                    children: [
+                      for (final g in const <({String label, String? value})>[(label: 'Tất cả', value: null), (label: 'Nam', value: 'Nam'), (label: 'Nữ', value: 'Nữ')])
+                        ChoiceChip(
+                          label: Text(g.label, style: const TextStyle(fontSize: 12)),
+                          selected: scanState.gender == g.value,
+                          onSelected: (_) => ref.read(scanStateProvider.notifier).setGender(g.value),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 20),
 

@@ -23,6 +23,8 @@ import 'screens/legal/legal_webview_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/profile/settings_screen.dart';
 import 'screens/salons/salons_screen.dart';
+import 'screens/salons/salon_detail_screen.dart';
+import 'screens/bookings/my_bookings_screen.dart';
 
 /// Luồng đầy đủ: Landing -> Login/Register -> Scan (tab gốc) -> Results -> Swap/Pricing,
 /// cộng thêm Catalog/Profile/Settings/Salons/Checkout/PaymentResult — khớp toàn bộ
@@ -108,6 +110,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/profile', builder: (context, state) => const ProfileScreen()),
       GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
       GoRoute(path: '/salons', builder: (context, state) => const SalonsScreen()),
+      GoRoute(
+        path: '/salons/:id',
+        builder: (context, state) =>
+            SalonDetailScreen(salonId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
+      ),
+      GoRoute(path: '/bookings', builder: (context, state) => const MyBookingsScreen()),
       GoRoute(
         path: '/legal',
         builder: (context, state) {

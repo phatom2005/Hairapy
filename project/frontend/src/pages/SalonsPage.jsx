@@ -7,7 +7,7 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
-import { Location, LocationDiscover, MagicStar, Call, Calendar, Star1 } from "iconsax-reactjs";
+import { Location, LocationDiscover, MagicStar, Call, Calendar, Star1, RowVertical, Map1 } from "iconsax-reactjs";
 
 // Khắc phục lỗi bundler Vite không tải được default marker icons của Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -481,17 +481,18 @@ export default function SalonsPage() {
       </div>
 
       {/* Floating View Switcher trên Mobile */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 rounded-full border border-line bg-white/95 p-1 shadow-2xl backdrop-blur-md lg:hidden">
+      <div className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 rounded-full border border-line bg-white/95 p-1 shadow-2xl backdrop-blur-md lg:hidden">
         <button
           type="button"
           onClick={() => setMobileView("list")}
-          className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition cursor-pointer ${
+          className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-xs font-bold transition cursor-pointer ${
             mobileView === "list"
               ? "bg-primary text-white shadow-xs"
               : "text-mauve hover:text-ink"
           }`}
         >
-          <span>📋 Danh sách ({list.length})</span>
+          <RowVertical size={14} className="shrink-0" />
+          <span>Danh sách ({list.length})</span>
         </button>
         <button
           type="button"
@@ -499,13 +500,14 @@ export default function SalonsPage() {
             setMobileView("map");
             setTimeout(() => mapRef.current?.invalidateSize(), 150);
           }}
-          className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition cursor-pointer ${
+          className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-xs font-bold transition cursor-pointer ${
             mobileView === "map"
               ? "bg-primary text-white shadow-xs"
               : "text-mauve hover:text-ink"
           }`}
         >
-          <span>🗺️ Bản đồ</span>
+          <Map1 size={14} className="shrink-0" />
+          <span>Bản đồ</span>
         </button>
       </div>
 

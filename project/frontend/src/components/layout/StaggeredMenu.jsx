@@ -76,7 +76,7 @@ export default function StaggeredMenu({ items, onClose }) {
             <Link
               to={it.to}
               onClick={onClose}
-              className="block py-2 font-display text-2xl sm:text-3xl font-extrabold text-ink hover:text-brand transition-colors"
+              className="block py-1.5 font-display text-2xl sm:text-3xl font-extrabold text-ink hover:text-brand transition-colors"
             >
               {it.label}
             </Link>
@@ -95,6 +95,26 @@ export default function StaggeredMenu({ items, onClose }) {
               </Button>
             </>
           ) : (
+            <>
+            {/* Lối tắt tới 2 việc chính — trước đây menu điện thoại không có đường vào Quét/Thử tóc */}
+            <div className="grid w-full grid-cols-2 gap-2.5">
+              <Button to="/scan" size="sm" onClick={onClose} className="w-full px-3 shadow-md">
+                Quét khuôn mặt
+              </Button>
+              <Button to="/swap" size="sm" variant="outline" onClick={onClose} className="w-full px-3">
+                Thử tóc AI
+              </Button>
+            </div>
+            {user?.role === "SALON_OWNER" && (
+              <Button to="/salon-portal" size="sm" variant="dark" onClick={onClose} className="w-full">
+                Quản lý salon
+              </Button>
+            )}
+            {user?.role === "ADMIN" && (
+              <Button to="/admin" size="sm" variant="dark" onClick={onClose} className="w-full">
+                Trang quản trị
+              </Button>
+            )}
             <div className="flex w-full items-center justify-between gap-3 px-2">
               <Link to="/profile" onClick={onClose} className="text-sm font-semibold text-primary hover:underline">
                 Xem Hồ Sơ →
@@ -109,6 +129,7 @@ export default function StaggeredMenu({ items, onClose }) {
                 Đăng xuất
               </button>
             </div>
+            </>
           )}
         </motion.li>
       </motion.ul>

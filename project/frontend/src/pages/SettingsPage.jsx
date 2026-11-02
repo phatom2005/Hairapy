@@ -200,7 +200,8 @@ export default function SettingsPage() {
         {/* Sidebar (Dạng cuộn ngang trên mobile, menu dọc trên desktop) */}
         <Card className="h-fit p-3.5 sm:p-5">
           <h1 className="mb-3 sm:mb-6 text-xl sm:text-2xl font-bold text-ink">Cài đặt</h1>
-          <nav className="flex overflow-x-auto no-scrollbar gap-1.5 lg:flex-col lg:gap-1 pb-1 lg:pb-0">
+          {/* Điện thoại: lưới 2 cột hiện đủ chữ (trước đây cuộn ngang làm mất nhãn "Gói dịch vụ") */}
+          <nav className="grid grid-cols-2 gap-1.5 sm:flex sm:overflow-x-auto no-scrollbar lg:flex-col lg:gap-1 pb-1 lg:pb-0">
             {NAV_ITEMS.map((item) => {
               const IconComp = item.icon;
               return (
@@ -237,8 +238,13 @@ export default function SettingsPage() {
               {/* Avatar */}
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
                 <div className="relative shrink-0 flex items-center justify-center">
-                  <UserAvatar name={fullName || user?.fullName} email={user?.email} plan={user?.plan} size="lg" className="sm:hidden" />
-                  <UserAvatar name={fullName || user?.fullName} email={user?.email} plan={user?.plan} size="xl" className="hidden sm:inline-flex" />
+                  {/* Bọc div để ẩn/hiện theo màn hình (UserAvatar tự có inline-flex nên class "hidden" truyền vào bị đè -> từng hiện 2 avatar trên điện thoại) */}
+                  <div className="sm:hidden">
+                    <UserAvatar name={fullName || user?.fullName} email={user?.email} plan={user?.plan} size="lg" />
+                  </div>
+                  <div className="hidden sm:block">
+                    <UserAvatar name={fullName || user?.fullName} email={user?.email} plan={user?.plan} size="xl" />
+                  </div>
                 </div>
                 <div className="text-center sm:text-left">
                   <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink">Thông tin cá nhân</h2>

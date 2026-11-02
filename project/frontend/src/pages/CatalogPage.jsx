@@ -564,7 +564,7 @@ export default function CatalogPage() {
       {/* Hero */}
       <section className="bg-transparent px-6 pb-6 pt-16 sm:px-16">
         <div className="mx-auto max-w-[1200px] text-center">
-          <h1 className="font-display text-4xl font-extrabold tracking-tight text-ink sm:text-5xl">
+          <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink sm:text-5xl">
             Bộ Sưu Tập Kiểu Tóc
           </h1>
           <p className="mx-auto mt-3 max-w-2xl text-mauve">

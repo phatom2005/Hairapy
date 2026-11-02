@@ -878,7 +878,7 @@ export default function SwapPage() {
                       type="button"
                       onClick={handleShare}
                       disabled={sharing}
-                      className="rounded-xl border border-pink/30 bg-pink/10 px-3 py-1.5 text-xs font-bold text-pink hover:bg-pink hover:text-white transition cursor-pointer flex items-center gap-1.5"
+                      className="whitespace-nowrap rounded-xl border border-pink/30 bg-pink/10 px-3 py-1.5 text-xs font-bold text-pink hover:bg-pink hover:text-white transition cursor-pointer flex items-center gap-1.5"
                     >
                       <ShareIcon size={14} />
                       <span>Chia sẻ</span>
@@ -889,13 +889,14 @@ export default function SwapPage() {
                     <button
                       type="button"
                       onClick={() => setShowCompare(!showCompare)}
-                      className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                      className={`whitespace-nowrap rounded-xl border px-3 py-1.5 text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
                         showCompare
                           ? "border-primary bg-primary/10 text-primary font-bold shadow-xs"
                           : "border-line bg-white text-mauve hover:text-ink hover:border-primary/40"
                       }`}
                     >
-                      <span>↔ So sánh Trước / Sau</span>
+                      <span className="sm:hidden">So sánh</span>
+                      <span className="hidden sm:inline">↔ So sánh Trước / Sau</span>
                       <span
                         className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
                           showCompare ? "bg-primary text-white" : "bg-line text-muted"
@@ -909,9 +910,10 @@ export default function SwapPage() {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="rounded-xl border border-line bg-white px-3 py-1.5 text-xs font-semibold text-mauve hover:text-ink hover:border-primary transition cursor-pointer"
+                    className="whitespace-nowrap rounded-xl border border-line bg-white px-3 py-1.5 text-xs font-semibold text-mauve hover:text-ink hover:border-primary transition cursor-pointer"
                   >
-                    Đổi ảnh khác
+                    <span className="sm:hidden">Đổi ảnh</span>
+                    <span className="hidden sm:inline">Đổi ảnh khác</span>
                   </button>
                 </div>
               </div>
@@ -987,10 +989,12 @@ export default function SwapPage() {
                       });
                       setShowSalonMatch(true);
                     }}
+                    variant={salonCtaVariant === "B" ? "primary" : "outline"}
+                    size="none"
                     className={
                       salonCtaVariant === "B"
-                        ? "w-full sm:w-auto shrink-0 bg-primary hover:bg-primary-hover text-white font-bold text-sm px-5 py-3 shadow-md"
-                        : "w-full sm:w-auto shrink-0 bg-white hover:bg-primary/5 border-2 border-primary text-primary font-bold text-xs px-4 py-2.5"
+                        ? "w-full sm:w-auto shrink-0 font-bold text-sm px-5 py-3 shadow-md"
+                        : "w-full sm:w-auto shrink-0 font-bold text-xs px-4 py-2.5"
                     }
                   >
                     {salonCtaVariant === "B" ? "Đặt lịch cắt kiểu này gần bạn" : "Cắt kiểu này ở đâu?"}

@@ -24,6 +24,8 @@
 
 html {
   overflow-x: hidden;
+  /* clip: chặn hẳn vuốt ngang trên iOS Safari do các khối trang trí (blob, glow) lố mép, không phá position: sticky */
+  overflow-x: clip;
 }
 
 body {
@@ -33,6 +35,7 @@ body {
   color: var(--color-mauve);
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* Ẩn scrollbar nhưng vẫn cho phép vuốt cuộn mượt mà trên mobile */

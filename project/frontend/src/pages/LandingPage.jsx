@@ -77,12 +77,13 @@ function Hero() {
           </AnimatedContent>
 
           <AnimatedContent delay={0.7} y={20}>
-            <div className="flex flex-wrap gap-4 pt-4">
+            {/* Điện thoại: 2 nút cùng hàng, bằng nhau; desktop giữ như cũ */}
+            <div className="grid grid-cols-2 gap-3 pt-4 sm:flex sm:flex-wrap sm:gap-4">
               {/* CTA chính có viền glow xoay → thu hút mắt */}
-              <BorderGlow rounded="rounded-full" thickness={2}>
-                <Button to="/scan" size="lg" className="shadow-xl">Phân tích ngay</Button>
+              <BorderGlow rounded="rounded-full" thickness={2} className="w-full sm:w-auto [&>div]:w-full sm:[&>div]:w-auto">
+                <Button to="/scan" size="lg" className="w-full px-4 shadow-xl sm:w-auto sm:px-10">Phân tích ngay</Button>
               </BorderGlow>
-              <Button href="#trends" variant="outline" size="lg">Xem mẫu thử</Button>
+              <Button href="#trends" variant="outline" size="lg" className="w-full px-4 sm:w-auto sm:px-10">Xem mẫu thử</Button>
             </div>
           </AnimatedContent>
         </div>

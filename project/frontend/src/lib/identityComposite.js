@@ -116,7 +116,7 @@ export async function composeIdentityPreserving({ originalBlob, aiBlob }) {
       width: W,
       height: H,
       dilatePx: edge,
-      blurPx: Math.round(edge * 1.5),
+      blurPx: edge,
     });
     const out = blendRgba(origPx.data, aiPx.data, alpha);
     octx.putImageData(new ImageData(out, W, H), 0, 0);

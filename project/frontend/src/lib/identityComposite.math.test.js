@@ -8,6 +8,7 @@ import {
   buildAlpha,
   blendRgba,
   computePortraitCrop,
+  ramp,
 } from "./identityComposite.math";
 
 const pts = [
@@ -121,5 +122,37 @@ describe("computePortraitCrop", () => {
     expect(c.x + c.w).toBeLessThanOrEqual(3000);
     expect(c.y + c.h).toBeLessThanOrEqual(4000);
     expect(c.y).toBeLessThan(800); // chừa khoảng phía trên cho tóc
+  });
+});
+
+describe("chống bóng ma tóc cũ (ảnh người dùng báo lỗi 2026-11-03)", () => {
+  it("ramp: dưới 0.2 = 0, trên 0.5 = 1", () => {
+    expect(ramp(0.1)).toBe(0);
+    expect(ramp(0.35)).toBeCloseTo(0.5, 6);
+    expect(ramp(0.7)).toBe(1);
+  });
+
+  it("sợi mái cũ mảnh trên trán (tóc gốc 0.5, da mặt 0.5) phải lấy hẳn ảnh AI", () => {
+    const a = buildAlpha({
+      hairAI: Float32Array.from([0]),
+      hairOrig: Float32Array.from([0.5]),
+      keepOrig: Float32Array.from([0.5]),
+      width: 1, height: 1, dilatePx: 0, blurPx: 0,
+    });
+    expect(a[0]).toBeCloseTo(1, 6);
+  });
+
+  it("mép tóc cũ mờ (0.3) cạnh tóc cũ bị giãn xoá luôn, da mặt thuần vẫn giữ gốc", () => {
+    // 0: tóc cũ rõ | 1: mép tóc cũ mờ trên nền | 2: nền | 3: da mặt thuần
+    const a = buildAlpha({
+      hairAI: new Float32Array(4),
+      hairOrig: Float32Array.from([1, 0.3, 0, 0]),
+      keepOrig: Float32Array.from([0, 0, 0, 1]),
+      width: 4, height: 1, dilatePx: 1, blurPx: 0,
+    });
+    expect(a[0]).toBe(1);
+    expect(a[1]).toBe(1);
+    expect(a[2]).toBe(1); // nằm trong vùng giãn x2 của tóc cũ -> lấy nền AI, hết quầng
+    expect(a[3]).toBe(0); // da mặt không dính tóc cũ -> giữ nguyên ảnh gốc
   });
 });

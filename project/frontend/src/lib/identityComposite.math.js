@@ -109,22 +109,43 @@ export function boxBlur(mask, width, height, r) {
 }
 
 /**
+ * Đưa độ tin cậy mềm của model về gần nhị phân: < lo coi như 0, > hi coi như 1, giữa thì tuyến tính.
+ * Lý do: mép tóc / sợi tóc mảnh model chỉ cho ~0.3–0.6; trộn thẳng theo số này sẽ để lại
+ * "bóng ma" nửa trong suốt của tóc cũ (vệt mái trên trán, quầng quanh đỉnh đầu).
+ */
+export function ramp(x, lo = 0.2, hi = 0.5) {
+  if (x <= lo) return 0;
+  if (x >= hi) return 1;
+  return (x - lo) / (hi - lo);
+}
+
+function rampAll(mask) {
+  const out = new Float32Array(mask.length);
+  for (let i = 0; i < mask.length; i++) out[i] = ramp(mask[i]);
+  return out;
+}
+
+/**
  * Mask alpha (0..1): 1 = lấy pixel ảnh AI, 0 = giữ pixel ảnh gốc.
- *  - take    = tóc AI ∪ tóc gốc (tóc mới + chỗ tóc cũ cần xoá), giãn dilatePx
- *  - protect = (da mặt ∪ da thân ∪ quần áo của ảnh GỐC) trừ phần tóc AI phủ lên (mái che trán)
- *  - alpha   = take * (1 - protect), làm mềm blurPx, nhân thêm aiCoverage (pixel AI rỗng sau khi xoay/dịch = 0)
+ *  - take    = tóc AI ∪ tóc gốc. Tóc gốc giãn GẤP ĐÔI để xoá sạch cả sợi mảnh/quầng mép tóc cũ.
+ *  - protect = (da mặt ∪ da thân ∪ quần áo của ảnh GỐC) nhưng KHÔNG bảo vệ pixel nào còn dính tóc cũ
+ *              (kể cả sợi tóc mảnh lẫn trên trán) và không bảo vệ chỗ tóc AI phủ lên (mái che trán).
+ *  - alpha   = take * (1 - protect), làm mềm biên blurPx, nhân aiCoverage (ngoài vùng ảnh AI = 0)
  * Các mask là Float32Array độ tin cậy 0..1 cùng kích thước width*height.
  */
-export function buildAlpha({ hairAI, hairOrig, keepOrig, aiCoverage, width, height, dilatePx = 4, blurPx = 6 }) {
+export function buildAlpha({ hairAI, hairOrig, keepOrig, aiCoverage, width, height, dilatePx = 4, blurPx = 4 }) {
   const n = width * height;
-  const take = new Float32Array(n);
-  for (let i = 0; i < n; i++) take[i] = Math.max(hairAI[i], hairOrig[i]);
-  const takeD = dilate(take, width, height, dilatePx);
-  const hairAID = dilate(hairAI, width, height, Math.max(1, dilatePx >> 1));
+  const hA = rampAll(hairAI);
+  const hO = rampAll(hairOrig);
+  const keep = rampAll(keepOrig);
+  const hAD = dilate(hA, width, height, dilatePx);
+  const hOD = dilate(hO, width, height, dilatePx * 2);
+  const hAProtectD = dilate(hA, width, height, Math.max(1, dilatePx >> 1));
   const alpha = new Float32Array(n);
   for (let i = 0; i < n; i++) {
-    const protect = keepOrig[i] * (1 - hairAID[i]);
-    alpha[i] = takeD[i] * (1 - protect);
+    const take = Math.max(hAD[i], hOD[i]);
+    const protect = keep[i] * (1 - hO[i]) * (1 - hAProtectD[i]);
+    alpha[i] = take * (1 - protect);
   }
   const soft = boxBlur(alpha, width, height, blurPx);
   if (aiCoverage) {

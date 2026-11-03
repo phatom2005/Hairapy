@@ -97,8 +97,11 @@ export default function ProfilePage() {
   const { data: bookings = [], isLoading: bookingsLoading } = useQuery({
     queryKey: ["profile-bookings"],
     queryFn: async () => {
-      const res = await api.get("/bookings/my");
-      return res.data || [];
+      // Backend trả Page<MyBookingResponse> ({ content: [...] }), không phải mảng
+      const res = await api.get("/bookings/my", { params: { size: 30 } });
+      const data = res.data;
+      if (Array.isArray(data)) return data;
+      return Array.isArray(data?.content) ? data.content : [];
     },
     enabled: !!user,
   });

@@ -190,6 +190,9 @@ export default function SwapPage() {
 
   const activeResultImage = resultImage || existingSessionResult?.imageUrl || null;
 
+  // Màu tóc sẽ gửi cho AI ở lượt "Áp dụng" kế tiếp
+  const aiColor = hairColor || activeStudioColor?.value || "";
+
   // Ghi nhận exposure của thử nghiệm salon_cta khi nút thực sự hiện ra (có ảnh kết quả), 1 lần/phiên
   const hasSalonCta = Boolean(activeResultImage);
   useEffect(() => {
@@ -421,7 +424,7 @@ export default function SwapPage() {
       }
 
       const styleName = activeStyle?.name || "Kiểu tóc mới";
-      const colorName = activeStudioColor?.name || "";
+      const colorName = activeStudioColor?.label || "";
       const shareUrl = window.location.href;
       const title = `Kiểu tóc ${styleName} trên Hairapy`;
       const text = `Tôi vừa thử kiểu tóc ${styleName}${colorName ? ` với màu ${colorName}` : ""} trên Hairapy! Thử ngay nhé:`;
@@ -531,9 +534,12 @@ export default function SwapPage() {
       return;
     }
 
-    const chosenColor = typeof overrideColor === "string" ? overrideColor : hairColor;
-    if (typeof overrideColor === "string") {
-      setHairColor(overrideColor);
+    // Màu gửi cho AI: màu truyền thẳng vào > màu đã chốt trước đó > màu đang xem trước trong "Bảng thử màu".
+    // (Bản thiết kế lại 759bf7a bỏ mất nút "Tạo bằng AI với màu này" nên màu chọn ở bảng
+    // không bao giờ tới được AI — giờ bấm "Áp dụng kiểu tóc AI" sẽ dùng luôn màu đó.)
+    const chosenColor = typeof overrideColor === "string" ? overrideColor : aiColor;
+    if (chosenColor !== hairColor) {
+      setHairColor(chosenColor);
     }
 
     setLoading(true);
@@ -725,14 +731,18 @@ export default function SwapPage() {
             </div>
           )}
 
-          {hairColor && (
-            <div className="flex items-center justify-between rounded-2xl border border-line bg-canvas p-3 text-xs">
+          {aiColor && (
+            <div className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-canvas p-3 text-xs">
               <span className="text-mauve">
-                Màu AI: <b className="text-ink">{COLOR_BY_VALUE[hairColor]?.label || hairColor}</b>
+                Màu gửi cho AI: <b className="text-ink">{COLOR_BY_VALUE[aiColor]?.label || aiColor}</b>
+                {!hairColor && activeStudioColor && <span className="text-muted"> (từ Bảng thử màu)</span>}
               </span>
               <button
                 type="button"
-                onClick={() => setHairColor("")}
+                onClick={() => {
+                  setHairColor("");
+                  colorStudioRef.current?.reset?.();
+                }}
                 className="text-xs font-bold text-primary hover:underline cursor-pointer"
               >
                 Về màu gốc

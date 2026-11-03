@@ -147,7 +147,9 @@ const HairColorStudio = forwardRef(function HairColorStudio(
           maskCacheRef.current.set(imageUrl, { ...cached, mask });
         } catch (err) {
           console.error("Lỗi nhận diện tóc:", err);
-          setErrorMsg(err.message || "Thiết bị của bạn chưa hỗ trợ xem trước màu — hãy dùng nút Tạo bằng AI");
+          setErrorMsg("Máy chưa xem trước được màu này — bấm \"Áp dụng kiểu tóc AI\" để AI nhuộm giúp bạn.");
+          // Vẫn ghi nhận màu đã chọn để SwapPage gửi cho AI dù không xem trước được
+          setActiveColor(colorObj);
           setIsSegmenting(false);
           return;
         } finally {
@@ -250,10 +252,12 @@ const HairColorStudio = forwardRef(function HairColorStudio(
     () => ({
       download: handleDownload,
       getBlob: getExportBlob,
+      // Bỏ màu đang xem trước (SwapPage gọi khi người dùng bấm "Về màu gốc")
+      reset: () => renderColor(null, intensity, "reset"),
       hasActiveColor: Boolean(activeColor),
       activeColor,
     }),
-    [handleDownload, getExportBlob, activeColor]
+    [handleDownload, getExportBlob, activeColor, renderColor, intensity]
   );
 
   // ================= Touch / Pointer Event Drag & Drop =================

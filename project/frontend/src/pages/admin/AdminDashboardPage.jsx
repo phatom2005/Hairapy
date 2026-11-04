@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import {
   Area,
   AreaChart,
@@ -24,10 +25,13 @@ import {
   Gallery,
   Star1,
   TrendUp,
+  TrendDown,
+  ArrowRight2,
   ReceiptText,
   Shop,
 } from "iconsax-reactjs";
 import api from "../../lib/api";
+import { SALON_PARTNER } from "../../lib/plans";
 import QuotaPanel from "../../components/admin/QuotaPanel";
 import GaPanel from "../../components/admin/GaPanel";
 import WeeklyInsightPanel from "../../components/admin/WeeklyInsightPanel";
@@ -55,6 +59,15 @@ const PERIODS = [
 
 const nf = new Intl.NumberFormat("vi-VN");
 const formatVND = (n) => `${nf.format(n ?? 0)} ₫`;
+// Số 1 chữ số thập phân kiểu VN: 4,3
+const fmt1 = (n) =>
+  (n ?? 0).toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+const FEATURE_RATING_LABEL = {
+  HAIR_SWAP: "Thử tóc AI",
+  FACE_SCAN: "Quét khuôn mặt",
+  GENERAL: "Chung",
+};
 // Rút gọn số tiền cho trục Y (1,2tr / 350k)
 const compactVND = (n) =>
   n >= 1_000_000 ? `${+(n / 1_000_000).toFixed(1)}tr` : n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`;
@@ -91,7 +104,7 @@ function Panel({ title, subtitle, right, children, className = "" }) {
   );
 }
 
-function Kpi({ label, value, hint, Icon, tone }) {
+function Kpi({ label, value, hint, Icon, tone, extra }) {
   return (
     <div className="rounded-3xl border border-line bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between">
@@ -104,8 +117,24 @@ function Kpi({ label, value, hint, Icon, tone }) {
         </span>
       </div>
       <p className="mt-3 text-2xl font-bold tracking-tight text-ink">{value}</p>
+      {extra}
       {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
     </div>
+  );
+}
+
+// Chênh lệch điểm đánh giá so với kỳ trước (ẩn khi không có dữ liệu để so)
+function RatingDelta({ delta }) {
+  if (delta === null) return null;
+  const up = delta > 0;
+  const flat = delta === 0;
+  const color = flat ? C.muted : up ? "#15803d" : C.red;
+  const Icon = up ? TrendUp : TrendDown;
+  return (
+    <p className="mt-1 flex items-center gap-1 text-xs font-semibold" style={{ color }}>
+      {!flat && <Icon size={14} variant="Bold" />}
+      {flat ? "Bằng kỳ trước" : `${up ? "+" : "−"}${fmt1(Math.abs(delta))} so với kỳ trước`}
+    </p>
   );
 }
 
@@ -186,7 +215,17 @@ export default function AdminDashboardPage() {
   const revenue = stats.revenueTrend ?? [];
   const usage = stats.dailyUsage ?? [];
   const regs = stats.registrationTrend ?? [];
-  const dist = stats.ratingDistribution ?? [0, 0, 0, 0, 0];
+  // Đánh giá theo kỳ (Phase 8). Backend cũ chưa có field mới → dùng số toàn thời gian.
+  const hasPeriodRating = typeof stats.ratingCountInPeriod === "number";
+  const ratingCountP = hasPeriodRating ? stats.ratingCountInPeriod : stats.ratingCount ?? 0;
+  const ratingAvgP = hasPeriodRating ? stats.ratingAverageInPeriod ?? 0 : stats.ratingAverage ?? 0;
+  const ratingDelta =
+    hasPeriodRating && ratingCountP > 0 && (stats.ratingCountPrevPeriod ?? 0) > 0
+      ? Math.round((ratingAvgP - (stats.ratingAveragePrevPeriod ?? 0)) * 10) / 10
+      : null;
+  const ratingByFeature = Array.isArray(stats.ratingByFeature) ? stats.ratingByFeature : [];
+  const dist =
+    (hasPeriodRating ? stats.ratingDistributionInPeriod : stats.ratingDistribution) ?? [0, 0, 0, 0, 0];
   const ratingMax = Math.max(1, ...dist);
 
   const txData = [
@@ -233,7 +272,7 @@ export default function AdminDashboardPage() {
       <WeeklyInsightPanel />
 
       {/* KPI */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
         <Kpi
           label="Doanh thu trong kỳ"
           value={formatVND(stats.revenueInPeriod)}
@@ -268,6 +307,20 @@ export default function AdminDashboardPage() {
           Icon={Scan}
           tone={C.primary}
         />
+        <Kpi
+          label="Điểm đánh giá"
+          value={ratingCountP > 0 ? `${fmt1(ratingAvgP)}/5` : "—"}
+          extra={<RatingDelta delta={ratingDelta} />}
+          hint={
+            ratingCountP > 0
+              ? hasPeriodRating
+                ? `${nf.format(ratingCountP)} lượt trong kỳ · toàn thời gian ${fmt1(stats.ratingAverage)}`
+                : `${nf.format(ratingCountP)} lượt (toàn thời gian)`
+              : "Chưa có đánh giá trong kỳ"
+          }
+          Icon={Star1}
+          tone={C.amber}
+        />
       </div>
 
       {/* KPI Salon Đối tác (Phase 4) */}
@@ -280,7 +333,7 @@ export default function AdminDashboardPage() {
             </h2>
           </div>
           <span className="text-[11px] font-medium text-muted bg-surface px-2.5 py-0.5 rounded-full border border-line w-fit">
-            Gói dịch vụ 500.000₫ / tháng
+            Gói dịch vụ {SALON_PARTNER.priceLabel} {SALON_PARTNER.period}
           </span>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -383,12 +436,12 @@ export default function AdminDashboardPage() {
 
         <Panel
           title="Đánh giá"
-          subtitle={`${stats.ratingCount ?? 0} lượt đánh giá`}
+          subtitle={`${nf.format(ratingCountP)} lượt ${hasPeriodRating ? "trong kỳ" : "đánh giá"}`}
           right={<Star1 size={18} variant="Bulk" color={C.amber} />}
         >
           <div className="flex items-end gap-2">
             <span className="text-4xl font-bold text-ink">
-              {(stats.ratingAverage ?? 0).toFixed(1)}
+              {ratingCountP > 0 ? fmt1(ratingAvgP) : "—"}
             </span>
             <span className="pb-1 text-xs text-muted">/ 5</span>
           </div>
@@ -396,7 +449,12 @@ export default function AdminDashboardPage() {
             {[5, 4, 3, 2, 1].map((star) => {
               const v = dist[star - 1] ?? 0;
               return (
-                <div key={star} className="flex items-center gap-2 text-xs">
+                <Link
+                  key={star}
+                  to={`/admin/feedback?rating=${star}`}
+                  className="flex items-center gap-2 rounded-lg text-xs hover:bg-canvas"
+                  title={`Xem các đánh giá ${star} sao`}
+                >
                   <span className="w-3 text-mauve">{star}</span>
                   <div className="h-2 flex-1 overflow-hidden rounded-full bg-canvas">
                     <div
@@ -405,10 +463,33 @@ export default function AdminDashboardPage() {
                     />
                   </div>
                   <span className="w-8 text-right text-muted">{v}</span>
-                </div>
+                </Link>
               );
             })}
           </div>
+          {ratingByFeature.length > 0 && (
+            <div className="mt-4 space-y-1.5 border-t border-line pt-3">
+              {ratingByFeature.map((f) => (
+                <Link
+                  key={f.feature}
+                  to={`/admin/feedback?feature=${f.feature}`}
+                  className="flex items-center justify-between rounded-lg text-xs hover:bg-canvas"
+                >
+                  <span className="text-mauve">{FEATURE_RATING_LABEL[f.feature] || f.feature}</span>
+                  <span className="font-semibold text-ink">
+                    {f.count > 0 ? `${fmt1(f.average)}/5` : "—"}
+                    <span className="ml-1 font-normal text-muted">({nf.format(f.count ?? 0)})</span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+          <Link
+            to="/admin/feedback"
+            className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+          >
+            Xem chi tiết đánh giá <ArrowRight2 size={14} />
+          </Link>
         </Panel>
       </div>
 

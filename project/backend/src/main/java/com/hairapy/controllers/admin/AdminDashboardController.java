@@ -2,6 +2,8 @@ package com.hairapy.controllers.admin;
 
 import com.hairapy.dto.admin.DailyUsageStat;
 import com.hairapy.dto.admin.DashboardStatsResponse;
+import com.hairapy.dto.admin.FeatureRating;
+import com.hairapy.models.FeedbackFeature;
 import com.hairapy.models.PaymentStatus;
 import com.hairapy.models.Role;
 import com.hairapy.models.SubscriptionPlan;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -138,6 +141,45 @@ public class AdminDashboardController {
         }
         List<Long> ratingDistribution = List.of(dist[0], dist[1], dist[2], dist[3], dist[4]);
 
+        // Đánh giá theo kỳ + kỳ liền trước cùng độ dài (để so sánh tăng/giảm)
+        LocalDateTime nowVn = VnTime.nowVn();
+        LocalDateTime farFuture = nowVn.plusYears(100); // không chặn trên cho kỳ hiện tại
+        LocalDateTime prevSince = since.minus(Duration.between(since, nowVn));
+        long[] cur = countAndSum(feedbackRepository.countAndSumBetween(since, farFuture));
+        long[] prev = countAndSum(feedbackRepository.countAndSumBetween(prevSince, since));
+        long ratingCountInPeriod = cur[0];
+        double ratingAverageInPeriod = avg1(cur[1], cur[0]);
+        long ratingCountPrevPeriod = prev[0];
+        double ratingAveragePrevPeriod = avg1(prev[1], prev[0]);
+
+        long[] distInPeriod = new long[5];
+        for (Object[] row : feedbackRepository.countByRatingSince(since)) {
+            if (row[0] != null && row[1] != null) {
+                int star = ((Number) row[0]).intValue();
+                if (star >= 1 && star <= 5) {
+                    distInPeriod[star - 1] = ((Number) row[1]).longValue();
+                }
+            }
+        }
+        List<Long> ratingDistributionInPeriod = List.of(
+                distInPeriod[0], distInPeriod[1], distInPeriod[2], distInPeriod[3], distInPeriod[4]);
+
+        java.util.Map<String, long[]> byFeature = new java.util.HashMap<>();
+        for (Object[] row : feedbackRepository.statsByFeatureSince(since)) {
+            if (row[0] == null) continue;
+            String key = row[0] instanceof FeedbackFeature ff ? ff.name() : row[0].toString();
+            byFeature.put(key, new long[]{
+                    row[1] != null ? ((Number) row[1]).longValue() : 0L,
+                    row[2] != null ? ((Number) row[2]).longValue() : 0L});
+        }
+        List<FeatureRating> ratingByFeature = java.util.Arrays.stream(
+                        new FeedbackFeature[]{FeedbackFeature.HAIR_SWAP, FeedbackFeature.FACE_SCAN, FeedbackFeature.GENERAL})
+                .map(f -> {
+                    long[] v = byFeature.getOrDefault(f.name(), new long[]{0L, 0L});
+                    return new FeatureRating(f.name(), v[0], avg1(v[1], v[0]));
+                })
+                .collect(Collectors.toList());
+
         // Thống kê Salon đối tác
         LocalDateTime now = LocalDateTime.now();
         long activePartnerSalons = salonRepository.countByActiveTrueAndPartnerUntilAfter(now);
@@ -177,9 +219,29 @@ public class AdminDashboardController {
                 salonRevenue,
                 bookingsInPeriod,
                 completedBookingsInPeriod,
-                tryOnToBookingRate
+                tryOnToBookingRate,
+                ratingCountInPeriod,
+                ratingAverageInPeriod,
+                ratingCountPrevPeriod,
+                ratingAveragePrevPeriod,
+                ratingDistributionInPeriod,
+                ratingByFeature
         );
 
         return ResponseEntity.ok(stats);
+    }
+
+    /** Đọc dòng [count, sum] của query tổng hợp; rỗng/null → {0, 0}. */
+    private static long[] countAndSum(List<Object[]> rows) {
+        if (rows == null || rows.isEmpty() || rows.get(0) == null) return new long[]{0L, 0L};
+        Object[] r = rows.get(0);
+        long c = r.length > 0 && r[0] != null ? ((Number) r[0]).longValue() : 0L;
+        long s = r.length > 1 && r[1] != null ? ((Number) r[1]).longValue() : 0L;
+        return new long[]{c, s};
+    }
+
+    /** Trung bình làm tròn 1 chữ số; không có lượt nào → 0.0 (tránh NaN). */
+    private static double avg1(long totalStars, long count) {
+        return count == 0 ? 0.0 : Math.round((totalStars * 10.0) / count) / 10.0;
     }
 }

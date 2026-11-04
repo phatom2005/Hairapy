@@ -195,6 +195,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 28),
+          const Text('Bảo mật', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.line),
+            ),
+            child: Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              clipBehavior: Clip.antiAlias,
+              child: ListTile(
+                leading: const Icon(Icons.lock_outline, color: AppColors.mauve),
+                title: Text(
+                  (auth.user?.hasPassword ?? true) ? 'Đổi mật khẩu' : 'Đặt mật khẩu',
+                  style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                ),
+                subtitle: (auth.user?.hasPassword ?? true)
+                    ? null
+                    : const Text('Để đăng nhập bằng email ngoài Google/Facebook',
+                        style: TextStyle(fontSize: 11.5, color: AppColors.muted)),
+                trailing: const Icon(Icons.chevron_right, size: 20, color: AppColors.muted),
+                onTap: () => context.push('/change-password'),
+              ),
+            ),
+          ),
+          const SizedBox(height: 28),
           const Text('Pháp lý & Điều khoản', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
           const SizedBox(height: 12),
           // Viền ở Container, nền trắng đặt ở Material: ListTile vẽ nền/hiệu ứng chạm lên

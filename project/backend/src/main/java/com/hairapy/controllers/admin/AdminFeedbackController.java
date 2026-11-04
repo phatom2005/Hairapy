@@ -2,6 +2,7 @@ package com.hairapy.controllers.admin;
 
 import com.hairapy.dto.admin.AdminFeedbackResponse;
 import com.hairapy.models.Feedback;
+import com.hairapy.models.FeedbackFeature;
 import com.hairapy.repositories.FeedbackRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +37,7 @@ public class AdminFeedbackController {
     @Transactional(readOnly = true)
     public ResponseEntity<?> getFeedbackList(
             @RequestParam(required = false) Integer rating,
+            @RequestParam(required = false) String feature,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
@@ -43,9 +45,21 @@ public class AdminFeedbackController {
             return ResponseEntity.badRequest().body(Map.of("error", "Số sao lọc phải từ 1 đến 5"));
         }
 
+        // Lọc theo tính năng (Phase 6.5): HAIR_SWAP | FACE_SCAN | GENERAL, bỏ trống = tất cả
+        FeedbackFeature featureFilter = null;
+        if (feature != null && !feature.isBlank()) {
+            try {
+                featureFilter = FeedbackFeature.valueOf(feature.trim().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Tính năng lọc không hợp lệ"));
+            }
+        }
+
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size), Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Feedback> feedbackPage;
-        if (rating != null) {
+        if (featureFilter != null) {
+            feedbackPage = feedbackRepository.findAllByFeatureWithUser(featureFilter, rating, pageable);
+        } else if (rating != null) {
             feedbackPage = feedbackRepository.findAllByRatingWithUser(rating, pageable);
         } else {
             feedbackPage = feedbackRepository.findAllWithUser(pageable);

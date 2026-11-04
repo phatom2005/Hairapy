@@ -40,6 +40,24 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
     List<Object[]> countByRating();
 
     /**
+     * Số lượt + tổng số sao trong khoảng [from, to): trả về đúng 1 dòng [count, sum].
+     */
+    @Query("SELECT COUNT(f), COALESCE(SUM(f.rating), 0) FROM Feedback f WHERE f.createdAt >= :from AND f.createdAt < :to")
+    List<Object[]> countAndSumBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    /**
+     * Phân bố số sao từ thời điểm chỉ định: [rating, count].
+     */
+    @Query("SELECT f.rating, COUNT(f) FROM Feedback f WHERE f.createdAt >= :since GROUP BY f.rating")
+    List<Object[]> countByRatingSince(@Param("since") LocalDateTime since);
+
+    /**
+     * Số lượt + tổng số sao theo tính năng từ thời điểm chỉ định: [feature, count, sum].
+     */
+    @Query("SELECT f.feature, COUNT(f), COALESCE(SUM(f.rating), 0) FROM Feedback f WHERE f.createdAt >= :since GROUP BY f.feature")
+    List<Object[]> statsByFeatureSince(@Param("since") LocalDateTime since);
+
+    /**
      * Lấy toàn bộ danh sách feedback cho admin kèm thông tin user (tránh N+1).
      */
     @Query(value = "SELECT f FROM Feedback f JOIN FETCH f.user ORDER BY f.createdAt DESC",
@@ -52,4 +70,14 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
     @Query(value = "SELECT f FROM Feedback f JOIN FETCH f.user WHERE f.rating = :rating ORDER BY f.createdAt DESC",
            countQuery = "SELECT COUNT(f) FROM Feedback f WHERE f.rating = :rating")
     Page<Feedback> findAllByRatingWithUser(@Param("rating") Integer rating, Pageable pageable);
+
+    /**
+     * Lọc feedback theo tính năng kèm thông tin user; rating null = không lọc theo số sao.
+     */
+    @Query(value = "SELECT f FROM Feedback f JOIN FETCH f.user WHERE f.feature = :feature "
+            + "AND (:rating IS NULL OR f.rating = :rating) ORDER BY f.createdAt DESC",
+           countQuery = "SELECT COUNT(f) FROM Feedback f WHERE f.feature = :feature "
+            + "AND (:rating IS NULL OR f.rating = :rating)")
+    Page<Feedback> findAllByFeatureWithUser(@Param("feature") com.hairapy.models.FeedbackFeature feature,
+                                            @Param("rating") Integer rating, Pageable pageable);
 }

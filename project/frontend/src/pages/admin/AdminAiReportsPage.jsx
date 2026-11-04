@@ -24,6 +24,10 @@ export default function AdminAiReportsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(true);
+  // id báo cáo được tick "Hoàn 1 lượt" (Phase 6.4) và báo cáo đang gửi
+  const [refundIds, setRefundIds] = useState(() => new Set());
+  const [resolvingId, setResolvingId] = useState(null);
+  const [notice, setNotice] = useState(null); // { type: "success" | "info" | "error", text }
 
   const fetchReports = useCallback(() => {
     setLoading(true);
@@ -48,12 +52,42 @@ export default function AdminAiReportsPage() {
     };
   }, [fetchReports]);
 
+  const toggleRefund = (id) => {
+    setRefundIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const handleResolve = async (id) => {
+    const refundUsage = refundIds.has(id);
+    setResolvingId(id);
+    setNotice(null);
     try {
-      await api.post(`/admin/ai-reports/${id}/resolve`);
+      const res = await api.post(`/admin/ai-reports/${id}/resolve`, null, {
+        params: refundUsage ? { refundUsage: true } : undefined,
+      });
+      if (refundUsage) {
+        setNotice({
+          type: res.data?.refunded ? "success" : "info",
+          text: res.data?.message || (res.data?.refunded ? "Đã hoàn 1 lượt." : "Không hoàn được lượt."),
+        });
+      } else {
+        setNotice({ type: "success", text: "Đã đánh dấu báo cáo là đã xử lý." });
+      }
+      setRefundIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
       fetchReports();
     } catch (err) {
       console.error("Không đánh dấu được báo cáo:", err);
+      setNotice({ type: "error", text: err.response?.data?.error || "Không xử lý được báo cáo. Vui lòng thử lại." });
+    } finally {
+      setResolvingId(null);
     }
   };
 
@@ -79,6 +113,24 @@ export default function AdminAiReportsPage() {
           </select>
         </div>
       </div>
+
+      {notice && (
+        <div
+          role="status"
+          className={`flex items-start justify-between gap-3 rounded-2xl border px-4 py-3 text-sm ${
+            notice.type === "success"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+              : notice.type === "error"
+                ? "border-red-200 bg-red-50 text-red-700"
+                : "border-amber-200 bg-amber-50 text-amber-800"
+          }`}
+        >
+          <span>{notice.text}</span>
+          <button type="button" onClick={() => setNotice(null)} className="text-xs font-bold opacity-70 hover:opacity-100">
+            Đóng
+          </button>
+        </div>
+      )}
 
       <Card className="overflow-hidden border border-divider/10" padded={false}>
         {loading ? (
@@ -127,9 +179,29 @@ export default function AdminAiReportsPage() {
                     </td>
                     <td className="whitespace-nowrap px-5 py-4">
                       {r.status === "NEW" ? (
-                        <Button size="sm" variant="outline" className="rounded-xl px-3 py-1.5 text-xs font-bold" onClick={() => handleResolve(r.id)}>
-                          Đánh dấu đã xử lý
-                        </Button>
+                        <div className="flex flex-col items-start gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-xl px-3 py-1.5 text-xs font-bold"
+                            disabled={resolvingId === r.id}
+                            onClick={() => handleResolve(r.id)}
+                          >
+                            {resolvingId === r.id ? "Đang xử lý..." : "Đánh dấu đã xử lý"}
+                          </Button>
+                          {r.feature !== "GENERAL" && (
+                            <label className="flex cursor-pointer items-center gap-1.5 text-xs text-mauve">
+                              <input
+                                type="checkbox"
+                                checked={refundIds.has(r.id)}
+                                onChange={() => toggleRefund(r.id)}
+                                disabled={resolvingId === r.id}
+                                className="size-3.5 accent-brand"
+                              />
+                              Hoàn 1 lượt {r.feature === "FACE_SCAN" ? "quét mặt" : "thử tóc"} (chỉ lượt hôm nay)
+                            </label>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-xs font-bold text-emerald-600">Đã xử lý</span>
                       )}

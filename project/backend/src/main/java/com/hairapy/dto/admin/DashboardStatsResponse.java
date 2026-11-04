@@ -36,5 +36,13 @@ public record DashboardStatsResponse(
     long salonRevenue,              // doanh thu từ salon đối tác trong kỳ (VND, mô phỏng)
     long bookingsInPeriod,          // số yêu cầu đặt lịch tạo trong kỳ
     long completedBookingsInPeriod, // số yêu cầu đặt lịch đã hoàn thành trong kỳ
-    double tryOnToBookingRate       // tỉ lệ đặt lịch / lượt thử tóc trong kỳ (%)
+    double tryOnToBookingRate,      // tỉ lệ đặt lịch / lượt thử tóc trong kỳ (%)
+
+    // Đánh giá theo kỳ (Phase 8) — chỉ THÊM vào cuối, không đổi field cũ
+    long ratingCountInPeriod,               // số lượt đánh giá trong kỳ
+    double ratingAverageInPeriod,           // điểm TB trong kỳ, 0.0 nếu chưa có
+    long ratingCountPrevPeriod,             // số lượt ở kỳ liền trước cùng độ dài
+    double ratingAveragePrevPeriod,         // điểm TB kỳ trước, 0.0 nếu chưa có
+    List<Long> ratingDistributionInPeriod,  // đúng 5 phần tử: 1★..5★ trong kỳ
+    List<FeatureRating> ratingByFeature     // luôn đủ 3 tính năng HAIR_SWAP, FACE_SCAN, GENERAL
 ) {}

@@ -70,4 +70,14 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
     @Query(value = "SELECT f FROM Feedback f JOIN FETCH f.user WHERE f.rating = :rating ORDER BY f.createdAt DESC",
            countQuery = "SELECT COUNT(f) FROM Feedback f WHERE f.rating = :rating")
     Page<Feedback> findAllByRatingWithUser(@Param("rating") Integer rating, Pageable pageable);
+
+    /**
+     * Lọc feedback theo tính năng kèm thông tin user; rating null = không lọc theo số sao.
+     */
+    @Query(value = "SELECT f FROM Feedback f JOIN FETCH f.user WHERE f.feature = :feature "
+            + "AND (:rating IS NULL OR f.rating = :rating) ORDER BY f.createdAt DESC",
+           countQuery = "SELECT COUNT(f) FROM Feedback f WHERE f.feature = :feature "
+            + "AND (:rating IS NULL OR f.rating = :rating)")
+    Page<Feedback> findAllByFeatureWithUser(@Param("feature") com.hairapy.models.FeedbackFeature feature,
+                                            @Param("rating") Integer rating, Pageable pageable);
 }

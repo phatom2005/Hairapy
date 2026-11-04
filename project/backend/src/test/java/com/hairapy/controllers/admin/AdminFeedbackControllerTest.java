@@ -89,6 +89,31 @@ class AdminFeedbackControllerTest {
 
     @Test
     @WithMockUser(roles = "ADMIN")
+    void getFeedbackList_FilterByFeature_Success() throws Exception {
+        mockMvc.perform(get("/api/admin/feedback?feature=FACE_SCAN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].feature").value("FACE_SCAN"));
+
+        // Kết hợp tính năng + số sao: thử tóc 5 sao có 1, thử tóc 2 sao không có
+        mockMvc.perform(get("/api/admin/feedback?feature=HAIR_SWAP&rating=5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)));
+        mockMvc.perform(get("/api/admin/feedback?feature=HAIR_SWAP&rating=2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(0)));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void getFeedbackList_InvalidFeature_Returns400() throws Exception {
+        mockMvc.perform(get("/api/admin/feedback?feature=ABC"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Tính năng lọc không hợp lệ"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
     void getFeedbackList_InvalidRating_Returns400() throws Exception {
         mockMvc.perform(get("/api/admin/feedback?rating=6"))
                 .andExpect(status().isBadRequest())

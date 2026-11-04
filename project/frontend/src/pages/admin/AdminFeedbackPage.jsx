@@ -12,6 +12,10 @@ export default function AdminFeedbackPage() {
     const r = searchParams.get("rating");
     return r && /^[1-5]$/.test(r) ? r : "";
   });
+  const [featureFilter, setFeatureFilter] = useState(() => {
+    const f = searchParams.get("feature");
+    return ["HAIR_SWAP", "FACE_SCAN", "GENERAL"].includes(f) ? f : "";
+  });
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
@@ -36,6 +40,7 @@ export default function AdminFeedbackPage() {
       page,
       size: 10,
       rating: ratingFilter ? Number(ratingFilter) : undefined,
+      feature: featureFilter || undefined,
     };
     api
       .get("/admin/feedback", { params })
@@ -49,7 +54,7 @@ export default function AdminFeedbackPage() {
         console.error("Lỗi tải danh sách đánh giá:", err);
         setLoading(false);
       });
-  }, [page, ratingFilter]);
+  }, [page, ratingFilter, featureFilter]);
 
   useEffect(() => {
     let active = true;
@@ -91,7 +96,7 @@ export default function AdminFeedbackPage() {
       default:
         return (
           <span className="inline-flex items-center rounded-full bg-canvas px-2.5 py-0.5 text-xs font-semibold text-mauve border border-divider/20">
-            {feature || "Hệ thống"}
+            {!feature || feature === "GENERAL" ? "Chung" : feature}
           </span>
         );
     }
@@ -106,10 +111,25 @@ export default function AdminFeedbackPage() {
           <p className="text-sm text-mauve">Phản hồi và số sao đánh giá sau khi sử dụng tính năng AI</p>
         </div>
 
-        {/* Lọc theo số sao */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-muted">Lọc số sao:</span>
+        {/* Bộ lọc: tính năng + số sao */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-muted">Lọc:</span>
           <select
+            value={featureFilter}
+            onChange={(e) => {
+              setFeatureFilter(e.target.value);
+              setPage(0);
+            }}
+            aria-label="Lọc theo tính năng"
+            className="rounded-2xl border-2 border-line bg-white py-2 px-3 text-sm font-semibold text-ink outline-none transition focus:border-brand"
+          >
+            <option value="">Mọi tính năng</option>
+            <option value="HAIR_SWAP">Thử kiểu tóc</option>
+            <option value="FACE_SCAN">Quét khuôn mặt</option>
+            <option value="GENERAL">Chung</option>
+          </select>
+          <select
+            aria-label="Lọc theo số sao"
             value={ratingFilter}
             onChange={(e) => {
               setRatingFilter(e.target.value);

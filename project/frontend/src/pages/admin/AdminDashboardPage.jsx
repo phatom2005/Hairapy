@@ -470,13 +470,17 @@ export default function AdminDashboardPage() {
           {ratingByFeature.length > 0 && (
             <div className="mt-4 space-y-1.5 border-t border-line pt-3">
               {ratingByFeature.map((f) => (
-                <div key={f.feature} className="flex items-center justify-between text-xs">
+                <Link
+                  key={f.feature}
+                  to={`/admin/feedback?feature=${f.feature}`}
+                  className="flex items-center justify-between rounded-lg text-xs hover:bg-canvas"
+                >
                   <span className="text-mauve">{FEATURE_RATING_LABEL[f.feature] || f.feature}</span>
                   <span className="font-semibold text-ink">
                     {f.count > 0 ? `${fmt1(f.average)}/5` : "—"}
                     <span className="ml-1 font-normal text-muted">({nf.format(f.count ?? 0)})</span>
                   </span>
-                </div>
+                </Link>
               ))}
             </div>
           )}

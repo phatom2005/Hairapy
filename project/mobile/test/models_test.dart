@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/models/booking.dart';
+import 'package:mobile/models/payment_record.dart';
+import 'package:mobile/screens/profile/change_password_screen.dart' show validatePasswordChange;
 import 'package:mobile/models/salon.dart';
 import 'package:mobile/models/user.dart';
 import 'package:mobile/utils/booking_time.dart';
@@ -72,6 +74,53 @@ void main() {
       expect(b('PENDING', now.add(const Duration(hours: 3))).canCancel(now), isTrue);
       expect(b('CONFIRMED', now.subtract(const Duration(hours: 1))).canCancel(now), isFalse);
       expect(b('COMPLETED', now.add(const Duration(hours: 3))).canCancel(now), isFalse);
+    });
+  });
+
+  group('Lịch sử thanh toán (GET /payments/my)', () {
+    test('đọc response phân trang và nhãn tiếng Việt', () {
+      final list = parsePaymentPage({
+        'content': [
+          {'orderCode': 123, 'plan': 'PREMIUM', 'amount': 99000, 'status': 'PAID',
+           'createdAt': '2026-11-01T09:00:00', 'paidAt': '2026-11-01T09:02:00'},
+          {'orderCode': 124, 'plan': 'PRO', 'amount': 49000, 'status': 'CANCELLED', 'createdAt': '2026-10-01T09:00:00'},
+        ],
+        'totalElements': 2,
+      });
+      expect(list, hasLength(2));
+      expect(list[0].planName, 'Gói Tháng');
+      expect(list[0].statusLabel, 'Thành công');
+      expect(list[0].displayDate, DateTime(2026, 11, 1, 9, 2));
+      expect(list[1].planName, 'Gói Tuần');
+      expect(list[1].displayDate, DateTime(2026, 10, 1, 9, 0)); // chưa trả -> ngày tạo đơn
+    });
+
+    test('nhận cả mảng thuần và dữ liệu rỗng/lỗi', () {
+      expect(parsePaymentPage([{'orderCode': 1, 'plan': 'PRO', 'amount': 49000, 'status': 'PENDING'}]), hasLength(1));
+      expect(parsePaymentPage(null), isEmpty);
+      expect(parsePaymentPage({'content': null}), isEmpty);
+    });
+
+    test('định dạng tiền VND', () {
+      expect(formatVnd(99000), '99.000đ');
+      expect(formatVnd(1250000), '1.250.000đ');
+      expect(formatVnd(0), '0đ');
+    });
+  });
+
+  group('Kiểm tra form đổi mật khẩu', () {
+    test('thiếu mật khẩu hiện tại khi tài khoản có mật khẩu', () {
+      expect(validatePasswordChange(needCurrent: true, current: '', next: 'abcd1234', confirm: 'abcd1234'), isNotNull);
+    });
+    test('tài khoản Google (chưa có mật khẩu) không cần mật khẩu hiện tại', () {
+      expect(validatePasswordChange(needCurrent: false, current: '', next: 'abcd1234', confirm: 'abcd1234'), isNull);
+    });
+    test('mật khẩu mới quá ngắn hoặc nhập lại không khớp', () {
+      expect(validatePasswordChange(needCurrent: true, current: 'old12345', next: 'short', confirm: 'short'), isNotNull);
+      expect(validatePasswordChange(needCurrent: true, current: 'old12345', next: 'abcd1234', confirm: 'abcd12345'), isNotNull);
+    });
+    test('mật khẩu mới trùng mật khẩu cũ', () {
+      expect(validatePasswordChange(needCurrent: true, current: 'abcd1234', next: 'abcd1234', confirm: 'abcd1234'), isNotNull);
     });
   });
 }

@@ -2,7 +2,7 @@
 
 App di động của Hairapy: quét dáng mặt ngay trên máy, gợi ý kiểu tóc, thử tóc bằng AI và đặt lịch với salon đối tác. Dùng chung backend với web (`https://hairapy-production.up.railway.app/api`).
 
-Phiên bản hiện tại: **1.1.0 (build 4)** – đang ở kênh thử nghiệm khép kín trên Google Play.
+Phiên bản trong code: **1.2.0 (build 5)**. Bản đã lên Google Play: 1.1.0 (build 4).
 
 ## Chạy app
 
@@ -41,6 +41,8 @@ Cách tạo keystore và `key.properties`: xem `android/README-release.md`. Nh�
 | Salon | `/salons`, `/salons/:id` | Danh sách, **chi tiết salon**, chỉ đường, gọi điện, **đặt lịch** |
 | Lịch hẹn salon | `/bookings` | Trạng thái lịch, **huỷ lịch** |
 | Cá nhân, cài đặt | `/profile`, `/settings` | **Gói + hạn gói**, lịch sử quét/thử tóc, xoá tài khoản |
+| Lịch sử thanh toán | `/payments` | Các lần mua gói (mua trên web), trạng thái, số tiền – chỉ xem |
+| Đổi / đặt mật khẩu | `/change-password` | Tài khoản Google/Facebook chưa có mật khẩu thì thành "Đặt mật khẩu" |
 
 ## Gói & thanh toán
 

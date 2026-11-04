@@ -285,6 +285,8 @@ class ProfileScreen extends ConsumerWidget {
               _MenuTile(icon: Icons.workspace_premium_outlined, label: user.isPremium ? 'Quản lý gói Premium' : 'Nâng cấp Premium', onTap: () => context.push('/pricing'))
             else if (user.isPremium && !user.isStaff)
               _MenuTile(icon: Icons.workspace_premium_outlined, label: 'Gói hiện tại: ${planLabel(user.plan)}'),
+            // Chỉ xem lịch sử (gói mua trên web) — app không bán gói qua kênh ngoài Google Play
+            _MenuTile(icon: Icons.receipt_long_outlined, label: 'Lịch sử thanh toán', onTap: () => context.push('/payments')),
             _MenuTile(icon: Icons.event_note_outlined, label: 'Lịch hẹn salon của tôi', onTap: () => context.push('/bookings')),
             _MenuTile(icon: Icons.storefront_outlined, label: 'Salon đối tác', onTap: () => context.push('/salons')),
             if (user.isSalonOwner)

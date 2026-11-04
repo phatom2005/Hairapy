@@ -22,6 +22,8 @@ import 'screens/checkout/payment_result_screen.dart';
 import 'screens/legal/legal_webview_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/profile/settings_screen.dart';
+import 'screens/profile/payment_history_screen.dart';
+import 'screens/profile/change_password_screen.dart';
 import 'screens/salons/salons_screen.dart';
 import 'screens/salons/salon_detail_screen.dart';
 import 'screens/bookings/my_bookings_screen.dart';
@@ -109,6 +111,8 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       GoRoute(path: '/profile', builder: (context, state) => const ProfileScreen()),
       GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
+      GoRoute(path: '/payments', builder: (context, state) => const PaymentHistoryScreen()),
+      GoRoute(path: '/change-password', builder: (context, state) => const ChangePasswordScreen()),
       GoRoute(path: '/salons', builder: (context, state) => const SalonsScreen()),
       GoRoute(
         path: '/salons/:id',

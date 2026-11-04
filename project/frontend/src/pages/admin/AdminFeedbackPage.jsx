@@ -1,11 +1,17 @@
 import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Star1 } from "iconsax-reactjs";
 import api from "../../lib/api";
 import { Card, Button } from "../../components/ui";
 
 export default function AdminFeedbackPage() {
   const [feedbackList, setFeedbackList] = useState([]);
-  const [ratingFilter, setRatingFilter] = useState("");
+  // Cho phép mở sẵn bộ lọc từ dashboard: /admin/feedback?rating=1
+  const [searchParams] = useSearchParams();
+  const [ratingFilter, setRatingFilter] = useState(() => {
+    const r = searchParams.get("rating");
+    return r && /^[1-5]$/.test(r) ? r : "";
+  });
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);

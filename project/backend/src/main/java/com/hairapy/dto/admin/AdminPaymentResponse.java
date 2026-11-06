@@ -20,5 +20,11 @@ public record AdminPaymentResponse(
     String payosTransactionId,
     LocalDateTime createdAt,
     LocalDateTime paidAt,
-    boolean subscriptionGranted
+    boolean subscriptionGranted,
+    // Thông tin chuyển khoản rút gọn (V35) — chỉ THÊM ở cuối, không đổi field cũ
+    String counterBankName,
+    String counterAccountName,
+    String counterAccountLast4,
+    String transferDescription,
+    LocalDateTime bankTransactionAt
 ) {}

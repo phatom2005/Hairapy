@@ -128,7 +128,12 @@ public class AdminUserController {
                         p.getPayosTransactionId(),
                         p.getCreatedAt(),
                         p.getPaidAt(),
-                        p.isSubscriptionGranted()
+                        p.isSubscriptionGranted(),
+                        p.getCounterBankName(),
+                        p.getCounterAccountName(),
+                        p.getCounterAccountLast4(),
+                        p.getTransferDescription(),
+                        p.getBankTransactionAt()
                 ))
                 .toList();
 

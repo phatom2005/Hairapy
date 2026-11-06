@@ -125,6 +125,11 @@ export default function AdminPaymentsPage() {
           { header: "Thời gian tạo", value: (p) => formatDateTime(p.createdAt) },
           { header: "Thời gian thanh toán", value: (p) => (p.paidAt ? formatDateTime(p.paidAt) : "") },
           { header: "Mã GD PayOS", value: (p) => p.payosTransactionId || "" },
+          { header: "Ngân hàng chuyển", value: (p) => p.counterBankName || "" },
+          { header: "Tên người chuyển", value: (p) => p.counterAccountName || "" },
+          { header: "4 số cuối TK", value: (p) => p.counterAccountLast4 || "" },
+          { header: "Nội dung CK", value: (p) => p.transferDescription || "" },
+          { header: "Giờ GD ngân hàng", value: (p) => (p.bankTransactionAt ? formatDateTime(p.bankTransactionAt) : "") },
         ],
         rows
       );
@@ -424,6 +429,7 @@ export default function AdminPaymentsPage() {
                   <th className="px-5 py-4">Thời gian tạo</th>
                   <th className="px-5 py-4">Thời gian thanh toán</th>
                   <th className="px-5 py-4">Mã GD PayOS</th>
+                  <th className="px-5 py-4">Chuyển khoản</th>
                   <th className="px-5 py-4 text-center">Hành động</th>
                 </tr>
               </thead>
@@ -470,6 +476,26 @@ export default function AdminPaymentsPage() {
                     <td className="px-5 py-4 text-xs text-muted">{formatDateTime(p.paidAt)}</td>
                     <td className="px-5 py-4 font-mono text-xs text-mauve">
                       {p.payosTransactionId || "—"}
+                    </td>
+                    {/* Thông tin chuyển khoản rút gọn từ webhook PayOS (chỉ 4 số cuối tài khoản) */}
+                    <td className="px-5 py-4 text-xs">
+                      {p.counterAccountName || p.counterBankName || p.transferDescription ? (
+                        <div className="max-w-[220px] space-y-0.5">
+                          <div className="font-semibold text-ink">
+                            {p.counterAccountName || "—"}
+                            {p.counterAccountLast4 && <span className="ml-1 font-mono text-mauve">****{p.counterAccountLast4}</span>}
+                          </div>
+                          {p.counterBankName && <div className="text-mauve">{p.counterBankName}</div>}
+                          {p.transferDescription && (
+                            <div className="truncate text-muted" title={p.transferDescription}>
+                              ND: {p.transferDescription}
+                            </div>
+                          )}
+                          {p.bankTransactionAt && <div className="text-muted">NH: {formatDateTime(p.bankTransactionAt)}</div>}
+                        </div>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
                     </td>
                     <td className="px-5 py-4 text-center">
                       {p.status === "PENDING" || p.status === "CANCELLED" ? (

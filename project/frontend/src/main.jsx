@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
+// Font tự host (public/fonts, preload trong index.html) — thay cho Google Fonts
+import './fonts.css'
 import './index.css'
 import App from './App.jsx'
 import { initAnalytics } from './lib/analytics.js'

@@ -1,11 +1,11 @@
-/* Font da preload qua <link> trong index.html (Unbounded + Be Vietnam Pro) */
+/* Font tự host: khai báo @font-face ở src/fonts.css, file ở public/fonts (Unbounded Variable + Be Vietnam Pro) */
 @import "tailwindcss";
 
 /* ===== Design tokens Hairapy =====
    Tailwind 4 @theme: bg-brand, text-mauve, font-sans, font-display... */
 @theme {
   --font-sans: "Be Vietnam Pro", system-ui, -apple-system, sans-serif;
-  --font-display: "Unbounded", "Be Vietnam Pro", system-ui, sans-serif;
+  --font-display: "Unbounded Variable", "Unbounded", "Be Vietnam Pro", system-ui, sans-serif;
 
   --color-brand: #1039da;
   --color-primary: #2a4ae8;

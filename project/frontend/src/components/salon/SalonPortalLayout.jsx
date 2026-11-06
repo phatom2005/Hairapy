@@ -14,7 +14,7 @@ import {
   TrendUp,
 } from "iconsax-reactjs";
 import useAuthStore from "../../store/useAuthStore";
-import logoStack from "../../assets/logo/logo-stack.png";
+import logoStack from "../../assets/logo/logo-stack.webp";
 
 const navItems = [
   { to: "/salon-portal", label: "Tổng quan", Icon: Element3, end: true },

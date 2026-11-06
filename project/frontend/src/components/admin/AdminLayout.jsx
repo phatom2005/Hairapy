@@ -20,7 +20,7 @@ import {
   Add,
 } from "iconsax-reactjs";
 import useAuthStore from "../../store/useAuthStore";
-import logoStack from "../../assets/logo/logo-stack.png";
+import logoStack from "../../assets/logo/logo-stack.webp";
 
 // Danh sách menu — icon Iconsax (Bold khi active, Linear khi thường)
 const navItems = [

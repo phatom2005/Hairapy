@@ -1,4 +1,4 @@
-import { LOGO_NGANG } from "../../lib/figmaAssets";
+import { LOGO_NGANG, LOGO_NGANG_SIZE } from "../../lib/figmaAssets";
 import { Link } from "react-router-dom";
 
 // links: [{ label, to }] (route nội bộ) hoặc [{ label, href }] (mailto/link ngoài)
@@ -23,7 +23,7 @@ export default function Footer() {
       <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-6 py-8 sm:gap-8 sm:px-16 sm:py-12 md:grid-cols-2">
         <div className="flex flex-col gap-3 sm:gap-6">
           <Link to="/" className="-ml-2 inline-flex items-center self-start">
-            <img src={LOGO_NGANG} alt="Hairapy" className="h-12 w-auto sm:h-20" />
+            <img src={LOGO_NGANG} alt="Hairapy" {...LOGO_NGANG_SIZE} loading="lazy" decoding="async" className="h-12 w-auto sm:h-20" />
           </Link>
           <p className="max-w-sm text-sm text-mauve sm:text-base">
             Hairapy AI - Ứng dụng dẫn đầu về công nghệ làm đẹp cho thế hệ mới. Chúng tôi tin rằng

@@ -38,6 +38,21 @@ const BURST_SECONDS = 1.2;
 const HOLD = 1.6;
 const INTRO_MS = 1100;
 
+// ===== Tối ưu hiệu năng =====
+// Khi chỉ "trôi" tự do (wander, không có chuột/chạm) thì không cần 60 khung/giây:
+// giới hạn FPS để giảm tải GPU/CPU, nhất là trên điện thoại.
+const WANDER_FPS = 30;
+const WANDER_FPS_LOW_POWER = 20;
+
+/** Máy cảm ứng / ít nhân CPU / bật tiết kiệm dữ liệu → coi là máy yếu. */
+const isLowPowerDevice = () => {
+  if (typeof window === 'undefined') return false;
+  const coarse = window.matchMedia?.('(pointer: coarse)').matches;
+  const fewCores = (navigator.hardwareConcurrency || 8) <= 4;
+  const saveData = !!navigator.connection?.saveData;
+  return !!(coarse || fewCores || saveData);
+};
+
 const hexToRgb = hex => {
   let h = String(hex || '').replace('#', '');
   if (h.length === 3) h = h.replace(/./g, c => c + c);
@@ -475,13 +490,30 @@ const DitherVeil = ({
     if (!container) return undefined;
 
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    const renderer = new Renderer({ dpr: Math.min(window.devicePixelRatio || 1, 2), alpha: true, antialias: false });
+    const lowPower = isLowPowerDevice();
+    // Hiệu ứng dạng ô dither nên dpr cao không làm đẹp hơn bao nhiêu nhưng tốn gấp 4 lần pixel:
+    // máy yếu render ở dpr 1, máy mạnh tối đa 1.5 (bản cũ là 2).
+    const dpr = lowPower ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
+    const wanderInterval = 1000 / (lowPower ? WANDER_FPS_LOW_POWER : WANDER_FPS);
+    const renderer = new Renderer({ dpr, alpha: true, antialias: false });
     const gl = renderer.gl;
     const canvas = gl.canvas;
     canvas.style.display = 'block';
     canvas.style.width = '100%';
     canvas.style.height = '100%';
     container.appendChild(canvas);
+
+    // WebGL chạy bằng CPU (máy không có GPU, máy chấm điểm Lighthouse/PageSpeed) → mỗi khung hình
+    // tốn hàng trăm ms. Khi đó và trên máy yếu: chỉ vẽ ảnh tĩnh, không chạy vòng "trôi" liên tục.
+    let softwareGL = false;
+    try {
+      const dbg = renderer.getExtension('WEBGL_debug_renderer_info');
+      const name = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+      softwareGL = /swiftshader|llvmpipe|softpipe|software/i.test(String(name || ''));
+    } catch {
+      // không đọc được tên renderer thì coi như có GPU
+    }
+    const autoWander = !lowPower && !softwareGL;
 
     const floatMask = renderer.isWebgl2 && !!renderer.getExtension('EXT_color_buffer_float');
     const geometry = new Triangle(gl);
@@ -572,6 +604,8 @@ const DitherVeil = ({
     let height = 1;
     let visible = true;
     let raf = 0;
+    let started = false; // chỉ khởi động khi trình duyệt rảnh (sau khi trang chính đã hiện)
+    let lastDraw = 0;
     let last = performance.now();
     let trailUntil = 0;
     let presence = 0;
@@ -660,10 +694,20 @@ const DitherVeil = ({
       raf = 0;
       const s = settingsRef.current;
       if (!s) return;
+
+      // Chỉ đang trôi tự do (không chuột/chạm, không burst, đã qua intro) → bỏ bớt khung hình
+      const idleWander =
+        s.wander && autoWander && !reducedMotion && !pointer.inside && bursts.length === 0 && image && now - introStart >= INTRO_MS;
+      if (idleWander && now - lastDraw < wanderInterval) {
+        if (visible) raf = requestAnimationFrame(frame);
+        return;
+      }
+      lastDraw = now;
+
       const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
       last = now;
 
-      const wanderOn = s.wander && !reducedMotion;
+      const wanderOn = s.wander && autoWander && !reducedMotion;
       let targetX = pointer.x;
       let targetY = pointer.y;
       if (!pointer.inside && wanderOn) {
@@ -773,7 +817,7 @@ const DitherVeil = ({
     };
 
     const wake = () => {
-      if (raf || !visible) return;
+      if (!started || raf || !visible) return;
       last = performance.now();
       raf = requestAnimationFrame(frame);
     };
@@ -794,10 +838,12 @@ const DitherVeil = ({
       } catch {
         // bỏ qua lỗi đo edge — không quan trọng nếu sampler chưa sẵn sàng
       }
-      introStart = performance.now();
+      // Không có GPU: bỏ hiệu ứng hiện dần (mỗi khung hình quá đắt), vẽ thẳng trạng thái cuối
+      introStart = performance.now() - (softwareGL ? INTRO_MS : 0);
       wake();
     };
-    img.src = src;
+    // Máy yếu dùng ảnh nhỏ hơn (ảnh mặc định của Unsplash hỗ trợ tham số w=)
+    const imageSrc = lowPower && src === DEFAULT_SRC ? src.replace('w=1400', 'w=800') : src;
 
     const locate = e => {
       const rect = container.getBoundingClientRect();
@@ -841,9 +887,21 @@ const DitherVeil = ({
     intersectionObserver.observe(container);
 
     layout();
-    wake();
+
+    // Khởi động muộn: đợi trình duyệt rảnh để không tranh CPU với lúc tải trang (LCP/TBT)
+    const start = () => {
+      if (started) return;
+      started = true;
+      img.src = imageSrc;
+      wake();
+    };
+    const idleId = window.requestIdleCallback
+      ? window.requestIdleCallback(start, { timeout: 1500 })
+      : window.setTimeout(start, 600);
 
     return () => {
+      if (window.cancelIdleCallback) window.cancelIdleCallback(idleId);
+      else window.clearTimeout(idleId);
       cancelAnimationFrame(raf);
       wakeRef.current = () => {};
       resizeObserver.disconnect();

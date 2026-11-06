@@ -9,4 +9,4 @@ export { default as GlareHover } from "./GlareHover";
 export { default as BorderGlow } from "./BorderGlow";
 export { default as MarqueeText } from "./MarqueeText";
 export { default as FaceMeshPattern } from "./FaceMeshPattern";
-export { default as DitherVeil } from "./DitherVeil";
+// DitherVeil KHÔNG export ở đây: LandingPage tải lười trực tiếp để thư viện ogl tách chunk riêng

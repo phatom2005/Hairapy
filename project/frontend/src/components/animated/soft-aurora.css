@@ -60,3 +60,14 @@
 @media (prefers-reduced-motion: reduce) {
   .soft-aurora__blob { animation: none; }
 }
+
+/* Điện thoại/máy tính bảng: nền đứng yên + blur nhẹ hơn.
+   Nền động bên dưới khiến mọi lớp backdrop-blur (thanh menu kính mờ, modal...) phải
+   tính lại mỗi khung hình → giật khi cuộn trên máy tầm trung. Màu sắc giữ nguyên. */
+@media (pointer: coarse) {
+  .soft-aurora__blob {
+    animation: none;
+    filter: blur(48px);
+    will-change: auto;
+  }
+}

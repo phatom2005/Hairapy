@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { AI_STYLIST_ENABLED } from "../lib/features";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
@@ -8,7 +8,6 @@ import { Scan, MagicStar, CalendarTick, ArrowRight as IconsaxArrowRight, Flash }
 import {
   AnimatedContent,
   BorderGlow,
-  DitherVeil,
   FaceMeshPattern,
   GlareHover,
   MarqueeText,
@@ -25,6 +24,9 @@ import { Badge, Button, Card, DragScroll, Section, SectionHeading } from "../com
 import HairapyLogoMark from "../components/animated/HairapyLogoMark";
 import { PLANS, getPlanCta } from "../lib/plans";
 import PremiumGateModal from "../components/PremiumGateModal";
+
+// Hiệu ứng nền Hero (WebGL, kéo theo thư viện ogl ~50KB) — tải riêng, không chặn trang hiện lên
+const DitherVeil = lazy(() => import("../components/animated/DitherVeil"));
 
 export default function LandingPage() {
   return (
@@ -51,7 +53,9 @@ function Hero() {
           không cần opacity/mask thủ công nữa — nó tự hoà vào nền SoftAurora phía
           sau, chỉ có chấm sáng/rim/ảnh mặt là hiện rõ. */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <DitherVeil className="h-full w-full" wander />
+        <Suspense fallback={null}>
+          <DitherVeil className="h-full w-full" wander />
+        </Suspense>
       </div>
 
       <div className="relative mx-auto grid max-w-[1200px] grid-cols-1 items-center gap-12 sm:px-16 lg:grid-cols-2">

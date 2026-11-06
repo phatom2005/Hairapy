@@ -1,11 +1,23 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
-import { Flash, TickCircle, MagicStar, ArrowRight3, Add } from "iconsax-reactjs";
+import { useEffect, useState, useCallback, useMemo, Fragment } from "react";
+import {
+  Flash,
+  TickCircle,
+  MagicStar,
+  ArrowRight3,
+  Add,
+  ArrowDown2,
+  Edit2,
+  Trash,
+  SearchNormal1,
+  Profile,
+  CloseCircle,
+} from "iconsax-reactjs";
 import Cropper from "react-easy-crop";
 import api from "../../lib/api";
 import { Card, Badge, Button } from "../../components/ui";
 import { getCroppedImg } from "../../lib/cropImage.js";
 import ConfirmDialog from "../../components/admin/ConfirmDialog";
-import { HAIR_COLORS } from "../../lib/hairColors";
+import { HAIR_COLORS, COLOR_LABELS, COLOR_BY_VALUE, swatchBg } from "../../lib/hairColors";
 import {
   ModelPhotosPanel,
   SampleComparisonModal,
@@ -39,6 +51,9 @@ export default function AdminCatalogPage() {
 
   // AI Styles whitelist từ backend
   const [aiStyles, setAiStyles] = useState([]);
+
+  // Thu gọn / mở rộng bảng công cụ AI (đỡ chiếm chỗ màn hình)
+  const [showAiTools, setShowAiTools] = useState(false);
 
   // Ảnh người mẫu lưu trong state + sessionStorage
   const [models, setModels] = useState(() => {
@@ -236,7 +251,7 @@ export default function AdminCatalogPage() {
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
-  // Submit form
+  // Submit form - Giữ nguyên 100% logic Cropper và CORS theo yêu cầu
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name.trim()) {
@@ -372,7 +387,7 @@ export default function AdminCatalogPage() {
     }
 
     if (!modelDataUrl) {
-      alert(`Vui lòng tải ảnh người mẫu ${item.gender === "Nam" ? "Nam" : "Nữ"} ở khung phía trên trước khi tạo ảnh mẫu.`);
+      alert(`Vui lòng tải ảnh người mẫu ${item.gender === "Nam" ? "Nam" : "Nữ"} ở khung cài đặt AI trước khi tạo ảnh mẫu.`);
       return;
     }
 
@@ -485,7 +500,7 @@ export default function AdminCatalogPage() {
     return { baseStyles: bases, variantsByBase: varMap, orphanedVariants: orphans };
   }, [catalog]);
 
-  // Danh sách hiển thị theo bộ lọc "Chưa có ảnh AI"
+  // Danh sách kiểu tóc chưa có ảnh AI
   const stylesWithoutAi = useMemo(() => {
     return catalog.filter((i) => !i.sampleByAi);
   }, [catalog]);
@@ -501,40 +516,88 @@ export default function AdminCatalogPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="font-display text-3xl font-bold text-ink">Kho kiểu tóc</h2>
-          <p className="text-sm text-mauve">Quản lý kho mẫu tóc gợi ý, ảnh mẫu AI và biến thể màu</p>
+          <p className="text-sm text-mauve">Quản lý danh mục mẫu tóc gợi ý, tạo ảnh mẫu AI và biến thể màu sắc</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           <Button
             size="sm"
             variant="outline"
-            className="rounded-xl px-4 text-xs font-bold"
+            className="rounded-2xl px-4 py-2 text-xs font-bold border-line hover:border-brand/40 shadow-2xs"
             onClick={() => setBatchModalOpen(true)}
             disabled={stylesWithoutAi.length === 0}
           >
-            <Flash size={14} variant="Bold" className="mr-1 inline -mt-0.5" />Tạo hàng loạt ảnh AI ({stylesWithoutAi.length})
+            <Flash size={15} variant="Bold" className="mr-1.5 inline -mt-0.5 text-amber-500" />
+            Tạo hàng loạt ảnh AI ({stylesWithoutAi.length})
           </Button>
-          <Button size="sm" variant="brand" className="rounded-xl px-4 text-xs font-bold" onClick={handleOpenAdd}>
-            + Thêm kiểu tóc mới
+          <Button
+            size="sm"
+            variant="brand"
+            className="rounded-2xl px-4 py-2 text-xs font-bold shadow-xs hover:shadow-md transition-all"
+            onClick={handleOpenAdd}
+          >
+            <Add size={16} className="mr-1 inline -mt-0.5" /> Thêm kiểu tóc mới
           </Button>
         </div>
       </div>
 
-      {/* Accordion Lộ trình */}
-      <RoadmapBanner />
+      {/* AI Tools Collapsible Banner (Giải phóng không gian màn hình) */}
+      <div className="rounded-3xl border border-line bg-gradient-to-r from-canvas via-white to-brand/5 p-4 shadow-2xs transition-all">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-2xl bg-brand/10 text-brand flex items-center justify-center shrink-0">
+              <Profile size={22} variant="Bulk" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold text-ink">Người mẫu AI chuẩn:</span>
+                <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md ${
+                  models.male ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"
+                }`}>
+                  Nam: {models.male ? "Sẵn sàng ✓" : "Chưa tải ✗"}
+                </span>
+                <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md ${
+                  models.female ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"
+                }`}>
+                  Nữ: {models.female ? "Sẵn sàng ✓" : "Chưa tải ✗"}
+                </span>
+              </div>
+              <p className="text-[11px] text-mauve mt-0.5">Ảnh làm khuôn mặt gốc để AILab tạo ảnh mẫu catalog chân thực, đồng bộ</p>
+            </div>
+          </div>
 
-      {/* Panel ảnh người mẫu */}
-      <ModelPhotosPanel models={models} onModelChange={handleModelChange} />
+          <button
+            type="button"
+            onClick={() => setShowAiTools(!showAiTools)}
+            className="inline-flex items-center justify-center gap-1.5 self-start sm:self-center px-3.5 py-1.5 rounded-xl border border-line bg-white hover:border-brand/40 text-xs font-bold text-ink cursor-pointer transition shadow-2xs whitespace-nowrap"
+          >
+            {showAiTools ? "Thu gọn công cụ" : "Cài đặt ảnh mẫu & Lộ trình"}
+            <ArrowDown2 size={13} className={`transition-transform duration-200 ${showAiTools ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+
+        {/* Nội dung khi mở rộng */}
+        {showAiTools && (
+          <div className="mt-4 pt-4 border-t border-line space-y-4">
+            <RoadmapBanner />
+            <ModelPhotosPanel models={models} onModelChange={handleModelChange} />
+          </div>
+        )}
+      </div>
 
       {/* Bộ lọc */}
-      <Card className="border border-divider/10 p-4">
+      <Card className="border border-line bg-white p-4 rounded-3xl shadow-xs">
         <div className="flex flex-wrap items-center gap-3">
-          <input
-            type="search"
-            placeholder="Tìm theo tên hoặc tag..."
-            value={filters.keyword}
-            onChange={(e) => setFilters((f) => ({ ...f, keyword: e.target.value }))}
-            className="min-w-[200px] flex-1 rounded-2xl border-2 border-line bg-white px-3.5 py-2 text-sm text-ink outline-none transition placeholder:text-muted/60 focus:border-brand"
-          />
+          <div className="relative min-w-[240px] flex-1">
+            <SearchNormal1 size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+            <input
+              type="search"
+              placeholder="Tìm theo tên kiểu tóc, mã AI hoặc tag..."
+              value={filters.keyword}
+              onChange={(e) => setFilters((f) => ({ ...f, keyword: e.target.value }))}
+              className="w-full rounded-2xl border-2 border-line bg-canvas/30 pl-10 pr-4 py-2 text-xs font-medium text-ink outline-none transition placeholder:text-muted focus:border-brand focus:bg-white"
+            />
+          </div>
+
           {[
             { key: "faceShape", label: "Dáng mặt", options: FACE_SHAPES.map((v) => [v, v]) },
             { key: "hairLength", label: "Độ dài", options: HAIR_LENGTHS.map((v) => [v, v]) },
@@ -546,9 +609,9 @@ export default function AdminCatalogPage() {
               aria-label={label}
               value={filters[key]}
               onChange={(e) => setFilter(key, e.target.value)}
-              className="rounded-2xl border-2 border-line bg-white px-3 py-2 text-xs font-semibold text-ink outline-none transition focus:border-brand"
+              className="rounded-2xl border-2 border-line bg-white px-3 py-2 text-xs font-semibold text-ink outline-none transition hover:border-line focus:border-brand cursor-pointer"
             >
-              <option value="">{label}: tất cả</option>
+              <option value="">{label}: Tất cả</option>
               {options.map(([value, text]) => (
                 <option key={value} value={value}>
                   {text}
@@ -558,10 +621,10 @@ export default function AdminCatalogPage() {
           ))}
 
           {/* Quick filter: Chưa có ảnh mẫu AI */}
-          <label className="flex items-center gap-2 px-3 py-2 rounded-2xl border-2 border-line bg-white cursor-pointer select-none">
+          <label className="flex items-center gap-2 px-3 py-2 rounded-2xl border-2 border-line bg-white cursor-pointer select-none hover:border-amber-300 transition">
             <input
               type="checkbox"
-              className="size-4 rounded text-brand focus:ring-brand"
+              className="size-4 rounded text-brand focus:ring-brand cursor-pointer"
               checked={noAiSampleOnly}
               onChange={(e) => setNoAiSampleOnly(e.target.checked)}
             />
@@ -569,46 +632,54 @@ export default function AdminCatalogPage() {
           </label>
 
           {hasFilter && (
-            <Button size="sm" variant="ghost" className="rounded-xl text-xs" onClick={clearFilters}>
+            <Button size="sm" variant="ghost" className="rounded-xl text-xs text-mauve hover:text-ink" onClick={clearFilters}>
               Xóa bộ lọc
             </Button>
           )}
         </div>
-        <p className="mt-2.5 text-xs font-semibold text-muted">
-          {hasFilter ? `Tìm thấy ${displayedCatalog.length} kiểu tóc` : `Tổng ${totalElements} kiểu tóc`}
-        </p>
+
+        <div className="mt-2.5 flex items-center justify-between text-xs font-semibold text-muted">
+          <span>{hasFilter ? `Tìm thấy ${displayedCatalog.length} kiểu tóc khớp bộ lọc` : `Tổng cộng ${totalElements} kiểu tóc trong kho`}</span>
+          {noAiSampleOnly && <span className="text-amber-700 font-bold">Chế độ lọc: Chỉ hiển thị kiểu chưa phủ ảnh AI</span>}
+        </div>
       </Card>
 
-      {/* Table */}
-      <Card className="overflow-hidden border border-divider/10" padded={false}>
+      {/* Table Card */}
+      <Card className="overflow-hidden border border-line bg-white shadow-xs rounded-3xl" padded={false}>
         {loading ? (
-          <div className="flex h-64 items-center justify-center">
-            <div className="size-10 animate-spin rounded-full border-4 border-brand border-t-transparent" />
+          <div className="flex h-64 flex-col items-center justify-center gap-3">
+            <div className="size-9 animate-spin rounded-full border-3 border-brand border-t-transparent" />
+            <p className="text-xs font-medium text-mauve">Đang tải danh sách kiểu tóc...</p>
           </div>
         ) : displayedCatalog.length === 0 ? (
-          <div className="flex h-64 items-center justify-center text-muted">
-            {hasFilter ? "Không có kiểu tóc nào khớp bộ lọc" : "Kho kiểu tóc hiện tại trống"}
+          <div className="flex h-64 flex-col items-center justify-center text-muted gap-2">
+            <p className="text-sm font-semibold">{hasFilter ? "Không có kiểu tóc nào khớp bộ lọc" : "Kho kiểu tóc hiện tại trống"}</p>
+            {hasFilter && (
+              <Button size="sm" variant="outline" className="rounded-xl text-xs" onClick={clearFilters}>
+                Bỏ bộ lọc tìm kiếm
+              </Button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-sm">
+            <table className="w-full text-left border-collapse text-xs min-w-[1200px]">
               <thead>
-                <tr className="border-b border-line bg-canvas text-xs font-bold uppercase tracking-wider text-muted">
-                  <th className="px-5 py-4">Hình ảnh</th>
-                  <th className="px-5 py-4">Tên kiểu tóc</th>
-                  <th className="px-5 py-4 text-center">Ảnh mẫu</th>
-                  <th className="px-5 py-4">Mã AI & Màu</th>
-                  <th className="px-5 py-4">Dáng mặt</th>
-                  <th className="px-5 py-4">Độ dài</th>
-                  <th className="px-5 py-4">Giới tính</th>
-                  <th className="px-5 py-4">Giới hạn</th>
-                  <th className="px-5 py-4 text-center">Hiển thị</th>
-                  <th className="px-5 py-4 text-center">Đang lưu</th>
-                  <th className="px-5 py-4 text-center">Hành động</th>
+                <tr className="border-b border-line bg-canvas/70 text-[11px] font-bold uppercase tracking-wider text-muted">
+                  <th className="px-4 py-3.5 w-16">Hình ảnh</th>
+                  <th className="px-4 py-3.5 min-w-[220px]">Tên kiểu tóc</th>
+                  <th className="px-4 py-3.5 text-center min-w-[120px]">Ảnh mẫu</th>
+                  <th className="px-4 py-3.5 min-w-[140px]">Mã AI & Màu</th>
+                  <th className="px-4 py-3.5 min-w-[170px]">Dáng mặt phù hợp</th>
+                  <th className="px-4 py-3.5 min-w-[80px]">Độ dài</th>
+                  <th className="px-4 py-3.5 min-w-[90px]">Giới tính</th>
+                  <th className="px-4 py-3.5 text-center min-w-[90px]">Gói</th>
+                  <th className="px-4 py-3.5 text-center min-w-[90px]">Hiển thị</th>
+                  <th className="px-4 py-3.5 text-center min-w-[80px]">Đang lưu</th>
+                  <th className="px-4 py-3.5 text-right min-w-[240px]">Hành động</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-line">
-                {/* Render theo kiểu gốc lồng biến thể nếu không bật filter làm phẳng */}
+              <tbody className="divide-y divide-line/60">
+                {/* 1. Render theo kiểu gốc lồng biến thể màu */}
                 {!noAiSampleOnly && baseStyles.length > 0
                   ? baseStyles.map((item) => {
                       const variants = variantsByBase[item.id] || [];
@@ -616,26 +687,31 @@ export default function AdminCatalogPage() {
                       const isInactive = !item.active;
 
                       return (
-                        <div key={item.id} className="contents">
-                          {/* Row kiểu gốc */}
+                        <Fragment key={item.id}>
+                          {/* Hàng kiểu tóc gốc */}
                           <tr
                             className={`transition-colors ${
                               isInactive ? "opacity-65 bg-gray-50/70" : "hover:bg-canvas/50"
                             }`}
                           >
-                            <td className="px-5 py-3">
+                            <td className="px-4 py-3">
                               <img
                                 src={item.imageUrl}
                                 alt={item.name}
-                                className="size-12 rounded-xl object-cover border border-line"
+                                className="size-12 rounded-xl object-cover border border-line shadow-2xs"
                               />
                             </td>
-                            <td className="px-5 py-3">
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-semibold text-ink">{item.name}</span>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="font-bold text-ink text-sm">{item.name}</span>
                                 {isInactive && (
                                   <span className="inline-block rounded-md bg-gray-200 px-1.5 py-0.5 text-[10px] font-bold text-gray-700">
                                     Đang ẩn
+                                  </span>
+                                )}
+                                {item.tag && (
+                                  <span className="inline-block rounded-md bg-canvas px-1.5 py-0.5 text-[10px] font-semibold text-mauve border border-line">
+                                    {item.tag}
                                   </span>
                                 )}
                               </div>
@@ -643,30 +719,41 @@ export default function AdminCatalogPage() {
                                 <button
                                   type="button"
                                   onClick={() => toggleExpand(item.id)}
-                                  className="text-xs font-bold text-brand hover:underline mt-1 flex items-center gap-1 cursor-pointer"
+                                  className="text-xs font-bold text-brand hover:underline mt-1.5 flex items-center gap-1 cursor-pointer transition select-none"
                                 >
-                                  {isExpanded ? `▼ Thu gọn` : `▶ Xem ${variants.length} biến thể màu`}
+                                  <ArrowDown2 size={12} className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
+                                  {isExpanded ? "Thu gọn biến thể" : `Xem ${variants.length} biến thể màu`}
                                 </button>
                               )}
                             </td>
-                            <td className="px-5 py-3 text-center">
+                            <td className="px-4 py-3 text-center">
                               {item.sampleByAi ? (
-                                <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700 border border-emerald-200">
-                                  <TickCircle size={12} variant="Bold" className="mr-1" />AI
+                                <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 border border-emerald-200 shadow-2xs">
+                                  <TickCircle size={13} variant="Bold" className="mr-1 shrink-0" /> AI
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-700 border border-amber-200">
-                                  Ảnh cũ — nên tạo lại
+                                <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 border border-amber-200">
+                                  Ảnh mẫu cũ
                                 </span>
                               )}
                             </td>
-                            <td className="px-5 py-3 text-xs">
+                            <td className="px-4 py-3 text-xs">
                               <span className="font-mono text-ink font-semibold block">{item.ailabProStyle || "—"}</span>
-                              {item.ailabColor && (
-                                <span className="text-mauve text-[11px] block">Màu: {item.ailabColor}</span>
+                              {item.ailabColor ? (
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  <span
+                                    className="size-2.5 rounded-full border border-black/10 shrink-0"
+                                    style={{ background: swatchBg(COLOR_BY_VALUE[item.ailabColor]?.tones) }}
+                                  />
+                                  <span className="text-[11px] text-mauve font-medium">
+                                    {COLOR_LABELS[item.ailabColor] || item.ailabColor}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-[11px] text-muted block">Màu gốc</span>
                               )}
                             </td>
-                            <td className="px-5 py-3">
+                            <td className="px-4 py-3">
                               {item.faceShape ? (
                                 <div className="flex flex-wrap gap-1">
                                   {item.faceShape.split(",").map((s) => (
@@ -682,8 +769,8 @@ export default function AdminCatalogPage() {
                                 <span className="text-muted">—</span>
                               )}
                             </td>
-                            <td className="px-5 py-3 text-mauve font-medium text-xs">{item.hairLength || "—"}</td>
-                            <td className="px-5 py-3">
+                            <td className="px-4 py-3 text-mauve font-medium text-xs">{item.hairLength || "—"}</td>
+                            <td className="px-4 py-3">
                               <Badge
                                 variant={
                                   item.gender === "Nam" ? "new" : item.gender === "Nữ" ? "premium" : "neutral"
@@ -692,32 +779,32 @@ export default function AdminCatalogPage() {
                                 {item.gender || "Unisex"}
                               </Badge>
                             </td>
-                            <td className="px-5 py-3">
+                            <td className="px-4 py-3 text-center">
                               {item.premiumOnly ? (
                                 <Badge variant="premium">Trả phí</Badge>
                               ) : (
                                 <Badge variant="neutral">FREE</Badge>
                               )}
                             </td>
-                            <td className="px-5 py-3 text-center">
+                            <td className="px-4 py-3 text-center">
                               <button
                                 type="button"
                                 onClick={() => handleToggleActive(item.id, item.active)}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-brand/30 ${
                                   item.active ? "bg-emerald-500" : "bg-gray-300"
                                 }`}
-                                title={item.active ? "Đang hiển thị cho khách — bấm để ẩn" : "Đang ẩn — bấm để hiển thị"}
+                                title={item.active ? "Đang hiển thị cho khách — Bấm để ẩn" : "Đang ẩn — Bấm để hiển thị"}
                               >
                                 <span
-                                  className={`inline-block size-4 transform rounded-full bg-white transition-transform ${
+                                  className={`inline-block size-4 transform rounded-full bg-white shadow-xs transition-transform ${
                                     item.active ? "translate-x-6" : "translate-x-1"
                                   }`}
                                 />
                               </button>
                             </td>
-                            <td className="px-5 py-3 text-center font-bold text-ink">{item.savedCount || 0}</td>
-                            <td className="px-5 py-3 text-center">
-                              <div className="flex items-center justify-center gap-1.5 flex-nowrap">
+                            <td className="px-4 py-3 text-center font-bold text-ink text-xs">{item.savedCount || 0}</td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex items-center justify-end gap-1.5 flex-nowrap">
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -725,12 +812,19 @@ export default function AdminCatalogPage() {
                                   disabled={sampleGeneratingId === item.id}
                                   onClick={() => handleGenerateSample(item)}
                                 >
-                                  {sampleGeneratingId === item.id ? "Đang tạo..." : <><MagicStar size={14} variant="Bold" className="mr-1 inline -mt-0.5" />Tạo mẫu AI</>}
+                                  {sampleGeneratingId === item.id ? (
+                                    "Đang tạo..."
+                                  ) : (
+                                    <>
+                                      <MagicStar size={13} variant="Bold" className="mr-1 inline -mt-0.5" />
+                                      Tạo mẫu AI
+                                    </>
+                                  )}
                                 </Button>
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="px-2.5 py-1 text-xs rounded-xl font-bold cursor-pointer whitespace-nowrap"
+                                  className="px-2.5 py-1 text-xs rounded-xl font-bold cursor-pointer whitespace-nowrap hover:border-ink/30"
                                   onClick={() => handleOpenVariantModal(item)}
                                 >
                                   + Màu
@@ -738,37 +832,39 @@ export default function AdminCatalogPage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="px-2.5 py-1 text-xs rounded-xl cursor-pointer"
+                                  className="px-2.5 py-1 text-xs rounded-xl cursor-pointer hover:border-ink/30"
                                   onClick={() => handleOpenEdit(item)}
                                 >
+                                  <Edit2 size={12} className="mr-1 inline -mt-0.5" />
                                   Sửa
                                 </Button>
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  className="px-2.5 py-1 text-xs rounded-xl text-red-600 hover:bg-red-50 hover:text-red-700 cursor-pointer"
+                                  className="px-2 py-1 text-xs rounded-xl text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
                                   onClick={() => handleDelete(item)}
                                 >
+                                  <Trash size={12} className="mr-1 inline -mt-0.5" />
                                   Xóa
                                 </Button>
                               </div>
                             </td>
                           </tr>
 
-                          {/* Render sub-variants lồng dưới kiểu gốc nếu mở rộng */}
+                          {/* Danh sách biến thể màu lồng dưới kiểu gốc khi mở rộng */}
                           {isExpanded &&
                             variants.map((v) => (
-                              <tr key={v.id} className="bg-canvas/35 border-t border-line/50">
-                                <td className="px-5 py-2.5 pl-10">
+                              <tr key={v.id} className="bg-canvas/35 hover:bg-canvas/60 transition-colors border-t border-line/50">
+                                <td className="px-4 py-2.5 pl-8">
                                   <img
                                     src={v.imageUrl}
                                     alt={v.name}
-                                    className="size-9 rounded-lg object-cover border border-line"
+                                    className="size-9 rounded-lg object-cover border border-line shadow-2xs"
                                   />
                                 </td>
-                                <td className="px-5 py-2.5">
+                                <td className="px-4 py-2.5">
                                   <div className="flex items-center gap-2">
-                                    <ArrowRight3 size={12} className="shrink-0 text-muted" />
+                                    <ArrowRight3 size={13} className="shrink-0 text-muted" />
                                     <span className="text-xs font-semibold text-ink">{v.name}</span>
                                     {!v.active && (
                                       <span className="inline-block rounded-md bg-gray-200 px-1 py-0.5 text-[9px] font-bold text-gray-700">
@@ -777,7 +873,7 @@ export default function AdminCatalogPage() {
                                     )}
                                   </div>
                                 </td>
-                                <td className="px-5 py-2.5 text-center">
+                                <td className="px-4 py-2.5 text-center">
                                   {v.sampleByAi ? (
                                     <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200">
                                       <TickCircle size={12} variant="Bold" className="mr-1" />AI
@@ -788,21 +884,35 @@ export default function AdminCatalogPage() {
                                     </span>
                                   )}
                                 </td>
-                                <td className="px-5 py-2.5 text-xs text-mauve">
-                                  Màu: <strong>{v.ailabColor}</strong>
+                                <td className="px-4 py-2.5 text-xs">
+                                  <div className="flex items-center gap-1.5">
+                                    <span
+                                      className="size-2.5 rounded-full border border-black/10 shrink-0"
+                                      style={{ background: swatchBg(COLOR_BY_VALUE[v.ailabColor]?.tones) }}
+                                    />
+                                    <span className="text-ink font-medium">
+                                      {COLOR_LABELS[v.ailabColor] || v.ailabColor}
+                                    </span>
+                                  </div>
                                 </td>
-                                <td className="px-5 py-2.5 text-xs text-muted">—</td>
-                                <td className="px-5 py-2.5 text-xs text-muted">{v.hairLength || "—"}</td>
-                                <td className="px-5 py-2.5 text-xs text-muted">{v.gender || "—"}</td>
-                                <td className="px-5 py-2.5 text-xs text-muted">—</td>
-                                <td className="px-5 py-2.5 text-center">
+                                <td className="px-4 py-2.5 text-xs text-muted">—</td>
+                                <td className="px-4 py-2.5 text-xs text-mauve">{v.hairLength || "—"}</td>
+                                <td className="px-4 py-2.5 text-xs">
+                                  <Badge variant={v.gender === "Nam" ? "new" : v.gender === "Nữ" ? "premium" : "neutral"}>
+                                    {v.gender || "Unisex"}
+                                  </Badge>
+                                </td>
+                                <td className="px-4 py-2.5 text-center">
+                                  {v.premiumOnly ? <Badge variant="premium">Trả phí</Badge> : <Badge variant="neutral">FREE</Badge>}
+                                </td>
+                                <td className="px-4 py-2.5 text-center">
                                   <button
                                     type="button"
                                     onClick={() => handleToggleActive(v.id, v.active)}
                                     className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${
                                       v.active ? "bg-emerald-500" : "bg-gray-300"
                                     }`}
-                                    title={v.active ? "Ẩn" : "Hiện"}
+                                    title={v.active ? "Đang hiển thị — Bấm để ẩn" : "Đang ẩn — Bấm để hiển thị"}
                                   >
                                     <span
                                       className={`inline-block size-3.5 transform rounded-full bg-white transition-transform ${
@@ -811,34 +921,43 @@ export default function AdminCatalogPage() {
                                     />
                                   </button>
                                 </td>
-                                <td className="px-5 py-2.5 text-center text-xs font-bold text-ink">{v.savedCount || 0}</td>
-                                <td className="px-5 py-2.5 text-center">
-                                  <div className="flex items-center justify-center gap-1.5 flex-nowrap">
+                                <td className="px-4 py-2.5 text-center text-xs font-bold text-ink">{v.savedCount || 0}</td>
+                                <td className="px-4 py-2.5 text-right">
+                                  <div className="flex items-center justify-end gap-1.5 flex-nowrap">
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      className="px-2 py-0.5 text-[11px] rounded-lg font-bold text-brand hover:border-brand cursor-pointer"
+                                      className="px-2 py-0.5 text-[11px] rounded-lg font-bold text-brand hover:border-brand cursor-pointer whitespace-nowrap"
                                       disabled={sampleGeneratingId === v.id}
                                       onClick={() => handleGenerateSample(v)}
                                     >
-                                      {sampleGeneratingId === v.id ? "Đang tạo..." : <><MagicStar size={14} variant="Bold" className="mr-1 inline -mt-0.5" />Tạo ảnh AI</>}
+                                      {sampleGeneratingId === v.id ? "Đang tạo..." : <><MagicStar size={12} variant="Bold" className="mr-1 inline -mt-0.5" />Tạo ảnh AI</>}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="px-2 py-0.5 text-[11px] rounded-lg cursor-pointer hover:border-ink/30"
+                                      onClick={() => handleOpenEdit(v)}
+                                    >
+                                      <Edit2 size={11} className="mr-1 inline -mt-0.5" />Sửa
                                     </Button>
                                     <Button
                                       size="sm"
                                       variant="ghost"
-                                      className="px-2 py-0.5 text-[11px] rounded-lg text-red-600 hover:bg-red-50 cursor-pointer"
+                                      className="px-2 py-0.5 text-[11px] rounded-lg text-rose-600 hover:bg-rose-50 cursor-pointer"
                                       onClick={() => handleDelete(v)}
                                     >
-                                      Xóa
+                                      <Trash size={11} className="mr-1 inline -mt-0.5" />Xóa
                                     </Button>
                                   </div>
                                 </td>
                               </tr>
                             ))}
-                        </div>
+                        </Fragment>
                       );
                     })
-                  : displayedCatalog.map((item) => {
+                  : /* 2. Render danh sách phẳng (khi bật filter Chưa có ảnh AI) */
+                    displayedCatalog.map((item) => {
                       const isInactive = !item.active;
                       return (
                         <tr
@@ -847,65 +966,88 @@ export default function AdminCatalogPage() {
                             isInactive ? "opacity-65 bg-gray-50/70" : "hover:bg-canvas/50"
                           }`}
                         >
-                          <td className="px-5 py-3">
+                          <td className="px-4 py-3">
                             <img
                               src={item.imageUrl}
                               alt={item.name}
-                              className="size-12 rounded-xl object-cover border border-line"
+                              className="size-12 rounded-xl object-cover border border-line shadow-2xs"
                             />
                           </td>
-                          <td className="px-5 py-3 font-semibold text-ink">
-                            <div className="flex items-center gap-1.5">
-                              <span>{item.name}</span>
+                          <td className="px-4 py-3 font-semibold text-ink">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="text-sm font-bold">{item.name}</span>
                               {isInactive && (
                                 <span className="inline-block rounded-md bg-gray-200 px-1.5 py-0.5 text-[10px] font-bold text-gray-700">
                                   Đang ẩn
                                 </span>
                               )}
                               {item.baseStyleId && (
-                                <span className="inline-block rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
+                                <span className="inline-block rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 border border-blue-200">
                                   Biến thể
                                 </span>
                               )}
                             </div>
                           </td>
-                          <td className="px-5 py-3 text-center">
+                          <td className="px-4 py-3 text-center">
                             {item.sampleByAi ? (
-                              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700 border border-emerald-200">
-                                <TickCircle size={12} variant="Bold" className="mr-1" />AI
+                              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">
+                                <TickCircle size={13} variant="Bold" className="mr-1" />AI
                               </span>
                             ) : (
-                              <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-700 border border-amber-200">
-                                Ảnh cũ — nên tạo lại
+                              <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 border border-amber-200">
+                                Ảnh cũ
                               </span>
                             )}
                           </td>
-                          <td className="px-5 py-3 text-xs">
+                          <td className="px-4 py-3 text-xs">
                             <span className="font-mono text-ink font-semibold block">{item.ailabProStyle || "—"}</span>
-                            {item.ailabColor && (
-                              <span className="text-mauve text-[11px] block">Màu: {item.ailabColor}</span>
+                            {item.ailabColor ? (
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span
+                                  className="size-2.5 rounded-full border border-black/10 shrink-0"
+                                  style={{ background: swatchBg(COLOR_BY_VALUE[item.ailabColor]?.tones) }}
+                                />
+                                <span className="text-[11px] text-mauve font-medium">
+                                  {COLOR_LABELS[item.ailabColor] || item.ailabColor}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] text-muted block">Màu gốc</span>
                             )}
                           </td>
-                          <td className="px-5 py-3 text-xs">
-                            {item.faceShape || "—"}
+                          <td className="px-4 py-3">
+                            {item.faceShape ? (
+                              <div className="flex flex-wrap gap-1">
+                                {item.faceShape.split(",").map((s) => (
+                                  <span
+                                    key={s.trim()}
+                                    className="rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-semibold text-brand"
+                                  >
+                                    {s.trim()}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-muted">—</span>
+                            )}
                           </td>
-                          <td className="px-5 py-3 text-mauve font-medium text-xs">{item.hairLength || "—"}</td>
-                          <td className="px-5 py-3">
+                          <td className="px-4 py-3 text-mauve font-medium text-xs">{item.hairLength || "—"}</td>
+                          <td className="px-4 py-3">
                             <Badge variant={item.gender === "Nam" ? "new" : item.gender === "Nữ" ? "premium" : "neutral"}>
                               {item.gender || "Unisex"}
                             </Badge>
                           </td>
-                          <td className="px-5 py-3">
+                          <td className="px-4 py-3 text-center">
                             {item.premiumOnly ? <Badge variant="premium">Trả phí</Badge> : <Badge variant="neutral">FREE</Badge>}
                           </td>
-                          <td className="px-5 py-3 text-center">
+                          <td className="px-4 py-3 text-center">
                             <button
                               type="button"
                               onClick={() => handleToggleActive(item.id, item.active)}
                               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
                                 item.active ? "bg-emerald-500" : "bg-gray-300"
                               }`}
-                              title={item.active ? "Ẩn" : "Hiện"}
+                              title={item.active ? "Đang hiển thị — Bấm để ẩn" : "Đang ẩn — Bấm để hiển thị"}
                             >
                               <span
                                 className={`inline-block size-4 transform rounded-full bg-white transition-transform ${
@@ -914,9 +1056,9 @@ export default function AdminCatalogPage() {
                               />
                             </button>
                           </td>
-                          <td className="px-5 py-3 text-center font-bold text-ink">{item.savedCount || 0}</td>
-                          <td className="px-5 py-3 text-center">
-                            <div className="flex items-center justify-center gap-1.5 flex-nowrap">
+                          <td className="px-4 py-3 text-center font-bold text-ink text-xs">{item.savedCount || 0}</td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5 flex-nowrap">
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -924,49 +1066,147 @@ export default function AdminCatalogPage() {
                                 disabled={sampleGeneratingId === item.id}
                                 onClick={() => handleGenerateSample(item)}
                               >
-                                {sampleGeneratingId === item.id ? "Đang tạo..." : <><MagicStar size={14} variant="Bold" className="mr-1 inline -mt-0.5" />Tạo mẫu AI</>}
+                                {sampleGeneratingId === item.id ? "Đang tạo..." : <><MagicStar size={13} variant="Bold" className="mr-1 inline -mt-0.5" />Tạo mẫu AI</>}
                               </Button>
+                              {!item.baseStyleId && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="px-2.5 py-1 text-xs rounded-xl font-bold cursor-pointer whitespace-nowrap hover:border-ink/30"
+                                  onClick={() => handleOpenVariantModal(item)}
+                                >
+                                  + Màu
+                                </Button>
+                              )}
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="px-2.5 py-1 text-xs rounded-xl cursor-pointer"
+                                className="px-2.5 py-1 text-xs rounded-xl cursor-pointer hover:border-ink/30"
                                 onClick={() => handleOpenEdit(item)}
                               >
-                                Sửa
+                                <Edit2 size={12} className="mr-1 inline -mt-0.5" />Sửa
                               </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="px-2.5 py-1 text-xs rounded-xl text-red-600 hover:bg-red-50 hover:text-red-700 cursor-pointer"
+                                className="px-2 py-1 text-xs rounded-xl text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
                                 onClick={() => handleDelete(item)}
                               >
-                                Xóa
+                                <Trash size={12} className="mr-1 inline -mt-0.5" />Xóa
                               </Button>
                             </div>
                           </td>
                         </tr>
                       );
                     })}
-                {/* Render các biến thể mồ côi nếu có */}
+
+                {/* 3. Render các biến thể mồ côi (có baseStyleId nhưng base nằm ở trang khác) */}
                 {!noAiSampleOnly &&
                   orphanedVariants.map((item) => (
-                    <tr key={item.id} className="hover:bg-canvas/50">
-                      <td className="px-5 py-3">
-                        <img src={item.imageUrl} alt={item.name} className="size-10 rounded-lg object-cover" />
+                    <tr key={item.id} className="hover:bg-canvas/50 transition-colors bg-amber-50/20">
+                      <td className="px-4 py-3">
+                        <img src={item.imageUrl} alt={item.name} className="size-11 rounded-lg object-cover border border-line" />
                       </td>
-                      <td className="px-5 py-3 font-semibold text-ink">
-                        {item.name} <span className="text-[10px] text-muted">(Biến thể)</span>
+                      <td className="px-4 py-3 font-semibold text-ink">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm">{item.name}</span>
+                          <span className="inline-block rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
+                            Biến thể
+                          </span>
+                        </div>
                       </td>
-                      <td className="px-5 py-3 text-center">{item.sampleByAi ? <span className="inline-flex items-center gap-1"><TickCircle size={12} variant="Bold" />AI</span> : "Chưa có"}</td>
-                      <td className="px-5 py-3 text-xs">{item.ailabColor}</td>
-                      <td className="px-5 py-3 text-xs">{item.faceShape}</td>
-                      <td className="px-5 py-3 text-xs">{item.hairLength}</td>
-                      <td className="px-5 py-3 text-xs">{item.gender}</td>
-                      <td className="px-5 py-3 text-xs">{item.premiumOnly ? "Trả phí" : "FREE"}</td>
-                      <td className="px-5 py-3 text-center">{item.active ? "Hiện" : "Ẩn"}</td>
-                      <td className="px-5 py-3 text-center">{item.savedCount || 0}</td>
-                      <td className="px-5 py-3 text-center">
-                        <Button size="sm" variant="ghost" onClick={() => handleDelete(item)}>Xóa</Button>
+                      <td className="px-4 py-3 text-center">
+                        {item.sampleByAi ? (
+                          <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200">
+                            <TickCircle size={12} variant="Bold" className="mr-1" />AI
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700 border border-amber-200">
+                            Chưa có AI
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="size-2.5 rounded-full border border-black/10 shrink-0"
+                            style={{ background: swatchBg(COLOR_BY_VALUE[item.ailabColor]?.tones) }}
+                          />
+                          <span className="text-ink font-medium">
+                            {COLOR_LABELS[item.ailabColor] || item.ailabColor}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {item.faceShape ? (
+                          <div className="flex flex-wrap gap-1">
+                            {item.faceShape.split(",").map((s) => (
+                              <span
+                                key={s.trim()}
+                                className="rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-semibold text-brand"
+                              >
+                                {s.trim()}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-muted">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-mauve">{item.hairLength || "—"}</td>
+                      <td className="px-4 py-3">
+                        <Badge variant={item.gender === "Nam" ? "new" : item.gender === "Nữ" ? "premium" : "neutral"}>
+                          {item.gender || "Unisex"}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {item.premiumOnly ? <Badge variant="premium">Trả phí</Badge> : <Badge variant="neutral">FREE</Badge>}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleActive(item.id, item.active)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                            item.active ? "bg-emerald-500" : "bg-gray-300"
+                          }`}
+                          title={item.active ? "Đang hiển thị — Bấm để ẩn" : "Đang ẩn — Bấm để hiển thị"}
+                        >
+                          <span
+                            className={`inline-block size-4 transform rounded-full bg-white transition-transform ${
+                              item.active ? "translate-x-6" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-center font-bold text-ink text-xs">{item.savedCount || 0}</td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5 flex-nowrap">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="px-2 py-1 text-xs rounded-xl font-bold text-brand hover:border-brand cursor-pointer whitespace-nowrap"
+                            disabled={sampleGeneratingId === item.id}
+                            onClick={() => handleGenerateSample(item)}
+                          >
+                            {sampleGeneratingId === item.id ? "Đang tạo..." : <><MagicStar size={12} variant="Bold" className="mr-1 inline -mt-0.5" />Tạo ảnh AI</>}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="px-2 py-1 text-xs rounded-xl cursor-pointer hover:border-ink/30"
+                            onClick={() => handleOpenEdit(item)}
+                          >
+                            <Edit2 size={12} className="mr-1 inline -mt-0.5" />Sửa
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="px-2 py-1 text-xs rounded-xl text-rose-600 hover:bg-rose-50"
+                            onClick={() => handleDelete(item)}
+                          >
+                            <Trash size={12} className="mr-1 inline -mt-0.5" />Xóa
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -978,15 +1218,15 @@ export default function AdminCatalogPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between pt-4">
+        <div className="flex items-center justify-between pt-2">
           <p className="text-xs font-semibold text-muted">
-            Trang {page + 1} / {totalPages} (Tổng: {totalElements} kết quả)
+            Trang {page + 1} / {totalPages} (Tổng cộng: {totalElements} kiểu tóc)
           </p>
           <div className="flex gap-2">
             <Button
               size="sm"
               variant="outline"
-              className="px-4 py-2 rounded-xl text-xs"
+              className="px-4 py-2 rounded-2xl text-xs font-semibold border-line hover:border-brand/40"
               disabled={page === 0 || loading}
               onClick={() => setPage((p) => Math.max(0, p - 1))}
             >
@@ -995,7 +1235,7 @@ export default function AdminCatalogPage() {
             <Button
               size="sm"
               variant="outline"
-              className="px-4 py-2 rounded-xl text-xs"
+              className="px-4 py-2 rounded-2xl text-xs font-semibold border-line hover:border-brand/40"
               disabled={page >= totalPages - 1 || loading}
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
             >
@@ -1008,54 +1248,62 @@ export default function AdminCatalogPage() {
       {/* Modal Thêm/Sửa kiểu tóc */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-line pb-4 mb-4">
-              <h3 className="font-display text-xl font-bold text-ink">
-                {editingItem ? "Chỉnh sửa kiểu tóc" : "Thêm kiểu tóc mới"}
-              </h3>
+          <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-3xl bg-white p-6 shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-line pb-4 mb-4 shrink-0">
+              <div>
+                <h3 className="font-display text-xl font-bold text-ink">
+                  {editingItem ? "Chỉnh sửa kiểu tóc" : "Thêm kiểu tóc mới"}
+                </h3>
+                <p className="text-xs text-mauve">
+                  {editingItem ? `Cập nhật thông tin cho "${editingItem.name}"` : "Khai báo kiểu tóc mới vào danh mục catalog"}
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="text-muted hover:text-ink text-xl font-bold p-1 cursor-pointer"
+                className="text-muted hover:text-ink text-xl font-bold p-1 rounded-xl hover:bg-canvas transition cursor-pointer"
               >
-                <Add size={22} className="rotate-45" />
+                <CloseCircle size={24} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Tên kiểu tóc */}
-              <label className="flex flex-col gap-1.5">
-                <span className="text-sm font-semibold text-mauve">Tên kiểu tóc *</span>
-                <input
-                  type="text"
-                  placeholder="Ví dụ: Undercut Hiện Đại"
-                  required
-                  className="w-full rounded-2xl border-2 border-line bg-white px-4 py-2.5 text-base text-ink outline-none transition focus:border-brand"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
-              </label>
-
-              {/* Tag */}
-              <label className="flex flex-col gap-1.5">
-                <span className="text-sm font-semibold text-mauve">Nhãn tag (nếu có)</span>
-                <input
-                  type="text"
-                  placeholder="Ví dụ: Mới, Xu Hướng, Thịnh Hành"
-                  className="w-full rounded-2xl border-2 border-line bg-white px-4 py-2.5 text-base text-ink outline-none transition focus:border-brand"
-                  value={formData.tag}
-                  onChange={(e) => setFormData({ ...formData, tag: e.target.value })}
-                />
-              </label>
-
-              {/* Mã kiểu AI (AILab Pro) */}
+            {/* Modal Body Form */}
+            <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto flex-1 pr-1">
+              {/* Tên & Tag */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-sm font-semibold text-mauve">Mã kiểu AI (AILab Pro)</span>
+                  <span className="text-xs font-bold text-mauve uppercase tracking-wider">Tên kiểu tóc *</span>
+                  <input
+                    type="text"
+                    placeholder="Ví dụ: Undercut Hiện Đại"
+                    required
+                    className="w-full rounded-2xl border-2 border-line bg-white px-3.5 py-2 text-sm text-ink outline-none transition focus:border-brand"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  />
+                </label>
+
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-bold text-mauve uppercase tracking-wider">Nhãn tag (nếu có)</span>
+                  <input
+                    type="text"
+                    placeholder="Ví dụ: Xu Hướng, Mới, Thịnh Hành"
+                    className="w-full rounded-2xl border-2 border-line bg-white px-3.5 py-2 text-sm text-ink outline-none transition focus:border-brand"
+                    value={formData.tag}
+                    onChange={(e) => setFormData({ ...formData, tag: e.target.value })}
+                  />
+                </label>
+              </div>
+
+              {/* Mã kiểu AI & Màu tóc AI */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-bold text-mauve uppercase tracking-wider">Mã kiểu AI (AILab Pro)</span>
                   <select
                     value={formData.ailabProStyle || ""}
                     onChange={(e) => setFormData({ ...formData, ailabProStyle: e.target.value })}
-                    className="w-full rounded-2xl border-2 border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-brand"
+                    className="w-full rounded-2xl border-2 border-line bg-white px-3 py-2 text-xs font-semibold text-ink outline-none transition focus:border-brand cursor-pointer"
                   >
                     <option value="">-- Chưa gán mã AI --</option>
                     <optgroup label="Kiểu Nam">
@@ -1085,13 +1333,12 @@ export default function AdminCatalogPage() {
                   </select>
                 </label>
 
-                {/* Màu tóc AI */}
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-sm font-semibold text-mauve">Màu tóc AI</span>
+                  <span className="text-xs font-bold text-mauve uppercase tracking-wider">Màu tóc AI</span>
                   <select
                     value={formData.ailabColor || ""}
                     onChange={(e) => setFormData({ ...formData, ailabColor: e.target.value })}
-                    className="w-full rounded-2xl border-2 border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-brand"
+                    className="w-full rounded-2xl border-2 border-line bg-white px-3 py-2 text-xs font-semibold text-ink outline-none transition focus:border-brand cursor-pointer"
                   >
                     <option value="">Màu gốc (không đổi màu)</option>
                     {HAIR_COLORS.map((c) => (
@@ -1103,9 +1350,12 @@ export default function AdminCatalogPage() {
                 </label>
               </div>
 
-              {/* Upload ảnh & Crop */}
-              <div className="flex flex-col gap-2">
-                <span className="text-sm font-semibold text-mauve">Hình ảnh kiểu tóc *</span>
+              {/* Upload ảnh & Cropper (Giữ nguyên logic) */}
+              <div className="flex flex-col gap-2 rounded-2xl border border-line bg-canvas/30 p-3.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-mauve uppercase tracking-wider">Hình ảnh kiểu tóc *</span>
+                  <span className="text-[11px] text-muted font-medium">Tỷ lệ chuẩn 3:4</span>
+                </div>
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/webp"
@@ -1115,7 +1365,7 @@ export default function AdminCatalogPage() {
 
                 {imagePreview && (
                   <div className="mt-2 space-y-3">
-                    <div className="relative h-64 w-full rounded-2xl overflow-hidden border-2 border-line bg-slate-900">
+                    <div className="relative h-64 w-full rounded-2xl overflow-hidden border-2 border-line bg-slate-900 shadow-inner">
                       <Cropper
                         image={imagePreview}
                         crop={crop}
@@ -1132,8 +1382,8 @@ export default function AdminCatalogPage() {
                         onCropComplete={onCropComplete}
                       />
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-semibold text-muted">Thu phóng:</span>
+                    <div className="flex items-center gap-3 px-1">
+                      <span className="text-xs font-semibold text-muted shrink-0">Thu phóng:</span>
                       <input
                         type="range"
                         min={1}
@@ -1153,7 +1403,7 @@ export default function AdminCatalogPage() {
 
               {/* Dáng mặt phù hợp */}
               <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-semibold text-mauve">Dáng mặt phù hợp</span>
+                <span className="text-xs font-bold text-mauve uppercase tracking-wider">Dáng mặt phù hợp</span>
                 <div className="flex flex-wrap gap-2">
                   {FACE_SHAPES.map((shape) => {
                     const isChecked = formData.faceShapes.includes(shape);
@@ -1167,7 +1417,7 @@ export default function AdminCatalogPage() {
                             : [...formData.faceShapes, shape];
                           setFormData({ ...formData, faceShapes: next.length > 0 ? next : ["Oval"] });
                         }}
-                        className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+                        className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
                           isChecked
                             ? "bg-brand text-white shadow-xs"
                             : "bg-canvas border border-line text-ink/70 hover:border-brand/40"
@@ -1183,11 +1433,11 @@ export default function AdminCatalogPage() {
               {/* Độ dài & Giới tính */}
               <div className="grid grid-cols-2 gap-4">
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-sm font-semibold text-mauve">Độ dài</span>
+                  <span className="text-xs font-bold text-mauve uppercase tracking-wider">Độ dài</span>
                   <select
                     value={formData.hairLength}
                     onChange={(e) => setFormData({ ...formData, hairLength: e.target.value })}
-                    className="w-full rounded-2xl border-2 border-line bg-white px-3 py-2 text-sm text-ink outline-none transition focus:border-brand"
+                    className="w-full rounded-2xl border-2 border-line bg-white px-3 py-2 text-xs font-semibold text-ink outline-none transition focus:border-brand cursor-pointer"
                   >
                     {HAIR_LENGTHS.map((len) => (
                       <option key={len} value={len}>
@@ -1198,11 +1448,11 @@ export default function AdminCatalogPage() {
                 </label>
 
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-sm font-semibold text-mauve">Giới tính</span>
+                  <span className="text-xs font-bold text-mauve uppercase tracking-wider">Giới tính</span>
                   <select
                     value={formData.gender}
                     onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                    className="w-full rounded-2xl border-2 border-line bg-white px-3 py-2 text-sm text-ink outline-none transition focus:border-brand"
+                    className="w-full rounded-2xl border-2 border-line bg-white px-3 py-2 text-xs font-semibold text-ink outline-none transition focus:border-brand cursor-pointer"
                   >
                     {GENDERS.map((g) => (
                       <option key={g} value={g}>
@@ -1215,33 +1465,34 @@ export default function AdminCatalogPage() {
 
               {/* Mô tả */}
               <label className="flex flex-col gap-1.5">
-                <span className="text-sm font-semibold text-mauve">Mô tả kiểu tóc</span>
+                <span className="text-xs font-bold text-mauve uppercase tracking-wider">Mô tả kiểu tóc</span>
                 <textarea
                   rows="3"
-                  placeholder="Mô tả phong cách, điểm nhấn..."
-                  className="w-full rounded-2xl border-2 border-line bg-white p-3 text-sm text-ink outline-none transition focus:border-brand"
+                  placeholder="Mô tả phong cách, điểm nhấn, cách chăm sóc..."
+                  className="w-full rounded-2xl border-2 border-line bg-white p-3 text-xs text-ink outline-none transition focus:border-brand resize-none"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
               </label>
 
               {/* Premium Only */}
-              <label className="flex items-center gap-2 cursor-pointer py-1">
+              <label className="flex items-center gap-2.5 cursor-pointer py-1.5 px-3 rounded-xl bg-canvas border border-line">
                 <input
                   type="checkbox"
-                  className="size-4 rounded border-2 border-line text-brand focus:ring-brand"
+                  className="size-4 rounded text-brand focus:ring-brand cursor-pointer"
                   checked={formData.premiumOnly}
                   onChange={(e) => setFormData({ ...formData, premiumOnly: e.target.checked })}
                 />
-                <span className="text-sm font-semibold text-ink">Chỉ dành cho tài khoản Trả phí (Gói Tuần / Tháng)</span>
+                <span className="text-xs font-bold text-ink">Chỉ dành cho tài khoản Trả phí (Gói Tuần / Tháng)</span>
               </label>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-line">
-                <Button type="button" variant="outline" className="rounded-xl px-5" onClick={() => setIsOpen(false)}>
+              {/* Modal Footer */}
+              <div className="flex justify-end gap-3 pt-3 border-t border-line shrink-0">
+                <Button type="button" variant="outline" className="rounded-2xl px-5 text-xs font-semibold" onClick={() => setIsOpen(false)}>
                   Hủy
                 </Button>
-                <Button type="submit" variant="brand" className="rounded-xl px-5 font-bold">
-                  Lưu thông tin
+                <Button type="submit" variant="brand" className="rounded-2xl px-6 text-xs font-bold shadow-xs">
+                  {editingItem ? "Lưu thay đổi" : "Tạo kiểu tóc"}
                 </Button>
               </div>
             </form>

@@ -152,9 +152,10 @@ function Pagination({ page, totalPages, onPageChange }) {
   return (
     <div className="flex items-center justify-center gap-1.5">
       <button
+        type="button"
         onClick={() => onPageChange(page - 1)}
         disabled={page === 1}
-        className="flex h-9 items-center gap-1 rounded-full border border-line px-3 text-sm font-medium text-mauve transition hover:border-primary hover:text-primary disabled:pointer-events-none disabled:opacity-40"
+        className="flex h-9 items-center gap-1 rounded-full border border-line px-3 text-sm font-medium text-mauve transition hover:border-primary hover:text-primary disabled:pointer-events-none disabled:opacity-40 cursor-pointer"
       >
         ‹ Trước
       </button>
@@ -163,9 +164,10 @@ function Pagination({ page, totalPages, onPageChange }) {
           <span key={`ellipsis-${i}`} className="px-1 text-mauve select-none">...</span>
         ) : (
           <button
+            type="button"
             key={p}
             onClick={() => onPageChange(p)}
-            className={`flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold transition ${
+            className={`flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold transition cursor-pointer ${
               p === page
                 ? "border-primary bg-primary text-white shadow-sm"
                 : "border-line text-mauve hover:border-primary hover:text-primary"
@@ -176,9 +178,10 @@ function Pagination({ page, totalPages, onPageChange }) {
         )
       )}
       <button
+        type="button"
         onClick={() => onPageChange(page + 1)}
         disabled={page === totalPages}
-        className="flex h-9 items-center gap-1 rounded-full border border-line px-3 text-sm font-medium text-mauve transition hover:border-primary hover:text-primary disabled:pointer-events-none disabled:opacity-40"
+        className="flex h-9 items-center gap-1 rounded-full border border-line px-3 text-sm font-medium text-mauve transition hover:border-primary hover:text-primary disabled:pointer-events-none disabled:opacity-40 cursor-pointer"
       >
         Sau ›
       </button>
@@ -377,12 +380,12 @@ export default function CatalogPage() {
   }, [genderFilter, face, lengthFilter, tagFilter, colorFilter]);
 
   const setParam = useCallback(
-    (key, value, resetPage = true) => {
+    (key, value, resetPage = key !== "page") => {
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev);
         if (value) next.set(key, value);
         else next.delete(key);
-        if (resetPage) next.set("page", "1");
+        if (resetPage && key !== "page") next.set("page", "1");
         return next;
       });
     },
@@ -797,7 +800,14 @@ export default function CatalogPage() {
 
               {groupedItems.length > 0 && (
                 <div className="mt-10 flex flex-col items-center gap-5">
-                  <Pagination page={safePage} totalPages={totalPages} onPageChange={(p) => setParam("page", String(p))} />
+                  <Pagination
+                    page={safePage}
+                    totalPages={totalPages}
+                    onPageChange={(p) => {
+                      setParam("page", String(p), false);
+                      window.scrollTo({ top: 350, behavior: "smooth" });
+                    }}
+                  />
                   <div className="flex items-center gap-2 text-xs text-mauve">
                     <span>Mỗi trang:</span>
                     {PAGE_SIZES.map((s) => (

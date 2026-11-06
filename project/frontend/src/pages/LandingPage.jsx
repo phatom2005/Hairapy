@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AI_STYLIST_ENABLED } from "../lib/features";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
@@ -25,9 +25,6 @@ import HairapyLogoMark from "../components/animated/HairapyLogoMark";
 import { PLANS, getPlanCta } from "../lib/plans";
 import PremiumGateModal from "../components/PremiumGateModal";
 
-// Hiệu ứng nền Hero (WebGL, kéo theo thư viện ogl ~50KB) — tải riêng, không chặn trang hiện lên
-const DitherVeil = lazy(() => import("../components/animated/DitherVeil"));
-
 export default function LandingPage() {
   return (
     // Outer wrapper transparent → Aurora bleed-through từ App level
@@ -47,16 +44,11 @@ export default function LandingPage() {
 function Hero() {
   return (
     <section className="relative isolate overflow-hidden bg-transparent px-6 py-24 sm:px-10 sm:py-32">
-      {/* DitherVeil làm nền cho cả Hero, đặt giữa (căn theo section, không lệch
-          trái/phải như mấy bản thử trước). Giờ phần "ink" trong chính component
-          đã tự trong suốt (xem DitherVeil.jsx: alpha dựa theo độ giống uInk) nên
-          không cần opacity/mask thủ công nữa — nó tự hoà vào nền SoftAurora phía
-          sau, chỉ có chấm sáng/rim/ảnh mặt là hiện rõ. */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <Suspense fallback={null}>
-          <DitherVeil className="h-full w-full" wander />
-        </Suspense>
-      </div>
+      {/* Nền WebGL DitherVeil tạm ẩn (2026-11-06) vì quá nặng trên điện thoại.
+          Component vẫn giữ ở components/animated/DitherVeil.jsx — muốn bật lại:
+          const DitherVeil = lazy(() => import("../components/animated/DitherVeil"));
+          rồi đặt <Suspense fallback={null}><DitherVeil className="h-full w-full" wander /></Suspense>
+          trong <div className="pointer-events-none absolute inset-0 -z-10"> tại đây. */}
 
       <div className="relative mx-auto grid max-w-[1200px] grid-cols-1 items-center gap-12 sm:px-16 lg:grid-cols-2">
         <div className="flex flex-col gap-6">

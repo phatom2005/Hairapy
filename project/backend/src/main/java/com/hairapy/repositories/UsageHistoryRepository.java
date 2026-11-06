@@ -34,6 +34,14 @@ public interface UsageHistoryRepository extends JpaRepository<UsageHistory, Long
     long countByFeatureBetween(@Param("feature") String feature, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     // Đếm số người dùng duy nhất hoạt động trong khoảng thời gian [start, end)
+    /**
+     * Gom lượt dùng theo user + tính năng trong khoảng [start, end): [userId, email, fullName, feature, count, lastUsedAt].
+     */
+    @Query("SELECT u.user.id, u.user.email, u.user.fullName, u.feature, COUNT(u), MAX(u.usedAt) FROM UsageHistory u "
+            + "WHERE u.usedAt >= :start AND u.usedAt < :end "
+            + "GROUP BY u.user.id, u.user.email, u.user.fullName, u.feature")
+    List<Object[]> summarizeByUserBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
     @Query("SELECT COUNT(DISTINCT u.user.id) FROM UsageHistory u WHERE u.usedAt >= :start AND u.usedAt < :end")
     long countActiveUsersBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 

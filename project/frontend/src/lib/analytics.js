@@ -69,10 +69,20 @@ export function initAnalytics() {
   if (!GA_ID || ready || typeof window === "undefined") return;
   captureFirstTouch();
 
-  const script = document.createElement("script");
-  script.async = true;
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
-  document.head.appendChild(script);
+  // Nạp gtag.js (~180KB) SAU khi trang hiện xong để không tranh băng thông/CPU lúc tải trang.
+  // Các lệnh gtag() gọi trước đó vẫn nằm trong window.dataLayer và được gửi khi script chạy.
+  const loadScript = () => {
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
+    document.head.appendChild(script);
+  };
+  const scheduleLoad = () => {
+    if (window.requestIdleCallback) window.requestIdleCallback(loadScript, { timeout: 2500 });
+    else window.setTimeout(loadScript, 1500);
+  };
+  if (document.readyState === "complete") scheduleLoad();
+  else window.addEventListener("load", scheduleLoad, { once: true });
 
   window.dataLayer = window.dataLayer || [];
   window.gtag = function gtag() {

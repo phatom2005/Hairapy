@@ -24,6 +24,7 @@ import { Badge, Button, Card, DragScroll, Section, SectionHeading } from "../com
 import HairapyLogoMark from "../components/animated/HairapyLogoMark";
 import { PLANS, getPlanCta } from "../lib/plans";
 import PremiumGateModal from "../components/PremiumGateModal";
+import { optimizedImage } from "../lib/imageUrl";
 
 export default function LandingPage() {
   return (
@@ -431,7 +432,8 @@ function Trends() {
         {trendingStyles.map((t) => (
           <Card key={t.hairstyleId || t.id} padded={false} className="w-[280px] shrink-0 p-3 shadow-lg">
             <div className="relative overflow-hidden rounded-[20px]">
-              <img src={t.imageUrl} alt={t.name} draggable={false} className="pointer-events-none h-[320px] w-full object-cover"
+              <img src={optimizedImage(t.imageUrl, 560)} alt={t.name} draggable={false} loading="lazy" decoding="async"
+                width={256} height={320} className="pointer-events-none h-[320px] w-full object-cover"
                 onError={(e) => { e.target.src = `https://placehold.co/280x320?text=${encodeURIComponent(t.name)}`; }} />
               {t.growthPct > 0 && (
                 <Badge variant="new" className="absolute left-4 top-4 shadow font-bold">

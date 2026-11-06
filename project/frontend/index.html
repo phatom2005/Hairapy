@@ -20,10 +20,14 @@
     <meta name="twitter:title" content="Hairapy - Gợi ý kiểu tóc bằng AI" />
     <meta name="twitter:description" content="Quét khuôn mặt, nhận gợi ý kiểu tóc phù hợp và thử tóc ảo bằng AI." />
 
-    <!-- Google Fonts: Unbounded (display) + Be Vietnam Pro (body) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&amp;family=Unbounded:wght@500;600;700;800&amp;display=swap">
+    <!-- Font tự host (public/fonts, @font-face ở src/fonts.css). Preload các file cần cho màn hình đầu
+         để font về song song với JS → trang vẽ lần đầu đã đúng font, không nhảy chữ. -->
+    <link rel="preload" href="/fonts/unbounded-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/unbounded-vietnamese-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/be-vietnam-pro-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/be-vietnam-pro-vietnamese-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/be-vietnam-pro-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/be-vietnam-pro-vietnamese-700-normal.woff2" as="font" type="font/woff2" crossorigin>
   </head>
   <body>
     <div id="root"></div>

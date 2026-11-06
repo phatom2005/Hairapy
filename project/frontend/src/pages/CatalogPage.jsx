@@ -14,6 +14,7 @@ import { HAIR_COLORS, COLOR_BY_VALUE, swatchBg } from "../lib/hairColors";
 import HairstyleDetailModal from "../components/HairstyleDetailModal";
 import PremiumGateModal from "../components/PremiumGateModal";
 import SalonMatchSheet from "../components/SalonMatchSheet";
+import { optimizedImage } from "../lib/imageUrl";
 
 const GENDER_OPTS = ["Nam", "Nữ", "Unisex"];
 const FACE_OPTS = ["Tròn", "Vuông", "Trái xoan", "Dài", "Trái tim", "Kim cương"];
@@ -202,8 +203,12 @@ function HairstyleCatalogCard({
     >
       <div className="relative overflow-hidden">
         <img
-          src={current.imageUrl}
+          src={optimizedImage(current.imageUrl, 600)}
           alt={current.name}
+          loading="lazy"
+          decoding="async"
+          width={400}
+          height={500}
           className="aspect-[4/5] w-full object-cover transition-transform duration-500 group-hover:scale-105"
           onError={(e) => {
             e.target.src = `https://placehold.co/400x500?text=${encodeURIComponent(current.name)}`;
@@ -605,8 +610,12 @@ export default function CatalogPage() {
               >
                 <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl">
                   <img
-                    src={t.imageUrl}
+                    src={optimizedImage(t.imageUrl, 360)}
                     alt={t.name}
+                    loading="lazy"
+                    decoding="async"
+                    width={180}
+                    height={240}
                     className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                     onError={(e) => {
                       e.target.src = `https://placehold.co/180x240?text=${encodeURIComponent(t.name)}`;

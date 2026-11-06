@@ -17,6 +17,20 @@ describe("optimizedImage", () => {
     expect(optimizedImage(null, 400)).toBe(null);
   });
 
+  it("không bị lừa bởi tên miền khác chứa chuỗi res.cloudinary.com", () => {
+    const fake = [
+      "https://evil.example/res.cloudinary.com/image/upload/v1/x.jpg",
+      "https://res.cloudinary.com.evil.example/image/upload/v1/x.jpg",
+      "https://evil.example/?u=res.cloudinary.com/image/upload/x.jpg",
+      "http://res.cloudinary.com/demo/image/upload/v1/x.jpg",
+    ];
+    fake.forEach((u) => expect(optimizedImage(u, 400)).toBe(u));
+  });
+
+  it("URL không hợp lệ thì trả nguyên", () => {
+    expect(optimizedImage("không phải url", 400)).toBe("không phải url");
+  });
+
   it("giữ nguyên URL đã có biến đổi (vd. watermark)", () => {
     const wm = "https://res.cloudinary.com/demo/image/upload/l_hairapy_wm,o_60/v1/hairapy/swap/x.jpg";
     expect(optimizedImage(wm, 400)).toBe(wm);

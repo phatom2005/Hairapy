@@ -232,6 +232,10 @@ public class PaymentService {
         // (Trước đây webhook code != "00" đến muộn có thể đổi PAID -> CANCELLED.)
         if (payment.getStatus() == PaymentStatus.PAID) {
             if ("00".equals(code)) {
+                // Đơn đã PAID qua poll trước khi webhook tới → bổ sung thông tin chuyển khoản nếu còn thiếu
+                if (payment.getBankTransactionAt() == null && applyTransferInfo(payment, data)) {
+                    paymentRepository.save(payment);
+                }
                 grantSubscriptionIfNeeded(payment);
             } else {
                 log.warn("Bỏ qua webhook code={} cho giao dịch đã PAID: orderCode={}", code, orderCode);
@@ -246,6 +250,10 @@ public class PaymentService {
             if (!(paidAmountObj instanceof Number paidAmount) || paidAmount.longValue() != payment.getAmount().longValue()) {
                 log.error("Webhook PayOS lệch số tiền, KHÔNG cấp gói: orderCode={}, expected={}, received={}",
                         orderCode, payment.getAmount(), paidAmountObj);
+                // Vẫn lưu thông tin chuyển khoản để admin biết ai đã chuyển và đối soát
+                if (applyTransferInfo(payment, data)) {
+                    paymentRepository.save(payment);
+                }
                 alertMismatch(payment, paidAmountObj);
                 return;
             }
@@ -254,6 +262,7 @@ public class PaymentService {
             payment.setStatus(PaymentStatus.PAID);
             payment.setPaidAt(LocalDateTime.now());
             payment.setPayosTransactionId(reference);
+            applyTransferInfo(payment, data);
             paymentRepository.save(payment);
 
             grantSubscriptionIfNeeded(payment);
@@ -303,6 +312,58 @@ public class PaymentService {
             paymentRepository.save(current);
         }
         return current;
+    }
+
+    private static final java.time.format.DateTimeFormatter PAYOS_TX_TIME =
+            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    /**
+     * Chép thông tin chuyển khoản RÚT GỌN từ data webhook PayOS vào payment (để admin đối soát).
+     * Chỉ giữ 4 số cuối tài khoản người chuyển; KHÔNG log các thông tin này.
+     *
+     * @return true nếu có ít nhất 1 trường được cập nhật.
+     */
+    boolean applyTransferInfo(Payment payment, Map<String, Object> data) {
+        boolean changed = false;
+        String bankName = trimTo(str(data.get("counterAccountBankName")), 100);
+        if (bankName == null) bankName = trimTo(str(data.get("counterAccountBankId")), 100);
+        if (bankName != null) { payment.setCounterBankName(bankName); changed = true; }
+
+        String accountName = trimTo(str(data.get("counterAccountName")), 150);
+        if (accountName != null) { payment.setCounterAccountName(accountName); changed = true; }
+
+        String accountNumber = str(data.get("counterAccountNumber"));
+        if (accountNumber != null) {
+            String digits = accountNumber.replaceAll("\\D", "");
+            if (!digits.isEmpty()) {
+                payment.setCounterAccountLast4(digits.substring(Math.max(0, digits.length() - 4)));
+                changed = true;
+            }
+        }
+
+        String description = trimTo(str(data.get("description")), 255);
+        if (description != null) { payment.setTransferDescription(description); changed = true; }
+
+        String txTime = str(data.get("transactionDateTime"));
+        if (txTime != null) {
+            try {
+                payment.setBankTransactionAt(LocalDateTime.parse(txTime, PAYOS_TX_TIME));
+                changed = true;
+            } catch (java.time.format.DateTimeParseException e) {
+                log.warn("Không đọc được transactionDateTime của PayOS cho orderCode={}", payment.getOrderCode());
+            }
+        }
+        return changed;
+    }
+
+    private static String str(Object o) {
+        if (o == null) return null;
+        String s = String.valueOf(o).trim();
+        return s.isEmpty() || "null".equalsIgnoreCase(s) ? null : s;
+    }
+
+    private static String trimTo(String s, int max) {
+        return s == null ? null : (s.length() > max ? s.substring(0, max) : s);
     }
 
     /** Cảnh báo admin (email, có cooldown) khi số tiền thu về lệch hóa đơn. */

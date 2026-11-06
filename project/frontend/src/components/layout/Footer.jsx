@@ -5,7 +5,8 @@ import { Link } from "react-router-dom";
 function FooterCol({ title, links }) {
   return (
     <div className="flex flex-col gap-2.5 text-sm sm:gap-4 sm:text-base">
-      <h5 className="font-bold text-magenta">{title}</h5>
+      {/* h2 thay h5: tránh nhảy cấp tiêu đề (a11y). Tailwind reset cỡ chữ heading về inherit nên hiển thị y như cũ */}
+      <h2 className="font-bold text-magenta">{title}</h2>
       {links.map((l) =>
         l.to ? (
           <Link key={l.label} to={l.to} className="text-mauve hover:text-ink">{l.label}</Link>

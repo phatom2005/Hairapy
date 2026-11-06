@@ -60,7 +60,11 @@ class PaymentServiceTest {
 
     /** Dựng webhook body có chữ ký hợp lệ theo đúng thuật toán PayOS (sắp key theo alphabet). */
     private Map<String, Object> webhook(long orderCode, String code, long amount) throws Exception {
-        Map<String, Object> data = new HashMap<>();
+        return webhook(orderCode, code, amount, Map.of());
+    }
+
+    private Map<String, Object> webhook(long orderCode, String code, long amount, Map<String, Object> extra) throws Exception {
+        Map<String, Object> data = new HashMap<>(extra);
         data.put("orderCode", orderCode);
         data.put("code", code);
         data.put("amount", amount);
@@ -130,6 +134,47 @@ class PaymentServiceTest {
 
         assertEquals(PaymentStatus.CANCELLED, p.getStatus());
         verify(paymentRepository).save(p);
+    }
+
+    @Test
+    void webhook_code00_luuThongTinChuyenKhoanRutGon_chiGiu4SoCuoi() throws Exception {
+        Payment p = payment(PaymentStatus.PENDING, false);
+        when(paymentRepository.findByOrderCode(777L)).thenReturn(Optional.of(p));
+        when(paymentRepository.findById(1L)).thenReturn(Optional.of(p));
+
+        service.handleWebhook(webhook(777L, "00", 49000, Map.of(
+                "counterAccountBankName", "Vietcombank",
+                "counterAccountName", "NGUYEN VAN A",
+                "counterAccountNumber", "0071 0012 34567",
+                "description", "Hairapy PRO 777",
+                "transactionDateTime", "2026-11-06 17:20:05")));
+
+        assertEquals(PaymentStatus.PAID, p.getStatus());
+        assertEquals("Vietcombank", p.getCounterBankName());
+        assertEquals("NGUYEN VAN A", p.getCounterAccountName());
+        assertEquals("4567", p.getCounterAccountLast4());
+        assertEquals("Hairapy PRO 777", p.getTransferDescription());
+        assertEquals(java.time.LocalDateTime.of(2026, 11, 6, 17, 20, 5), p.getBankTransactionAt());
+        // Số tài khoản đầy đủ không được nằm ở bất kỳ trường nào
+        for (String v : new String[]{p.getCounterBankName(), p.getCounterAccountName(),
+                p.getCounterAccountLast4(), p.getTransferDescription(), p.getPayosTransactionId()}) {
+            org.junit.jupiter.api.Assertions.assertFalse(v != null && v.replaceAll("\\D", "").contains("0071001234567"));
+        }
+    }
+
+    @Test
+    void webhook_thieuTenNganHang_dungMaBin_vaBoQuaGioSaiDinhDang() throws Exception {
+        Payment p = payment(PaymentStatus.PENDING, false);
+        when(paymentRepository.findByOrderCode(777L)).thenReturn(Optional.of(p));
+        when(paymentRepository.findById(1L)).thenReturn(Optional.of(p));
+
+        service.handleWebhook(webhook(777L, "00", 49000, Map.of(
+                "counterAccountBankId", "970436",
+                "transactionDateTime", "06/11/2026")));
+
+        assertEquals(PaymentStatus.PAID, p.getStatus());
+        assertEquals("970436", p.getCounterBankName());
+        assertEquals(null, p.getBankTransactionAt());
     }
 
     @Test

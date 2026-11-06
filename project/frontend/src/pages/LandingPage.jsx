@@ -31,11 +31,14 @@ export default function LandingPage() {
     // Outer wrapper transparent → Aurora bleed-through từ App level
     <div className="min-h-screen">
       <PillNav />
-      <Hero />
-      <MarqueeStrip />
-      <Features />
-      <Trends />
-      <PremiumUpsell />
+      {/* <main>: điểm mốc nội dung chính cho trình đọc màn hình / phím tắt (Lighthouse a11y) */}
+      <main>
+        <Hero />
+        <MarqueeStrip />
+        <Features />
+        <Trends />
+        <PremiumUpsell />
+      </main>
       <Footer />
     </div>
   );
@@ -444,7 +447,7 @@ function Trends() {
                 <Badge variant="premium" className="absolute right-4 top-4 shadow">Trả phí</Badge>
               )}
             </div>
-            <h4 className="mt-4 px-2 text-lg font-bold text-ink">{t.name}</h4>
+            <h3 className="mt-4 px-2 text-lg font-bold text-ink">{t.name}</h3>
             <div className="px-2 pb-2 pt-3">
               <Button onClick={() => handleTryStyle(t)} size="sm" className="w-full text-xs">Thử ngay</Button>
             </div>

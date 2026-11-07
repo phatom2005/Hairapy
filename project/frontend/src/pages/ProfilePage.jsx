@@ -213,6 +213,7 @@ export default function ProfilePage() {
               <div className="flex flex-wrap justify-center sm:justify-start gap-2.5">
                 <Button to="/settings" variant="outline" size="sm">Sửa hồ sơ</Button>
                 <Button to="/scan" size="sm">Quét AI mới</Button>
+                <Button to="/feedback" variant="outline" size="sm">Đánh giá Hairapy</Button>
                 {user?.role === "ADMIN" && (
                   <Button to="/admin" variant="pink" size="sm">Dashboard quản trị</Button>
                 )}

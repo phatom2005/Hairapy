@@ -115,6 +115,9 @@ export default function StaggeredMenu({ items, onClose }) {
                 Trang quản trị
               </Button>
             )}
+            <Link to="/feedback" onClick={onClose} className="self-center text-sm font-semibold text-mauve hover:text-ink">
+              Gửi đánh giá cho Hairapy
+            </Link>
             <div className="flex w-full items-center justify-between gap-3 px-2">
               <Link to="/profile" onClick={onClose} className="text-sm font-semibold text-primary hover:underline">
                 Xem Hồ Sơ →

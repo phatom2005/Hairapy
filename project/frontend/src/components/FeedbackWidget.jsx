@@ -1,11 +1,23 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { TickCircle, Star1 } from "iconsax-reactjs";
 import useAuthStore from "../store/useAuthStore";
 import api from "../lib/api";
 import { trackEvent } from "../lib/analytics";
 import { Card, Button } from "./ui";
 
-export default function FeedbackWidget({ feature }) {
+// Câu hỏi theo tính năng; GENERAL = đánh giá chung, không cần đã quét mặt / thử tóc
+const QUESTION = {
+  FACE_SCAN: "Bạn cảm thấy kết quả quét khuôn mặt thế nào?",
+  HAIR_SWAP: "Bạn cảm thấy kết quả thử kiểu tóc thế nào?",
+  GENERAL: "Bạn thấy Hairapy thế nào? Mọi góp ý đều giúp chúng mình làm tốt hơn.",
+};
+
+/**
+ * @param feature     FACE_SCAN | HAIR_SWAP | GENERAL
+ * @param loginPrompt true: khi chưa đăng nhập thì hiện lời mời đăng nhập thay vì ẩn hẳn (dùng ở trang /feedback)
+ */
+export default function FeedbackWidget({ feature = "GENERAL", loginPrompt = false }) {
   const token = useAuthStore((state) => state.token);
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -14,7 +26,23 @@ export default function FeedbackWidget({ feature }) {
   const [submitted, setSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
 
-  if (!token) return null;
+  if (!token) {
+    if (!loginPrompt) return null;
+    return (
+      <Card className="border border-divider/10 p-5 text-center rounded-2xl">
+        <p className="text-sm font-bold text-ink">Đăng nhập để gửi đánh giá</p>
+        <p className="mt-1 text-xs text-muted">Chỉ mất khoảng 30 giây, không cần quét mặt hay thử tóc trước.</p>
+        <div className="mt-4 flex justify-center gap-2">
+          <Button to="/login" state={{ from: "/feedback", message: "Đăng nhập để gửi đánh giá." }} size="sm" className="rounded-xl px-4">
+            Đăng nhập
+          </Button>
+          <Button to="/register" size="sm" variant="outline" className="rounded-xl px-4">
+            Tạo tài khoản
+          </Button>
+        </div>
+      </Card>
+    );
+  }
 
   if (submitted) {
     return (
@@ -25,6 +53,11 @@ export default function FeedbackWidget({ feature }) {
           <p className="text-xs text-emerald-600">
             Ý kiến đóng góp của bạn giúp Hairapy ngày càng hoàn thiện hơn.
           </p>
+          {feature === "GENERAL" && (
+            <Link to="/scan" className="mt-2 text-xs font-bold text-primary hover:underline">
+              Thử quét khuôn mặt miễn phí →
+            </Link>
+          )}
         </div>
       </Card>
     );
@@ -62,9 +95,7 @@ export default function FeedbackWidget({ feature }) {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <h4 className="font-bold text-ink text-sm">Đánh giá trải nghiệm của bạn</h4>
-          <p className="text-xs text-muted mt-0.5">
-            Bạn cảm thấy kết quả {feature === "FACE_SCAN" ? "quét khuôn mặt" : "thử kiểu tóc"} thế nào?
-          </p>
+          <p className="text-xs text-muted mt-0.5">{QUESTION[feature] || QUESTION.GENERAL}</p>
         </div>
 
         {/* Stars */}

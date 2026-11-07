@@ -32,6 +32,7 @@ const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const SalonDetailPage = lazy(() => import("./pages/SalonDetailPage"));
 const ForSalonsPage = lazy(() => import("./pages/ForSalonsPage"));
 const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
+const FeedbackPage = lazy(() => import("./pages/FeedbackPage"));
 const TermsPage = lazy(() => import("./pages/TermsPage"));
 const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
 const CheckoutPage = lazy(() => import("./pages/CheckoutPage"));
@@ -152,6 +153,7 @@ export default function App() {
         <Route path="/salons/:id" element={<SalonDetailPage />} />
         <Route path="/for-salons" element={<ForSalonsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/feedback" element={<FeedbackPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/delete-account" element={<DeleteAccountPage />} />
 

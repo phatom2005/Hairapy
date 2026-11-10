@@ -294,9 +294,11 @@ export default function AdminDashboardPage() {
           Icon={People}
           tone={C.magenta}
         />
+        {/* activeSubscriptions đếm cả Gói Tuần (PRO) lẫn Gói Tháng (PREMIUM) đang ACTIVE */}
         <Kpi
-          label="Gói Premium đang hoạt động"
+          label="Gói trả phí đang hoạt động"
           value={nf.format(stats.activeSubscriptions ?? 0)}
+          hint="Gói Tuần + Gói Tháng"
           Icon={Crown1}
           tone={C.amber}
         />

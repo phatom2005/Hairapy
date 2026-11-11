@@ -41,21 +41,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 16),
-              const Center(
-                child: Column(
-                  children: [
-                    Text(
-                      'Hairapy',
-                      style: TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.brand,
-                      ),
-                    ),
-                    SizedBox(height: 6),
-                    Text('Scan. Style. Smile.',
-                        style: TextStyle(fontSize: 14, color: AppColors.mauve, fontWeight: FontWeight.w500)),
-                  ],
+              // Logo ngang (đã gồm dòng "Scan. Style. Smile.")
+              Center(
+                child: Image.asset(
+                  'assets/brand/logo_horizontal.png',
+                  height: 60,
+                  semanticLabel: 'Hairapy - Scan. Style. Smile.',
                 ),
               ),
               const SizedBox(height: 40),

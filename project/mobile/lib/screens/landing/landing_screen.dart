@@ -24,30 +24,13 @@ class LandingScreen extends StatelessWidget {
           child: Column(
             children: [
               const Spacer(),
-              Container(
-                width: 120,
-                height: 120,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [AppColors.primary, AppColors.magenta],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: const Icon(Icons.face_retouching_natural, color: Colors.white, size: 52),
+              // Logo Hairapy bản trắng (đã gồm dòng "Scan. Style. Smile.") cho nền tối
+              Image.asset(
+                'assets/brand/logo_white_stack.png',
+                width: 210,
+                semanticLabel: 'Hairapy - Scan. Style. Smile.',
               ),
-              const SizedBox(height: 28),
-              const Text(
-                'Hairapy',
-                style: TextStyle(fontSize: 34, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.5),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Scan. Style. Smile.',
-                style: TextStyle(fontSize: 15, color: Colors.white70, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               const Text(
                 'Phân tích khuôn mặt bằng AI và thử ngay kiểu tóc hợp với bạn\ntrước khi ra tiệm.',
                 textAlign: TextAlign.center,
